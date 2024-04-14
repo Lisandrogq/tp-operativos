@@ -52,7 +52,7 @@ int recibir_operacion(int socket_cliente)
 	}
 }
 
-int handshake(int socket_cliente)
+int handshake_Server(int socket_cliente)
 {
 
 	size_t bytes;
