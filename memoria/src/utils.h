@@ -29,6 +29,6 @@ int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
-void handshake(int);
+int handshake(int);
 
 #endif /* UTILS_H_ */
