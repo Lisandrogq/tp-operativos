@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     log_info(logger, "Kernel listo para recibir");
     int cliente_fd = esperar_cliente(server_fd);
 
-    int modulo = handshake(cliente_fd);
+    int modulo = handshake_Server(cliente_fd);
 
     switch (modulo)
 	{
