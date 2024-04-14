@@ -27,8 +27,9 @@ int main(void)
 	puerto = config_get_string_value(config, "PUERTO");
 	
 	conexion_fd = crear_conexion(ip, puerto);
-
-	handshake(conexion_fd);
+	int resultado = handshake(conexion_fd);
+	
+	
 
 	terminar_programa(conexion_fd, logger, config);
 

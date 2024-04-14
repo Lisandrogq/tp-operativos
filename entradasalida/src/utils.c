@@ -58,7 +58,7 @@ void enviar_mensaje(char *mensaje, int socket_cliente)
     eliminar_paquete(paquete);
 }
 
-void handshake(int socket_cliente)
+int handshake(int socket_cliente)
 {
     size_t bytes;
 
@@ -70,8 +70,9 @@ void handshake(int socket_cliente)
 
     if (result != 0)
     {
-    exit(-1);
+        exit(-1);
     }
+    return result;
 }
 
     

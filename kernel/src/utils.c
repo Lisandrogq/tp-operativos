@@ -72,6 +72,7 @@ int handshake(int socket_cliente)
     {
     exit(-1);
     }
+    return result;
 }
 
     void crear_buffer(t_paquete * paquete)
@@ -155,8 +156,6 @@ int esperar_cliente(int socket_servidor)
 {
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	//log_info(logger, "Se conecto un modulo!");
-
 	return socket_cliente;
 }
 
