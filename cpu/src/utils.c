@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <errno.h>
 
 //Client//
 void *serializar_paquete(t_paquete *paquete, int bytes)
@@ -32,9 +33,10 @@ int crear_conexion(char *ip, char *puerto)
     int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
 
     // Ahora que tenemos el socket, vamos a conectarlo
-
+    int resultado;
     freeaddrinfo(server_info); /// creo q esto deberia ir al final, antes del return
-    connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
+    resultado =connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
+    printf("The last error message is: %s\n", strerror(errno));
 
     return socket_cliente;
 }
