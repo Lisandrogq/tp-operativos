@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
 		break;
 
 	}
-
+    close(server_fd);
+    close(cliente_fd);
     // while (1)
     // {
 	// 	int cod_op = recibir_operacion(cliente_fd);

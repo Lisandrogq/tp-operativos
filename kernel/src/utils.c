@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <errno.h>
 
 void *serializar_paquete(t_paquete *paquete, int bytes)
 {
@@ -143,9 +144,10 @@ int iniciar_servidor(void)
 	socket_servidor = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
 
 	// Asociamos el socket a un puerto
-	bind(socket_servidor, server_info->ai_addr, server_info->ai_addrlen);
+	 int resultado = bind(socket_servidor, server_info->ai_addr, server_info->ai_addrlen);
 	// Escuchamos las conexiones entrantes
-	listen(socket_servidor, SOMAXCONN);
+	resultado = listen(socket_servidor, SOMAXCONN); //error en el listen
+     printf("The last error message is: %s\n", strerror(errno));
 	freeaddrinfo(server_info);
 	log_info(logger, "Listo para escuchar a otro modulo"); // El profe puse log_trace
 
