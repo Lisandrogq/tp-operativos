@@ -186,7 +186,7 @@ int handshake_Server(int socket_cliente)
 
 	bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
 	
-	if (handshake>=0 && handshake<=3)
+	if (handshake==3)
 	{
 		bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
 	}

@@ -1,6 +1,5 @@
 #include "client.h"
 #include <readline/readline.h>
-/*
 int main(void)
 {
 
@@ -56,4 +55,3 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	config_destroy(config);
 	liberar_conexion(conexion);
 }
-*/
