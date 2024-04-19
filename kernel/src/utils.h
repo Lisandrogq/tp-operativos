@@ -17,8 +17,7 @@
 typedef enum
 {
 	MENSAJE,
-	PAQUETE,
-	HANDSHAKE
+	PAQUETE
 }op_code;
 
 //Cliente

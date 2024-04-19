@@ -5,13 +5,6 @@
 #include <commons/log.h>
 #include "utils.h"
 
-// typedef enum
-// {
-// 	KERNEL,
-// 	CPU,
-// 	MEMORIA,
-// 	IO
-// }  int32_t; // NUMEROS DE HANDSHAKE, pasar esto a un archivo global
 
 
 int main(int argc, char *argv[])

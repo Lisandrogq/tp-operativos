@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 // 	IO
 // }  int32_t; // NUMEROS DE HANDSHAKE, pasar esto a un archivo global
 
-
+/*
 int main(int argc, char *argv[])
 {
     logger = log_create("log.log", "Servidor", 1, LOG_LEVEL_DEBUG);
@@ -70,3 +70,4 @@ int main(int argc, char *argv[])
     decir_hola("CPU");
     return 0;
 }
+*/

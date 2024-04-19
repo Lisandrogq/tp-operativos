@@ -17,7 +17,7 @@ typedef enum
 {
 	MENSAJE,
 	PAQUETE,
-	HANDSHAKE
+	OPERACION1
 }op_code;
 
 extern t_log* logger;
@@ -29,6 +29,7 @@ int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
+void recibir_operacion1(int socket_cliente);
 int handshake_Server(int);
-
+int terminarServidor(int,int);
 #endif /* UTILS_H_ */

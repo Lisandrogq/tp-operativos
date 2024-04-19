@@ -3,6 +3,9 @@
 		"debug.onTaskErrors": "abort",
 		"files.associations": {
 			"*.h": "c",
+			"functional": "c",
+			"cerrno": "c",
+			"cstdlib": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

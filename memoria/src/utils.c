@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <errno.h>
 
 t_log *logger;
 
@@ -19,10 +20,13 @@ int iniciar_servidor(void)
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
 
+	
 	// Asociamos el socket a un puerto
 	bind(socket_servidor, server_info->ai_addr, server_info->ai_addrlen);
+
 	// Escuchamos las conexiones entrantes
-	listen(socket_servidor, SOMAXCONN);
+	int resultado =listen(socket_servidor, SOMAXCONN); 
+	
 	freeaddrinfo(server_info);
 	log_info(logger, "Listo para escuchar a otro modulo"); // El profe puse log_trace
 
@@ -78,7 +82,15 @@ void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char *buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	log_info(logger, "Me llego el mensaje: %s", buffer);
+	free(buffer);
+}
+
+void recibir_operacion1(int socket_cliente)
+{
+	int size;
+	char *buffer = recibir_buffer(&size, socket_cliente);
+	log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
 	free(buffer);
 }
 
