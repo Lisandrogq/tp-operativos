@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	
 		switch (cod_op)
 		{
-		case OPERACION1:
+		case OPERACION_IO_1:
 			//capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
 			recibir_operacion1(cliente_fd);
 			break;

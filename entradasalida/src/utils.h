@@ -18,7 +18,8 @@ typedef enum
 {
 	MENSAJE,
 	PAQUETE,
-	OPERACION1 
+	OPERACION_IO_1, 
+	OPERACION_KERNEL_1 
 }op_code;
 
 //Cliente

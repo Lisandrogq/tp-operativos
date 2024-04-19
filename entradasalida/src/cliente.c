@@ -29,7 +29,7 @@ int main(void)
 	conexion_fd = crear_conexion(ip, puerto);
 	int resultado = handshake(conexion_fd);
 	
-	enviar_operacion(OPERACION1,modulo, conexion_fd);
+	enviar_operacion(OPERACION_IO_1,modulo, conexion_fd);
 	enviar_operacion(MENSAJE,"segundo mensaje", conexion_fd);
 	terminar_programa(conexion_fd, logger, config);
 

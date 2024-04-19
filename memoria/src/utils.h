@@ -14,10 +14,11 @@
 #define PUERTO "4444"
 
 typedef enum
-{
+{	//habría q ver como podemos unificar esto en un solo archivo
 	MENSAJE,
 	PAQUETE,
-	OPERACION1
+	OPERACION_IO_1, 
+	OPERACION_KERNEL_1
 }op_code;
 
 extern t_log* logger;
