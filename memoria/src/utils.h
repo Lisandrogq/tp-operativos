@@ -18,7 +18,8 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	OPERACION_IO_1, 
-	OPERACION_KERNEL_1
+	OPERACION_KERNEL_1,
+	OPERACION_CPU_1
 }op_code;
 
 extern t_log* logger;

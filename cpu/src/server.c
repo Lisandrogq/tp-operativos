@@ -5,12 +5,7 @@
 #include <string.h>
 #include <commons/log.h>
 #include "utils.h"
-/*
-int main(int argc, char* argv[]) {
-    decir_hola("CPU");
-    return 0;
-}
-*/
+
 
 
 // typedef enum
@@ -21,7 +16,7 @@ int main(int argc, char* argv[]) {
 // 	IO
 // }  int32_t; // NUMEROS DE HANDSHAKE, pasar esto a un archivo global
 
-/*
+
 int main(int argc, char *argv[])
 {
     logger = log_create("log.log", "Servidor", 1, LOG_LEVEL_DEBUG);
@@ -50,24 +45,35 @@ int main(int argc, char *argv[])
 
 
 
-    // while (1)
-    // {
-	// 	int cod_op = recibir_operacion(cliente_fd);
-    //     switch (cod_op)
-    //     {
-    //     case MENSAJE:
-	// 		recibir_mensaje(cliente_fd);
-    //         break;
-    //     case -1:
-    //         log_error(logger, "el cliente se desconecto. Terminando servidor");
-    //         return EXIT_FAILURE;
-    //     default:
-    //         log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-    //         break;
-    //     }
-    // }
+    while (1)
+    {
+	 	int cod_op = recibir_operacion(cliente_fd);
+        switch (cod_op)
+        {
+        case OPERACION_KERNEL_1:
+			//capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_operacion1(cliente_fd);
+			break;
+        case MENSAJE:
+	 		recibir_mensaje(cliente_fd);
+             break;
+        case -1:
+             log_info(logger, "Se desconecto el cliente");
+			return terminarServidor(server_fd, cliente_fd); //Por ahora esta bien que se cierra en un futuro no se si sea lo mejor
+			break;
+        default:
+             log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+             break;
+        }
+    }
 
-    decir_hola("CPU");
-    return 0;
+    close(server_fd);
+	return EXIT_FAILURE;
 }
-*/
+int terminarServidor(int server_fd, int client_fd)
+{
+	log_info(logger, "Terminando servidor");
+	close(server_fd);
+	close(client_fd);
+	return EXIT_SUCCESS;
+}

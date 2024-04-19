@@ -39,11 +39,13 @@ int crear_conexion(char *ip, char *puerto)
     return socket_cliente;
 }
 
-void enviar_mensaje(char *mensaje, int socket_cliente)
+void enviar_operacion(int cod_op,char *mensaje, int socket_cliente) 
 {
+//vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
+
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
-    paquete->codigo_operacion = MENSAJE;
+    paquete->codigo_operacion = cod_op;
     paquete->buffer = malloc(sizeof(t_buffer));
     paquete->buffer->size = strlen(mensaje) + 1;
     paquete->buffer->stream = malloc(paquete->buffer->size);
@@ -214,4 +216,11 @@ void *recibir_buffer(int *size, int socket_cliente)
 	recv(socket_cliente, buffer, *size, MSG_WAITALL);
 
 	return buffer;
+}
+void recibir_operacion1(int socket_cliente)
+{
+	int size;
+	char *buffer = recibir_buffer(&size, socket_cliente);
+	log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
+	free(buffer);
 }

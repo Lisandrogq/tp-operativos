@@ -39,6 +39,14 @@ int main(int argc, char *argv[])
 	
 		switch (cod_op)
 		{
+		case OPERACION_KERNEL_1:
+			//capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_operacion1(cliente_fd);
+			break;
+		case OPERACION_CPU_1:
+			//capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_operacion1(cliente_fd);
+			break;
 		case OPERACION_IO_1:
 			//capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
 			recibir_operacion1(cliente_fd);
@@ -49,7 +57,7 @@ int main(int argc, char *argv[])
 			break;
 		case -1:
 			log_info(logger, "Se desconecto el cliente");
-			return terminarServidor(server_fd, cliente_fd);
+			return terminarServidor(server_fd, cliente_fd); //Por ahora esta bien que se cierra en un futuro no se si sea lo mejor
 			break;
 		default:
 			log_warning(logger, "Operacion desconocida. No quieras meter la pata");

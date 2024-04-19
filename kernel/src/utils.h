@@ -15,9 +15,12 @@
 #define PUERTO "4444"
 
 typedef enum
-{
+{	//habría q ver como podemos unificar esto en un solo archivo
 	MENSAJE,
-	PAQUETE
+	PAQUETE,
+	OPERACION_IO_1, 
+	OPERACION_KERNEL_1,
+	OPERACION_CPU_1
 }op_code;
 
 //Cliente
@@ -36,7 +39,8 @@ typedef struct
 
 
 int crear_conexion(char* ip, char* puerto);
-void enviar_mensaje(char* mensaje, int socket_cliente);
+//void enviar_mensaje(char* mensaje, int socket_cliente);
+void enviar_operacion(int cod_op,char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
@@ -55,6 +59,8 @@ t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
 int handshake_Server(int);
+int terminarServidor(int,int);
+void recibir_operacion1(int socket_cliente);
 
 #endif /* UTILS_H_ */
 

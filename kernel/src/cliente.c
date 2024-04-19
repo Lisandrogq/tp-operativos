@@ -26,9 +26,10 @@ int main(void)
 	puerto = config_get_string_value(config, "PUERTO");
 	
 	conexion_fd = crear_conexion(ip, puerto);
+	int resultado = handshake(conexion_fd);
 
-	handshake(conexion_fd);
-
+	enviar_operacion(OPERACION_KERNEL_1,modulo, conexion_fd);
+	enviar_operacion(MENSAJE,"segundo mensaje", conexion_fd);
 	terminar_programa(conexion_fd, logger, config);
 
 }
