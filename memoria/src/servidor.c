@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	close(server_fd);
+	terminarServidor(server_fd, cliente_fd);
 	return EXIT_FAILURE;
 }
 
