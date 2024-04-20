@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <utils/hello.c>
+#include <utils/utils_generales.h>
 #include <string.h>
 #include <commons/log.h>
 #include <readline/readline.h>
@@ -30,8 +30,8 @@ void * cliente(){
 	config = config_create("kernel.config");
 	modulo = config_get_string_value(config, "MODULO");
 	log_info(logger,modulo);
-	ip = config_get_string_value(config, "IP");
-	puerto = config_get_string_value(config, "PUERTO");
+	ip = config_get_string_value(config, "IP_MEMORIA");
+	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 	
 	conexion_fd = crear_conexion(ip, puerto);
 	int resultado = handshake(conexion_fd);
@@ -39,7 +39,7 @@ void * cliente(){
 	enviar_operacion(OPERACION_KERNEL_1,modulo, conexion_fd);
 	enviar_operacion(MENSAJE,"segundo mensaje", conexion_fd);
 	terminar_programa(conexion_fd, logger, config);
-
+	return 0;
 }
 
 void * servidor(){

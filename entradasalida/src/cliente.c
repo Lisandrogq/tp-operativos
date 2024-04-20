@@ -21,8 +21,8 @@ int main(void)
 	config = config_create("IO.config");
 	modulo = config_get_string_value(config, "MODULO");
 	log_info(logger,modulo);
-	ip = config_get_string_value(config, "IP");
-	puerto = config_get_string_value(config, "PUERTO");
+	ip = config_get_string_value(config, "IP_KERNEL");
+	puerto = config_get_string_value(config, "PUERTO_KERNEL");
 	
 	conexion_fd = crear_conexion(ip, puerto);
 	int resultado = handshake(conexion_fd);

@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <utils/hello.c>
 #include <string.h>
 #include <commons/log.h>
 #include "utils.h"

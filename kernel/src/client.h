@@ -10,7 +10,6 @@
 
 #include "utils.h"
 
-
 t_log* iniciar_logger(void);
 t_config* iniciar_config(void);
 void leer_consola(t_log*);

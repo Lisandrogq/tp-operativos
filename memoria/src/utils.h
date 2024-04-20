@@ -10,8 +10,9 @@
 #include<commons/collections/list.h>
 #include<string.h>
 #include<assert.h>
+#include<utils/utils_generales.h>
 
-#define PUERTO "4444"
+
 
 typedef enum
 {	//habría q ver como podemos unificar esto en un solo archivo
