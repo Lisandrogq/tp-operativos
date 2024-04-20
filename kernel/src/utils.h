@@ -10,21 +10,16 @@
 #include<string.h>
 #include<commons/log.h>
 #include<commons/collections/list.h>
-#include<assert.h>
+#include<commons/config.h>
 
+#include<assert.h>
+#include<readline/readline.h>
+
+#include<commons/string.h>
 #include <utils/utils_generales.h>
 
 
 
-
-typedef enum
-{	//habría q ver como podemos unificar esto en un solo archivo
-	MENSAJE,
-	PAQUETE,
-	OPERACION_IO_1, 
-	OPERACION_KERNEL_1,
-	OPERACION_CPU_1
-}op_code;
 
 //Cliente
 typedef struct
@@ -49,6 +44,11 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+t_log* iniciar_logger(void);
+t_config* iniciar_config(void);
+void leer_consola(t_log*);
+void paquete(int);
+void terminar_programa(int, t_log*, t_config*);
 
 
 //Server
