@@ -29,6 +29,10 @@ int main(void)
 	
 	enviar_operacion(OPERACION_IO_1,modulo, conexion_fd); // modulo es la info que se mand
 	enviar_operacion(MENSAJE,"segundo mensaje", conexion_fd);
+	//intento de crear interfaz generica
+	
+
+
 	terminar_programa(conexion_fd, logger, config);
 
 }

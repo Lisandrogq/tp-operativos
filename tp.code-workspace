@@ -5,7 +5,8 @@
 			"*.h": "c",
 			"functional": "c",
 			"cerrno": "c",
-			"cstdlib": "c"
+			"cstdlib": "c",
+			"string": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},
