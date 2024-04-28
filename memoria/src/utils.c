@@ -1,10 +1,7 @@
 #include "utils.h"
 #include <errno.h>
-
 t_log *logger;
-
-
-int iniciar_servidor(void)
+int iniciar_servidor(void)//HABRIA Q METER LOGS ANTE ERRORES ACA!!!
 {
 	int socket_servidor;
 
@@ -20,13 +17,12 @@ int iniciar_servidor(void)
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
 
-	
 	// Asociamos el socket a un puerto
 	bind(socket_servidor, server_info->ai_addr, server_info->ai_addrlen);
 
 	// Escuchamos las conexiones entrantes
-	int resultado =listen(socket_servidor, SOMAXCONN); 
-	
+	int resultado = listen(socket_servidor, SOMAXCONN);
+
 	freeaddrinfo(server_info);
 	log_info(logger, "Listo para escuchar a otro modulo"); // El profe puse log_trace
 
@@ -35,11 +31,73 @@ int iniciar_servidor(void)
 
 int esperar_cliente(int socket_servidor)
 {
-	// Aceptamos un nuevo cliente
-	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	//log_info(logger, "Se conecto un modulo!");
+	while (1) // reemplazar por condicion de terminacion de sistema/modulo
+	{
+		pthread_t thread;
+		int *socket_cliente = malloc(sizeof(int)); // cuando liberar esto?
+		// Aceptamos un nuevo cliente
+		*socket_cliente = accept(socket_servidor, NULL, NULL);
+		pthread_create(&thread,
+					   NULL,
+					   (void *)client_handler,
+					   socket_cliente);
+		pthread_detach(thread); // creo q debería ser detach pq la condicion de terminacion de sistema es externa
+	}
+}
 
-	return socket_cliente;
+void *client_handler(void *arg)
+{
+	int socket_cliente = *(int *)arg;
+	int modulo = handshake_Server(socket_cliente);
+	switch (modulo) // se debería ejecutar un handler para cada modulo
+	{
+	case 0:
+		log_info(logger, "se conecto el modulo kernel");
+		break;
+	case 1:
+		log_info(logger, "se conecto el modulo cpu");
+		break;
+	case 2:
+		log_info(logger, "se conecto el modulo memoria");
+		break;
+	case 3:
+		log_info(logger, "se conecto el modulo io");
+		break;
+	}
+
+	bool conexion_terminada = false;
+	while (!conexion_terminada)
+	{
+		int cod_op = recibir_operacion(socket_cliente);
+
+		switch (cod_op)
+		{
+		case OPERACION_KERNEL_1:
+			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_operacion1(socket_cliente);
+			break;
+		case OPERACION_CPU_1:
+			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_operacion1(socket_cliente);
+			break;
+		case OPERACION_IO_1:
+			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_operacion1(socket_cliente);
+			break;
+		case MENSAJE:
+			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			recibir_mensaje(socket_cliente);
+			break;
+		case -1:
+			log_info(logger, "Se desconecto algun cliente");
+			conexion_terminada = true;
+			break;
+		default:
+			log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+	close(socket_cliente);
 }
 
 int recibir_operacion(int socket_cliente)
@@ -66,8 +124,8 @@ int handshake_Server(int socket_cliente)
 	int32_t resultError = -1;
 
 	bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
-	
-	if (handshake>=0 && handshake<=3)
+
+	if (handshake >= 0 && handshake <= 3)
 	{
 		bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
 	}

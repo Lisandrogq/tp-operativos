@@ -21,8 +21,8 @@ int main(void)
 	config = config_create("IO.config");
 	modulo = config_get_string_value(config, "MODULO");
 	log_info(logger,modulo);
-	ip = config_get_string_value(config, "IP_KERNEL");
-	puerto = config_get_string_value(config, "PUERTO_KERNEL");
+	ip = config_get_string_value(config, "IP_MEMORIA");
+	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 	
 	conexion_fd = crear_conexion(ip, puerto);
 	int resultado = handshake(conexion_fd);
@@ -31,7 +31,7 @@ int main(void)
 	enviar_operacion(MENSAJE,"segundo mensaje", conexion_fd);
 	//intento de crear interfaz generica
 	
-
+	sleep(5); //para simular varios clientes simultaneamente
 
 	terminar_programa(conexion_fd, logger, config);
 
