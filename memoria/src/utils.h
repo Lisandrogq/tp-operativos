@@ -18,8 +18,6 @@ extern t_log *logger;
 
 void *recibir_buffer(int *, int);
 void* client_handler(void *arg);
-int iniciar_servidor(void);
-int esperar_cliente(int);
 t_list *recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);

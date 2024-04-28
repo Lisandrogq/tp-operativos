@@ -3,6 +3,18 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<signal.h>
+#include<unistd.h>
+#include<sys/socket.h>
+#include<netdb.h>
+#include<string.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include<commons/log.h>
+
+
 #define PUERTO_KERNEL "4444"
 #define PUERTO_CPU "4445"
 #define PUERTO_MEMORIA "4446"
@@ -21,5 +33,6 @@ typedef enum
 * @brief Imprime un saludo al nombre que se pase por parámetro por consola.
 */
 void decir_hola(char* quien);
-
+int esperar_cliente(int socket_servidor, void* client_handler (void*));
+int iniciar_servidor(char* PUERTO,t_log *logger);
 #endif

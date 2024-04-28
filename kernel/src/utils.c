@@ -1,6 +1,8 @@
 #include "utils.h"
 #include <errno.h>
 
+extern t_log *logger;
+
 void *serializar_paquete(t_paquete *paquete, int bytes)
 {
     void *magic = malloc(bytes);
@@ -126,40 +128,58 @@ void liberar_conexion(int socket_cliente)
 }
 
 // Server
-t_log *logger;
 
-int iniciar_servidor(void)
+
+void *client_handler(void *arg)
 {
-    int socket_servidor;
+    int socket_cliente = *(int *)arg;
+    int modulo = handshake_Server(socket_cliente);
+    switch (modulo) // se debería ejecutar un handler para cada modulo
+    {
+    case 1:
+        log_info(logger, "se conecto el modulo cpu");
+        break;
+    case 2:
+        log_info(logger, "se conecto el modulo memoria");
+        break;
+    case 3:
+        log_info(logger, "se conecto el modulo io");
+        break;
+    }
 
-    struct addrinfo hints, *server_info; //, *p;
+    bool conexion_terminada = false;
+    while (!conexion_terminada)
+    {
+        int cod_op = recibir_operacion(socket_cliente); // REVISARESTO
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    getaddrinfo(NULL, PUERTO_KERNEL, &hints, &server_info);
-
-    // Creamos el socket de escucha del servidor
-    socket_servidor = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-
-    // Asociamos el socket a un puerto
-    int resultado = bind(socket_servidor, server_info->ai_addr, server_info->ai_addrlen);
-    // Escuchamos las conexiones entrantes
-    resultado = listen(socket_servidor, SOMAXCONN); // error en el listen
-    printf("The last error message is: %s\n", strerror(errno));
-    freeaddrinfo(server_info);
-    log_info(logger, "Listo para escuchar a otro modulo"); // El profe puse log_trace
-
-    return socket_servidor;
-}
-
-int esperar_cliente(int socket_servidor)
-{
-    // Aceptamos un nuevo cliente
-    int socket_cliente = accept(socket_servidor, NULL, NULL);
-    return socket_cliente;
+        switch (cod_op)
+        {
+        case OPERACION_KERNEL_1:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_operacion1(socket_cliente);
+            break;
+        case OPERACION_CPU_1:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_operacion1(socket_cliente);
+            break;
+        case OPERACION_IO_1:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_operacion1(socket_cliente);
+            break;
+        case MENSAJE:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_mensaje(socket_cliente);
+            break;
+        case -1:
+            log_info(logger, "Se desconecto algun cliente");
+            conexion_terminada = true;
+            break;
+        default:
+            log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+            break;
+        }
+    }
+    close(socket_cliente);
 }
 
 int recibir_operacion(int socket_cliente)

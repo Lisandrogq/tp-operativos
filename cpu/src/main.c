@@ -43,52 +43,10 @@ void * cliente(){
 
 void * servidor(){
     logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
-    int server_fd = iniciar_servidor();
+    int server_fd = iniciar_servidor(PUERTO_CPU,logger);
     log_info(logger, "Cpu listo para recibir");
-    int cliente_fd = esperar_cliente(server_fd);
-
-    int modulo = handshake_Server(cliente_fd);
-
-    switch (modulo)
-	{
-	case 0:
-	log_info(logger,"se conecto el modulo kernel");
-		break;
-	case 1:
-	log_info(logger,"se conecto el modulo cpu");
-		break;
-	case 2:
-	log_info(logger,"se conecto el modulo memoria");
-		break;
-	case 3:
-	log_info(logger,"se conecto el modulo io");
-		break;
-
-	}
-
-    while (1)
-    {
-	 	int cod_op = recibir_operacion(cliente_fd);
-        switch (cod_op)
-        {
-        case OPERACION_IO_1:
-			//capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			recibir_operacion1(cliente_fd);
-			break;
-        case MENSAJE:
-	 		recibir_mensaje(cliente_fd);
-             break;
-        case -1:
-            log_info(logger, "Se desconecto el cliente");
-			return terminarServidor(server_fd, cliente_fd); //Por ahora esta bien que se cierra en un futuro no se si sea lo mejor
-			break;
-        default:
-             log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-             break;
-        }
-    }
-	terminarServidor(server_fd, cliente_fd);
-	return EXIT_FAILURE;
+    int socket_cliente = esperar_cliente_cpu(server_fd);//como el cpu solo escucha al kernel, no hace falta multiplexar
+	client_handler(socket_cliente);
 }
 t_log* iniciar_logger(void)
 {

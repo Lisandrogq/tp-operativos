@@ -8,14 +8,15 @@
 #include<sys/socket.h>
 #include<netdb.h>
 #include<string.h>
+
 #include<commons/log.h>
 #include<commons/collections/list.h>
 #include<commons/config.h>
+#include<commons/string.h>
 
 #include<assert.h>
 #include<readline/readline.h>
 
-#include<commons/string.h>
 #include <utils/utils_generales.h>
 
 
@@ -56,8 +57,7 @@ extern t_log* logger;
 
 void* recibir_buffer(int*, int);
 
-int iniciar_servidor(void);
-int esperar_cliente(int);
+void* client_handler(void *arg);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
