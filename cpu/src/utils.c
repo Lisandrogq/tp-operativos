@@ -16,28 +16,13 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
     return magic;
 }
 
-int crear_conexion(char *ip, char *puerto)
+int esperar_cliente_cpu(int socket_servidor)
 {
-    struct addrinfo hints;
-    struct addrinfo *server_info;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    getaddrinfo(ip, puerto, &hints, &server_info);
-
-    // Ahora vamos a crear el socket.
-    int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-
-    // Ahora que tenemos el socket, vamos a conectarlo
-
-    freeaddrinfo(server_info); /// creo q esto deberia ir al final, antes del return
-    connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
-
+    // Aceptamos un nuevo cliente
+    int socket_cliente = accept(socket_servidor, NULL, NULL);
     return socket_cliente;
 }
+
 
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
@@ -65,7 +50,7 @@ int handshake(int socket_cliente)
 {
     size_t bytes;
 
-    int32_t handshake = 1; // PASAR ESTO A CONFIG en utils
+    int32_t handshake = HS_CPU; // PASAR ESTO A CONFIG en utils
     int32_t result;
 
     bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
@@ -128,20 +113,13 @@ void liberar_conexion(int socket_cliente)
 // Server
 t_log *logger;
 
-int esperar_cliente_cpu(int socket_servidor)
-{
-    // Aceptamos un nuevo cliente
-    int socket_cliente = accept(socket_servidor, NULL, NULL);
-    return socket_cliente;
-}
-
-int client_handler(int socket_cliente)
+void *client_handler_dispatch(int socket_cliente)
 {
     int modulo = handshake_Server(socket_cliente);
     switch (modulo) // se debería ejecutar un handler para cada modulo
     {
-    case 0:
-        log_info(logger, "se conecto el modulo kernel");
+    case HS_KERNEL:
+        log_info(logger, "se conecto el modulo kernel(dispatch)");
         break;
     default:
         log_warning(logger, "Cliente desconocido por cpu server.");
@@ -152,7 +130,6 @@ int client_handler(int socket_cliente)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
-        log_warning(logger,"codop:%i",cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -182,6 +159,54 @@ int client_handler(int socket_cliente)
     }
     close(socket_cliente);
 }
+
+void *client_handler_interrupt(int socket_cliente)
+{
+    int modulo = handshake_Server(socket_cliente);
+    switch (modulo) // se debería ejecutar un handler para cada modulo
+    {
+    case HS_KERNEL:
+        log_info(logger, "se conecto el modulo kernel(interrupt)");
+        break;
+    default:
+        log_warning(logger, "Cliente desconocido por cpu server.");
+        return -1;
+    }
+
+    bool conexion_terminada = false;
+    while (!conexion_terminada)
+    {
+        int cod_op = recibir_operacion(socket_cliente);
+        switch (cod_op)
+        {
+        case OPERACION_KERNEL_1:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_operacion1(socket_cliente);
+            break;
+        case OPERACION_CPU_1:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_operacion1(socket_cliente);
+            break;
+        case OPERACION_IO_1:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_operacion1(socket_cliente);
+            break;
+        case MENSAJE:
+            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+            recibir_mensaje(socket_cliente);
+            break;
+        case -1:
+            log_info(logger, "Se desconecto algun cliente");
+            conexion_terminada = true;
+            break;
+        default:
+            log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+            break;
+        }
+    }
+    close(socket_cliente);
+}
+
 int recibir_operacion(int socket_cliente)
 {
     int cod_op;
@@ -207,7 +232,7 @@ int handshake_Server(int socket_cliente)
 
     bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
 
-    if (handshake == 3)
+    if (handshake == HS_KERNEL|| handshake == HS_KERNEL) // handshake que enviará el kernel
     {
         bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
     }

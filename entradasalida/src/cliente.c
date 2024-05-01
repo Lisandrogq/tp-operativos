@@ -27,7 +27,7 @@ int main(void)
 	//ip = config_get_string_value(config, "IP_KERNEL");
 	//puerto = config_get_string_value(config, "PUERTO_KERNEL");
 	
-	conexion_fd = crear_conexion(ip, puerto);
+	conexion_fd = crear_conexion(ip, puerto,logger);
 	int resultado = handshake(conexion_fd);
 	
 	enviar_operacion(OPERACION_IO_1,modulo, conexion_fd); // modulo es la info que se mand

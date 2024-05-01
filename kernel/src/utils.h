@@ -37,7 +37,6 @@ typedef struct
 
 
 //Cliente
-int crear_conexion(char* ip, char* puerto);
 void enviar_operacion(int cod_op,char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);

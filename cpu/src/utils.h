@@ -36,7 +36,6 @@ typedef struct
 
 
 //Cliente
-int crear_conexion(char* ip, char* puerto);
 void enviar_operacion(int cod_op,char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);
@@ -53,11 +52,10 @@ void terminar_programa(int, t_log*, t_config*);
 
 //Server
 extern t_log* logger;
-
+int esperar_cliente_cpu(int socket_servidor);
 void* recibir_buffer(int*, int);
-
-int esperar_cliente_cpu (int);
-int client_handler(int socket_cliente);
+void *client_handler_interrupt(int socket_cliente);
+void *client_handler_dispatch(int socket_cliente);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);

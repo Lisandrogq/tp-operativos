@@ -32,7 +32,7 @@ void * cliente(){
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 	
-	conexion_fd = crear_conexion(ip, puerto);
+	conexion_fd = crear_conexion(ip, puerto,logger);
 	int resultado = handshake(conexion_fd);
 
 	enviar_operacion(OPERACION_CPU_1,modulo, conexion_fd);
@@ -41,12 +41,21 @@ void * cliente(){
 	return 0;
 }
 
-void * servidor(){
+void * servidor_interrupt(){
     logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
-    int server_fd = iniciar_servidor(PUERTO_CPU,logger);
-    log_info(logger, "Cpu listo para recibir");
-    int socket_cliente = esperar_cliente_cpu(server_fd);//como el cpu solo escucha al kernel, no hace falta multiplexar
-	client_handler(socket_cliente);
+    int server_fd = iniciar_servidor(PUERTO_CPU_INTERRUPT,logger);
+    log_info(logger, "Cpu-interruptlisto para recibir");
+    int socket_cliente = esperar_cliente_cpu(server_fd);
+	client_handler_interrupt(socket_cliente);
+}
+
+void * servidor_dispatch(){
+    logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
+    int server_fd = iniciar_servidor(PUERTO_CPU_DISPATCH,logger);
+    log_info(logger, "Cpu-dipatch listo para recibir");
+    int socket_cliente = esperar_cliente_cpu(server_fd);
+	client_handler_dispatch(socket_cliente);
+	
 }
 t_log* iniciar_logger(void)
 {
@@ -77,14 +86,22 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 int main(int argc, char const *argv[])
 {   
     int err;
-    err = pthread_create(&(tid[0]), NULL, servidor, NULL);
+    err = pthread_create(&(tid[0]), NULL, servidor_dispatch, NULL);
     if (err != 0){
-    	printf("\nHubo un problema al crear el thread servidor:[%s]", strerror(err));
+    	printf("\nHubo un problema al crear el thread servidor-cpu-dispatch:[%s]", strerror(err));
     	return err;
     }
-    printf("\nEl thread servidor inició su ejecución\n");
+    printf("\nEl thread servidor-cpu-dispatch inició su ejecución\n");
 
-    err = pthread_create(&(tid[1]), NULL, cliente, NULL);
+ err = pthread_create(&(tid[1]), NULL, servidor_interrupt, NULL);
+    if (err != 0){
+    	printf("\nHubo un problema al crear el thread servidor-cpu-interrupt:[%s]", strerror(err));
+    	return err;
+    }
+    printf("\nEl thread servidor-cpu-interrupt inició su ejecución\n");
+
+
+    err = pthread_create(&(tid[2]), NULL, cliente, NULL);
     if (err != 0){
     	printf("\nHubo un problema al crear el thread cliente:[%s]", strerror(err));
     	return err;
@@ -92,5 +109,6 @@ int main(int argc, char const *argv[])
     printf("\nEl thread cliente inició su ejecución\n");
     pthread_join(tid[0], NULL);
     pthread_join(tid[1], NULL);
+    pthread_join(tid[2], NULL);
     return 0;
 }

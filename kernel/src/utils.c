@@ -18,29 +18,6 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
     return magic;
 }
 
-int crear_conexion(char *ip, char *puerto)
-{
-    struct addrinfo hints;
-    struct addrinfo *server_info;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    getaddrinfo(ip, puerto, &hints, &server_info);
-
-    // Ahora vamos a crear el socket.
-    int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-
-    // Ahora que tenemos el socket, vamos a conectarlo
-
-    freeaddrinfo(server_info); /// creo q esto deberia ir al final, antes del return
-    connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
-
-    return socket_cliente;
-}
-
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
     // vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
@@ -66,8 +43,8 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 int handshake(int socket_cliente)
 {
     size_t bytes;
-
-    int32_t handshake = 0; // PASAR ESTO A CONFIG en utils
+    
+    int32_t handshake = HS_KERNEL; // PASAR ESTO A CONFIG en utils
     int32_t result;
 
     bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
@@ -75,7 +52,8 @@ int handshake(int socket_cliente)
 
     if (result != 0)
     {
-        exit(-1);
+        log_error(logger, "Error en el handshake");
+        return -1; // capaz habría q hacer mas cosas
     }
     return result;
 }
@@ -128,7 +106,6 @@ void liberar_conexion(int socket_cliente)
 }
 
 // Server
-
 
 void *client_handler(void *arg)
 {
