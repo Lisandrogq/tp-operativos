@@ -39,6 +39,23 @@ typedef enum
 	HS_IO,
 }hs_code;
 
+typedef struct pcb
+{
+	int pid,
+	int program_counter,
+	int quantum,
+
+
+};
+typedef struct registros_generales
+{
+	int pid,
+	int program_counter,
+	int quantum,
+	
+
+};
+
 
 /**
 * @fn    decir_hola
