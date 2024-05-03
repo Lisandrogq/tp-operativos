@@ -220,3 +220,21 @@ void recibir_operacion1(int socket_cliente)
     log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
     free(buffer);
 }
+
+//no se si van aca//
+// inicializo en 0 todos los registros para darles algun valor inicial// 
+registrosCPU* crearRegistrosCPU(){
+    registrosCPU* registrosCPU = malloc(sizeof(registrosCPU));
+    registrosCPU->PC = 0;
+    registrosCPU->AX = 0;
+    registrosCPU->BX = 0;
+    registrosCPU->CX = 0;
+    registrosCPU->DX = 0;
+    registrosCPU->EAX = 0;
+    registrosCPU->EBX = 0;
+    registrosCPU->ECX = 0;
+    registrosCPU->EDX = 0;
+    registrosCPU->SI = 0;
+    registrosCPU->DI = 0;
+    return registrosCPU;
+}

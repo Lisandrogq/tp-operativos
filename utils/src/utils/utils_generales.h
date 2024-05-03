@@ -8,9 +8,9 @@
 #include<signal.h>
 #include<unistd.h>
 #include<sys/socket.h>
-#include<netdb.h>
-#include<string.h>
-#include <pthread.h>
+#include	<netdb.h>
+#include	<string.h>
+#include	<pthread.h>
 #include <semaphore.h>
 #include<commons/log.h>
 
@@ -39,21 +39,40 @@ typedef enum
 	HS_IO,
 }hs_code;
 
-typedef struct pcb
+//estructura de pcb//
+typedef struct 
 {
-	int pid,
-	int program_counter,
-	int quantum,
+	int pid;
+	int program_counter;
+	int quantum;
+	registrosCPU* registrosCPU,
+}pcb;	
 
+//funcion de crear pcb//
+pcb* CrearPCB(int pid, int program_counter, int quantum, registrosCPU* registrosCPU);
+//void DestruirPCB(pcb* pcb);
 
-};
+//creo regsitrosCPU//
+typedef struct 
+{
+	uint32_t PC[4];
+	uint8_t AX[1];
+	uint8_t BX[1];
+	uint8_t CX[1];
+	uint8_t DX[1];
+	uint32_t EAX[4];
+	uint32_t EBX[4];
+	uint32_t ECX[4];
+	uint32_t EDX[4];
+	uint32_t SI[4];
+	uint32_t DI[4];
+}registrosCPU;
+
 typedef struct registros_generales
 {
-	int pid,
-	int program_counter,
-	int quantum,
-	
-
+	int pid;
+	int program_counter;
+	int quantum;
 };
 
 
