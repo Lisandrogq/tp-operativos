@@ -56,7 +56,6 @@ int esperar_cliente_cpu(int socket_servidor);
 void* recibir_buffer(int*, int);
 void *client_handler_interrupt(int socket_cliente);
 void *client_handler_dispatch(int socket_cliente);
-t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
 int handshake_Server(int);

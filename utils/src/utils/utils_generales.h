@@ -66,7 +66,7 @@ typedef struct
 	int pid;
 	int quantum;
 	registros_t *registros_t;
-	state_t* state;
+	state_t state;
 } pcb_t;
 
 pcb_t *crear_pcb(int pid);

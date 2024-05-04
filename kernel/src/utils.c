@@ -19,7 +19,7 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
     return magic;
 }
 
-void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
+void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)
 {
     // vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
     log_warning(logger,"enviar operacion: codop:%i",cod_op );
@@ -27,10 +27,17 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 
     paquete->codigo_operacion = cod_op;
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->buffer->size = strlen(mensaje) + 1;
+    paquete->buffer->size = sizeof(int) *2 + sizeof(registros_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
-    memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+    paquete->buffer->offset = 0;
+    
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.pid, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
 
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.quantum, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, pcb.registros, sizeof(registros_t));
     int bytes = paquete->buffer->size + 2 * sizeof(int);
 
     void *a_enviar = serializar_paquete(paquete, bytes);
@@ -38,6 +45,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
     send(socket_cliente, a_enviar, bytes, 0);
 
     free(a_enviar);
+    free(pcb.registros);
     eliminar_paquete(paquete);
 }
 
@@ -220,4 +228,39 @@ void recibir_operacion1(int socket_cliente)
     char *buffer = recibir_buffer(&size, socket_cliente);
     log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
     free(buffer);
+}
+pcb_t *crear_pcb(int pid)
+{// capaz hay q setear el quantum cuando sea RR
+	pcb_t *nuevo_pcb = malloc(sizeof(pcb_t));
+	memset(nuevo_pcb, 0, sizeof(pcb_t));
+
+    nuevo_pcb->pid = pid;
+    
+	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
+	memset(registros, 0, sizeof(registros_t));
+	nuevo_pcb->registros= registros;
+    nuevo_pcb->registros->AX = 3;
+
+	return nuevo_pcb;
+}
+void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
+{
+    // vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
+
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+
+    paquete->codigo_operacion = cod_op;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = strlen(mensaje) + 1;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_cliente, a_enviar, bytes, 0);
+
+    free(a_enviar);
+    eliminar_paquete(paquete);
 }

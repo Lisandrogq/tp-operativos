@@ -30,6 +30,7 @@ typedef enum
 typedef struct
 {
 	int size;
+	int offset;
 	void* stream;
 } t_buffer;
 
@@ -42,8 +43,9 @@ typedef struct
 
 
 //Cliente
-void esperar_iniciar_proceso(char *path,int conexion_fd);
 void enviar_operacion(int cod_op,char *mensaje, int socket_cliente);
+void esperar_iniciar_proceso_PCB(char *path,int conexion_fd);
+void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
@@ -63,12 +65,13 @@ extern t_log* logger;
 void* recibir_buffer(int*, int);
 
 void* client_handler(void *arg);
-t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
 int handshake_Server(int);
 int terminarServidor(int,int);
 void recibir_operacion1(int socket_cliente);
+void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
+pcb_t *crear_pcb(int pid);
 
 #endif /* UTILS_H_ */
 

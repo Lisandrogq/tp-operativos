@@ -50,6 +50,11 @@ void *client_handler(void *arg)
 			break;
 		case CREAR_PCB:
 			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			pcb_t* pcb = malloc(sizeof(pcb_t));
+			pcb = recibir_paquete(socket_cliente);
+			log_info(logger, "Pid: %i", pcb->pid);
+			log_info(logger, "Quantum: %i", pcb->quantum);
+			log_info(logger, "Registros: %i", pcb->registros->AX);
 			handle_crear_pcb(socket_cliente);
 			break;
 
@@ -134,4 +139,36 @@ void *recibir_buffer(int *size, int socket_cliente)
 	recv(socket_cliente, buffer, *size, MSG_WAITALL);
 
 	return buffer;
+}
+typedef struct
+{
+	int size;
+	int offset;
+	void* stream;
+} t_buffer;
+
+typedef struct
+{
+	op_code codigo_operacion;
+	t_buffer* buffer;
+} t_paquete;
+
+pcb_t *recibir_paquete(int socket_cliente){
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	pcb_t* pcb = malloc(sizeof(pcb_t));
+	pcb->registros = malloc(sizeof(registros_t));
+	void* stream = paquete->buffer->stream;
+	memcpy(&(pcb->pid), stream, sizeof(int));
+    stream += sizeof(int);
+	memcpy(&(pcb->quantum), stream, sizeof(int));
+    stream += sizeof(int);
+	memcpy(pcb->registros, stream, sizeof(registros_t));
+    
+	return pcb;
 }

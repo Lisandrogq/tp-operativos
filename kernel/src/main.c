@@ -79,6 +79,8 @@ void *cliente_memoria()
 		return;
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "segundo mensaje", conexion_fd);
+	pcb_t * pcb = crear_pcb(1);
+	enviar_operacion_PCB(CREAR_PCB, *pcb, conexion_fd);
 	esperar_iniciar_proceso("pathxd", conexion_fd);
 	return 0;
 }
@@ -133,7 +135,7 @@ void esperar_iniciar_proceso(char *path, int conexion_fd)
 		if (operacion == 0)
 		{
 			next_pid++;
-			enviar_operacion(CREAR_PCB, "next_pid", conexion_fd);
+			//enviar_operacion(CREAR_PCB, "next_pid", conexion_fd);
 		}
 
 		// else{		//--algo así va a ser necesario cuando soportemos varias ops por consola. o consumidor productor
