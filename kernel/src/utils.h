@@ -19,7 +19,11 @@
 
 #include <utils/utils_generales.h>
 
+typedef enum
+{	//habría q ver como podemos unificar esto en un solo archivo
+	INICIAR_PROCESO,
 
+}kernel_opcode;
 
 
 //Cliente
@@ -36,7 +40,9 @@ typedef struct
 } t_paquete;
 
 
+
 //Cliente
+void esperar_iniciar_proceso(char *path,int conexion_fd);
 void enviar_operacion(int cod_op,char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);

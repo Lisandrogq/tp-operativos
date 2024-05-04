@@ -6,7 +6,11 @@
 			"functional": "c",
 			"cerrno": "c",
 			"cstdlib": "c",
-			"string": "c"
+			"string": "c",
+			"array": "c",
+			"string_view": "c",
+			"initializer_list": "c",
+			"utility": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

@@ -7,11 +7,15 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "utils.h"
+#include <errno.h>
 
 t_log *logger;
 t_config *config;
-
 pthread_t tid[3];
+
+pthread_mutex_t operacion_mutex;
+int operacion;
+int next_pid = 0; // REVISAR SI ESTO NECESITA SEMAFORO
 
 void *cliente_cpu_dispatch()
 {
@@ -33,7 +37,6 @@ void *cliente_cpu_dispatch()
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
 	return 0;
 }
-
 
 void *cliente_cpu_interrupt()
 {
@@ -72,9 +75,9 @@ void *cliente_memoria()
 	int resultado = handshake(conexion_fd);
 	if (resultado == -1)
 		return;
-
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "segundo mensaje", conexion_fd);
+	esperar_iniciar_proceso("pathxd", conexion_fd);
 	return 0;
 }
 
@@ -117,8 +120,31 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 	config_destroy(config);
 	liberar_conexion(conexion);
 }
+
+// FUNCIONES DE CONSOLA
+void esperar_iniciar_proceso(char *path, int conexion_fd)
+{
+	while (1) // revisar
+	{
+		pthread_mutex_lock(&operacion_mutex);
+
+		if (operacion == 0)
+		{
+			next_pid++;
+			enviar_operacion(CREAR_PCB, "next_pid", conexion_fd);
+		}
+		// else{		//--algo así va a ser necesario cuando soportemos varias ops por consola. o consumidor productor
+		// 	pthread_mutex_lock(&operacion_mutex); 
+		// }
+	}
+}
+
+
 int main(int argc, char const *argv[])
 {
+
+	pthread_mutex_init(&operacion_mutex, NULL);
+	pthread_mutex_lock (&operacion_mutex);
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
 	config = iniciar_config();
@@ -157,9 +183,13 @@ int main(int argc, char const *argv[])
 	}
 	log_info(logger, "El thread cliente_memoria inició su ejecución");
 
+	// esto se escribe por consola:
+	operacion = INICIAR_PROCESO;
+	pthread_mutex_unlock(&operacion_mutex);
+
 	pthread_join(tid[0], NULL);
 	pthread_detach(tid[1]);
 	pthread_detach(tid[2]);
-	pthread_detach(tid[3]);
+	pthread_join(tid[3], NULL);
 	return 0;
 }

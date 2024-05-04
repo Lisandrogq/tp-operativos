@@ -15,7 +15,7 @@
 #include <semaphore.h>
 
 extern t_log *logger;
-
+void handle_crear_pcb(int socket_cliente);
 void *recibir_buffer(int *, int);
 void* client_handler(void *arg);
 t_list *recibir_paquete(int);

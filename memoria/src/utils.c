@@ -29,7 +29,7 @@ void *client_handler(void *arg)
 	while (!conexion_terminada)
 	{
 		int cod_op = recibir_operacion(socket_cliente);
-
+		log_warning(logger,"codop:%i",cod_op); 
 		switch (cod_op)
 		{
 		case OPERACION_KERNEL_1:
@@ -48,6 +48,11 @@ void *client_handler(void *arg)
 			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
 			recibir_mensaje(socket_cliente);
 			break;
+		case CREAR_PCB:
+			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+			handle_crear_pcb(socket_cliente);
+			break;
+
 		case -1:
 			log_info(logger, "Se desconecto algun cliente");
 			conexion_terminada = true;
@@ -85,7 +90,7 @@ int handshake_Server(int socket_cliente)
 
 	bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
 
-	if (handshake == HS_KERNEL  || handshake == HS_CPU || handshake == HS_IO)
+	if (handshake == HS_KERNEL || handshake == HS_CPU || handshake == HS_IO)
 	{
 		bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
 	}
@@ -109,6 +114,14 @@ void recibir_operacion1(int socket_cliente)
 	int size;
 	char *buffer = recibir_buffer(&size, socket_cliente);
 	log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
+	free(buffer);
+}
+
+void handle_crear_pcb(int socket_cliente)
+{
+	int size;
+	int *buffer = recibir_buffer(&size, socket_cliente);
+	log_info(logger, "Me llego la operacion crear_pcb, el pid es: %s", buffer);
 	free(buffer);
 }
 
