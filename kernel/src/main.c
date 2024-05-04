@@ -33,6 +33,8 @@ void *cliente_cpu_dispatch()
 	conexion_fd = crear_conexion(ip, puerto, logger);
 	int resultado = handshake(conexion_fd);
 
+	//hay que enviar pcb//
+
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
 	return 0;
@@ -133,6 +135,7 @@ void esperar_iniciar_proceso(char *path, int conexion_fd)
 			next_pid++;
 			enviar_operacion(CREAR_PCB, "next_pid", conexion_fd);
 		}
+
 		// else{		//--algo así va a ser necesario cuando soportemos varias ops por consola. o consumidor productor
 		// 	pthread_mutex_lock(&operacion_mutex); 
 		// }

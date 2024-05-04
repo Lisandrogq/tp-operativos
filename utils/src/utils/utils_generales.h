@@ -37,6 +37,15 @@ typedef enum
 	HS_IO,
 } hs_code;
 
+// Estados de pcb//
+typedef enum{
+	NEW,
+	READY,
+	EXEC,
+	BLOCK,
+	EXIT
+} state_t;
+
 typedef struct
 {
 	uint32_t PC;
@@ -57,6 +66,7 @@ typedef struct
 	int pid;
 	int quantum;
 	registros_t *registros_t;
+	state_t* state;
 } pcb_t;
 
 pcb_t *crear_pcb(int pid);
