@@ -21,6 +21,27 @@
 
 typedef enum
 { // habría q ver como podemos unificar esto en un solo archivo
+	SET,
+	MOV_IN,
+	MOV_OUTSUM,
+	SUB,
+	JNZ,
+	RESIZE,
+	COPY_STRING,
+	WAIT,
+	SIGNAL,
+	IO_STDIN_READ,
+	IO_STDOUT_WRITE,
+	IO_FS_CREATE,
+	IO_FS_DELETE,
+	IO_FS_TRUNCATE,
+	IO_FS_WRITE,
+	IO_FS_READ,
+	EXIT_P,
+} instruction_code;
+
+typedef enum
+{ // habría q ver como podemos unificar esto en un solo archivo
 	MENSAJE,
 	PAQUETE,
 	OPERACION_IO_1,
@@ -38,12 +59,13 @@ typedef enum
 } hs_code;
 
 // Estados de pcb//
-typedef enum{
-	NEW,
-	READY,
-	EXEC,
-	BLOCK,
-	EXIT
+typedef enum
+{
+	NEW_S,
+	READY_S,
+	EXEC_S,
+	BLOCK_S,
+	EXIT_S
 } state_t;
 
 typedef struct
@@ -65,7 +87,7 @@ typedef struct
 {
 	int pid;
 	int quantum;
-	registros_t *registros_t;
+	registros_t *registros;
 	state_t state;
 } pcb_t;
 

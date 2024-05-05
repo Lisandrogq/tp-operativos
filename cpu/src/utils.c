@@ -1,6 +1,12 @@
 #include "utils.h"
 #include <errno.h>
 
+void cpu_set(uint32_t *p1, int p2) // uint32_t revisar implementacion(puede venir un uint32_t o un uint8_t)
+{
+    *p1 = p2; //chequear si esto realmente pone p2 en lo contenido por p1
+
+}
+
 void *serializar_paquete(t_paquete *paquete, int bytes)
 {
     void *magic = malloc(bytes);
@@ -22,7 +28,6 @@ int esperar_cliente_cpu(int socket_servidor)
     int socket_cliente = accept(socket_servidor, NULL, NULL);
     return socket_cliente;
 }
-
 
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
@@ -232,7 +237,7 @@ int handshake_Server(int socket_cliente)
 
     bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
 
-    if (handshake == HS_KERNEL|| handshake == HS_KERNEL) // handshake que enviará el kernel
+    if (handshake == HS_KERNEL || handshake == HS_KERNEL) // handshake que enviará el kernel
     {
         bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
     }

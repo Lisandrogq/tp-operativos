@@ -43,7 +43,7 @@ typedef struct
 
 
 //Cliente
-void enviar_operacion(int cod_op,char *mensaje, int socket_cliente);
+void enviar_operacion(int cod_op ,char *mensaje, int socket_cliente);
 void esperar_iniciar_proceso_PCB(char *path,int conexion_fd);
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
 int handshake(int socket_cliente);

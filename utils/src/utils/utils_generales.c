@@ -99,11 +99,11 @@ pcb_t *crear_pcb(int pid)
 	memset(nuevo_pcb, 0, sizeof(pcb_t));
 
     nuevo_pcb->pid = pid;
-    nuevo_pcb->state = malloc(sizeof(state_t));
-    nuevo_pcb->state = NEW;
+   // nuevo_pcb->state = malloc(sizeof(state_t)); esto da error, revisar
+   // nuevo_pcb->state = NEW_S;
 	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
 	memset(registros, 0, sizeof(registros_t));
-	nuevo_pcb->registros_t= registros;
+	nuevo_pcb->registros= registros;
 
 	return nuevo_pcb;
 }
