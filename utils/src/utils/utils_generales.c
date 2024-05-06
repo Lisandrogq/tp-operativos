@@ -99,11 +99,21 @@ pcb_t *crear_pcb(int pid)
 	memset(nuevo_pcb, 0, sizeof(pcb_t));
 
     nuevo_pcb->pid = pid;
-   // nuevo_pcb->state = malloc(sizeof(state_t)); esto da error, revisar
-   // nuevo_pcb->state = NEW_S;
+    
 	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
 	memset(registros, 0, sizeof(registros_t));
 	nuevo_pcb->registros= registros;
+    nuevo_pcb->registros->AX = 3;
 
 	return nuevo_pcb;
+}
+void eliminar_pcb(pcb_t *pcb){
+    free(pcb->registros);
+    free(pcb);
+}
+void eliminar_paquete(t_paquete *paquete)
+{
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
 }

@@ -25,23 +25,6 @@ typedef enum
 
 }kernel_opcode;
 
-
-//Cliente
-typedef struct
-{
-	int size;
-	int offset;
-	void* stream;
-} t_buffer;
-
-typedef struct
-{
-	op_code codigo_operacion;
-	t_buffer* buffer;
-} t_paquete;
-
-
-
 //Cliente
 void enviar_operacion(int cod_op ,char *mensaje, int socket_cliente);
 void esperar_iniciar_proceso_PCB(char *path,int conexion_fd);
@@ -51,7 +34,6 @@ t_paquete* crear_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
-void eliminar_paquete(t_paquete* paquete);
 t_log* iniciar_logger(void);
 t_config* iniciar_config(void);
 void leer_consola(t_log*);

@@ -90,13 +90,6 @@ int handshake(int socket_cliente)
         free(a_enviar);
     }
 
-    void eliminar_paquete(t_paquete * paquete)
-    {
-        free(paquete->buffer->stream);
-        free(paquete->buffer);
-        free(paquete);
-    }
-
     void liberar_conexion(int socket_cliente)
     {
         close(socket_cliente);

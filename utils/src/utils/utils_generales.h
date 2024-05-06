@@ -49,7 +49,8 @@ typedef enum
 	OPERACION_IO_1,
 	OPERACION_KERNEL_1,
 	CREAR_PCB,
-	OPERACION_CPU_1
+	OPERACION_CPU_1,
+	ELIMINAR_PCB,
 } op_code;
 
 typedef enum
@@ -93,7 +94,21 @@ typedef struct
 	state_t state;
 } pcb_t;
 
+typedef struct
+{
+	int size;
+	int offset;
+	void* stream;
+} t_buffer;
+typedef struct
+{
+	op_code codigo_operacion;
+	t_buffer *buffer;
+} t_paquete;
+
 pcb_t *crear_pcb(int pid);
+void eliminar_pcb(pcb_t* pcb);
+void eliminar_paquete(t_paquete* paquete);
 
 /**
  * @fn    decir_hola

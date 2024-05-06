@@ -55,9 +55,10 @@ void *client_handler(void *arg)
 			log_info(logger, "Pid: %i", pcb->pid);
 			log_info(logger, "Quantum: %i", pcb->quantum);
 			log_info(logger, "Registros: %i", pcb->registros->AX);
-			handle_crear_pcb(socket_cliente);
 			break;
-
+		case ELIMINAR_PCB:
+			eliminar_pcb(pcb);
+			break;
 		case -1:
 			log_info(logger, "Se desconecto algun cliente");
 			conexion_terminada = true;
@@ -140,19 +141,6 @@ void *recibir_buffer(int *size, int socket_cliente)
 
 	return buffer;
 }
-typedef struct
-{
-	int size;
-	int offset;
-	void* stream;
-} t_buffer;
-
-typedef struct
-{
-	op_code codigo_operacion;
-	t_buffer* buffer;
-} t_paquete;
-
 pcb_t *recibir_paquete(int socket_cliente){
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
@@ -169,6 +157,6 @@ pcb_t *recibir_paquete(int socket_cliente){
 	memcpy(&(pcb->quantum), stream, sizeof(int));
     stream += sizeof(int);
 	memcpy(pcb->registros, stream, sizeof(registros_t));
-    
+	eliminar_paquete(paquete);
 	return pcb;
 }

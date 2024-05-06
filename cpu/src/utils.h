@@ -21,17 +21,6 @@
 // Cliente
 typedef struct
 {
-	int size;
-	void *stream;
-} t_buffer;
-
-typedef struct
-{
-	op_code codigo_operacion;
-	t_buffer *buffer;
-} t_paquete;
-typedef struct
-{
 	int cod_instruccion;
 	void *p1;
 	void *p2;
@@ -56,7 +45,6 @@ t_paquete *crear_paquete(void);
 void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio);
 void enviar_paquete(t_paquete *paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
-void eliminar_paquete(t_paquete *paquete);
 t_log *iniciar_logger(void);
 t_config *iniciar_config(void);
 void leer_consola(t_log *);

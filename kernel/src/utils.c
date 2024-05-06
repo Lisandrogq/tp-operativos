@@ -21,7 +21,7 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
 
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)
 {
-    // vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
+    
     log_warning(logger,"enviar operacion: codop:%i",cod_op );
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
@@ -45,7 +45,6 @@ void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)
     send(socket_cliente, a_enviar, bytes, 0);
 
     free(a_enviar);
-    free(pcb.registros);
     eliminar_paquete(paquete);
 }
 
@@ -102,12 +101,6 @@ void enviar_paquete(t_paquete *paquete, int socket_cliente)
     free(a_enviar);
 }
 
-void eliminar_paquete(t_paquete *paquete)
-{
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
 
 void liberar_conexion(int socket_cliente)
 {
@@ -228,20 +221,6 @@ void recibir_operacion1(int socket_cliente)
     char *buffer = recibir_buffer(&size, socket_cliente);
     log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
     free(buffer);
-}
-pcb_t *crear_pcb(int pid)
-{// capaz hay q setear el quantum cuando sea RR
-	pcb_t *nuevo_pcb = malloc(sizeof(pcb_t));
-	memset(nuevo_pcb, 0, sizeof(pcb_t));
-
-    nuevo_pcb->pid = pid;
-    
-	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
-	memset(registros, 0, sizeof(registros_t));
-	nuevo_pcb->registros= registros;
-    nuevo_pcb->registros->AX = 3;
-
-	return nuevo_pcb;
 }
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
