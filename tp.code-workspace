@@ -11,7 +11,8 @@
 			"string_view": "c",
 			"initializer_list": "c",
 			"utility": "c",
-			"atomic": "c"
+			"atomic": "c",
+			"numbers": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

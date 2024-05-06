@@ -1,0 +1,1 @@
+- [ ] Revisar si hace falta un hilo que solo este en rcv para escuchar las solicitudes a IO desde CPU
