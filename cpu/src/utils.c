@@ -1,10 +1,21 @@
 #include "utils.h"
 #include <errno.h>
 
-void cpu_set(uint32_t *p1, int p2) // uint32_t revisar implementacion(puede venir un uint32_t o un uint8_t)
+void execute_set(uint32_t *r_destino, int valor) // uint32_t revisar implementacion(puede venir un uint32_t o un uint8_t)
 {
-    *p1 = p2; //chequear si esto realmente pone p2 en lo contenido por p1
-
+    *r_destino = valor; // chequear si esto realmente pone p2 en lo contenido por p1
+}
+void execute_sum(uint32_t *r_destino, uint32_t *r_origen)
+{
+    *r_destino = *r_destino + *r_origen;
+}
+void execute_sub(uint32_t *r_destino, uint32_t *r_origen)
+{
+    *r_destino = *r_destino - *r_origen;
+}
+void execute_jnz(uint32_t *registro, uint32_t *nuevo_pc, registros_t *contexto) //habría que ver si hay alguna forma para no pasar el contexto
+{
+    if(*registro!=0) contexto->PC = nuevo_pc;
 }
 
 void *serializar_paquete(t_paquete *paquete, int bytes)

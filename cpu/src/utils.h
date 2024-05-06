@@ -43,8 +43,12 @@ typedef struct
 t_instruccion *fetch(int conexion_fd, int PC);
 void decode();
 void execute(t_instruccion *instruccion);
+void check_intr();
 
-void cpu_set(uint32_t *p1, int p2);
+void execute_set(uint32_t *r_destino, int valor);
+void execute_sum(uint32_t *r_destino, uint32_t *r_origen);
+void execute_sub(uint32_t *r_destino, uint32_t *r_origen);
+void execute_jnz(uint32_t *registro, uint32_t *nuevo_pc, registros_t *contexto);
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);

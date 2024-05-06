@@ -20,25 +20,37 @@ void ejecutar_cliclos(int conexion_fd)
 {
 	while (!terminar_modulo)
 	{
-		t_instruccion *instruccion = fetch(conexion_fd,contexto->PC);//hace falta enviar el pid??
-		decode(); // por ahora no sabemos q hacer en decode
+		t_instruccion *instruccion = fetch(conexion_fd, contexto->PC); // hace falta enviar el pid??
+		decode();													   // por ahora no sabemos q hacer en decode
 		execute(instruccion);
-
+		check_intr();
 		terminar_modulo = true;
-		contexto->PC += 1;
 	}
 }
 t_instruccion *fetch(int conexion_fd, int PC)
 {
-	// aca se haría send a socket de memoria y recv instruccion
-	// esto es para ver si anda, sirve de base para la deserializacion.
 	t_instruccion *instruccion;
 	instruccion = malloc(sizeof(t_instruccion));
-	instruccion->cod_instruccion = 0;
-	instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	strcpy(instruccion->p1, "EDX");
-	instruccion->p2 = 2 * 2 * 2 * 2 + 42;
+	memset(instruccion, 0, sizeof(t_instruccion));
+	// aca se haría send a socket de memoria y recv instruccion
+	// esto es para ver si anda, sirve de base para la deserializacion.
+	// instruccion->cod_instruccion = SET;
+	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	// strcpy(instruccion->p1, "EDX");
+	// instruccion->p2 = 2 * 2 * 2 * 2 + 42;
 
+	// instruccion->cod_instruccion = SUB;
+	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	// strcpy(instruccion->p1, "AX");
+	// instruccion->p2 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	// strcpy(instruccion->p2, "BX");
+
+	instruccion->cod_instruccion = JNZ;
+	instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	strcpy(instruccion->p1, "AX");
+	instruccion->p2 = 31;
+
+	contexto->PC += 1; //EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
 	return instruccion;
 }
 void decode() {}
@@ -49,12 +61,42 @@ void execute(t_instruccion *instruccion)
 	{
 		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
 		int p2 = instruccion->p2;
-		cpu_set(p1, p2);
+		execute_set(p1, p2);
+		free((instruccion->p1));
+		free(instruccion);
 	}
-	free((instruccion->p1));
-	free(instruccion);
+	if (instruccion->cod_instruccion == SUM)
+	{
+		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
+		u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
+		execute_sum(p1, p2);
+		free((instruccion->p1));
+		free((instruccion->p2));
+		free(instruccion);
+	}
+	if (instruccion->cod_instruccion == SUB)
+	{
+		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
+		u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
+		execute_sub(p1, p2);
+		free((instruccion->p1));
+		free((instruccion->p2));
+		free(instruccion);
+	}
+	if (instruccion->cod_instruccion == JNZ)
+	{
+		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
+		int p2 = instruccion->p2;
+		execute_jnz(p1, p2,contexto);
+		free((instruccion->p1));
+		free(instruccion);
+	}
+	if (instruccion->cod_instruccion == IO_GEN_SLEEP)
+	{
+		// todo
+	}
 }
-
+void check_intr(){}
 void *servidor_interrupt()
 {
 	logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
@@ -138,7 +180,8 @@ int iniciar_conexion_memoria(t_config *config, t_log *logger)
 
 	return conexion_fd;
 }
-t_dictionary * inicializar_diccionario(){
+t_dictionary *inicializar_diccionario()
+{
 	dictionary = dictionary_create();
 	dictionary_put(dictionary, "AX", &(contexto->AX));
 	dictionary_put(dictionary, "BX", &(contexto->BX));
@@ -171,9 +214,16 @@ int main(int argc, char const *argv[])
 	iniciar_thread_interrupt();
 	conexion_fd = iniciar_conexion_memoria(config, logger);
 
-	log_info(logger, "antes EDX:%i", contexto->EDX);
+	contexto->AX = 0;
+	contexto->BX = 0;
+	contexto->PC = 5;
+	log_info(logger, "antes AX:%i", contexto->AX);
+	log_info(logger, "antes BX:%i", contexto->BX);
+	log_info(logger, "antes PC:%i", contexto->PC);
 	ejecutar_cliclos(conexion_fd);
-	log_info(logger, "despues EDX:%i", contexto->EDX);
+	log_info(logger, "despues AX:%i", contexto->AX);
+	log_info(logger, "antes BX:%i", contexto->BX);
+	log_info(logger, "despues PC:%i", contexto->PC);
 
 	pthread_join(tid[0], NULL);
 	pthread_join(tid[1], NULL);
