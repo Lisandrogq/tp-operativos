@@ -81,8 +81,8 @@ void *cliente_memoria()
 	enviar_operacion(MENSAJE, "segundo mensaje", conexion_fd);
 	pcb_t * pcb = crear_pcb(1);
 	enviar_operacion_PCB(CREAR_PCB, *pcb, conexion_fd);
-	//enviar_operacion_PCB(ELIMINAR_PCB, *pcb, conexion_fd); Por alguna razon esta linea hace que lleguen muchos codops distintos a memoria
-	//eliminar_pcb(pcb);
+	enviar_operacion_PCB(ELIMINAR_PCB, *pcb, conexion_fd); 
+	eliminar_pcb(pcb);
 	esperar_iniciar_proceso("pathxd", conexion_fd);
 	return 0;
 }

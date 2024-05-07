@@ -57,6 +57,7 @@ void *client_handler(void *arg)
 			log_info(logger, "Registros: %i", pcb->registros->AX);
 			break;
 		case ELIMINAR_PCB:
+			pcb = recibir_paquete(socket_cliente);
 			eliminar_pcb(pcb);
 			break;
 		case -1:
