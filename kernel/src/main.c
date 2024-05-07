@@ -17,6 +17,18 @@ pthread_mutex_t operacion_mutex;
 int operacion;
 int next_pid = 0; // REVISAR SI ESTO NECESITA SEMAFORO
 
+void *consola(){
+	char *linea;
+    while (1) {
+        linea = readline(">");
+        if (!linea) {
+            break;
+        }
+        
+        free(linea);
+	}
+}
+
 void *cliente_cpu_dispatch()
 {
 
