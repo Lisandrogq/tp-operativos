@@ -1,9 +1,20 @@
 #include "utils.h"
 #include <errno.h>
 
-void execute_set(uint32_t *r_destino, int valor) // uint32_t revisar implementacion(puede venir un uint32_t o un uint8_t)
+t_dictionary *dictionary;
+
+void execute_set(char *nombre_r_destino, int valor)
 {
-    *r_destino = valor; // chequear si esto realmente pone p2 en lo contenido por p1
+	if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+	{
+		u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+		*r_destino = valor;
+	}
+	else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
+	{
+		u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+		*r_destino = valor;
+	}
 }
 void execute_sum(uint32_t *r_destino, uint32_t *r_origen)
 {

@@ -18,6 +18,8 @@
 #include <commons/string.h>
 #include <utils/utils_generales.h>
 
+
+extern t_dictionary *dictionary;
 // Cliente
 typedef struct
 {
@@ -34,7 +36,7 @@ void decode();
 void execute(t_instruccion *instruccion);
 void check_intr();
 
-void execute_set(uint32_t *r_destino, int valor);
+void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(uint32_t *r_destino, uint32_t *r_origen);
 void execute_sub(uint32_t *r_destino, uint32_t *r_origen);
 void execute_jnz(uint32_t *registro, uint32_t *nuevo_pc, registros_t *contexto);

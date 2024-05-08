@@ -14,7 +14,8 @@ pthread_t tid[2];
 registros_t *contexto;
 int pid;
 bool terminar_modulo = false;
-t_dictionary *dictionary;
+
+
 
 void ejecutar_cliclos(int conexion_fd)
 {
@@ -32,12 +33,12 @@ t_instruccion *fetch(int conexion_fd, int PC)
 	t_instruccion *instruccion;
 	instruccion = malloc(sizeof(t_instruccion));
 	memset(instruccion, 0, sizeof(t_instruccion));
-	// aca se haría send a socket de memoria y recv instruccion
-	// esto es para ver si anda, sirve de base para la deserializacion.
-	// instruccion->cod_instruccion = SET;
-	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	// strcpy(instruccion->p1, "EDX");
-	// instruccion->p2 = 2 * 2 * 2 * 2 + 42;
+	/// aca se haría send a socket de memoria y recv instruccion
+	/// esto es para ver si anda, sirve de base para la deserializacion.
+	instruccion->cod_instruccion = SET;
+	instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	strcpy(instruccion->p1, "EDX");
+	instruccion->p2 = 37;
 
 	// instruccion->cod_instruccion = SUB;
 	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
@@ -45,12 +46,12 @@ t_instruccion *fetch(int conexion_fd, int PC)
 	// instruccion->p2 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
 	// strcpy(instruccion->p2, "BX");
 
-	instruccion->cod_instruccion = JNZ;
-	instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	strcpy(instruccion->p1, "AX");
-	instruccion->p2 = 31;
+	// instruccion->cod_instruccion = JNZ;
+	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	// strcpy(instruccion->p1, "AX");
+	// instruccion->p2 = 31;
 
-	contexto->PC += 1; //EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
+	contexto->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
 	return instruccion;
 }
 void decode() {}
@@ -59,9 +60,8 @@ void execute(t_instruccion *instruccion)
 
 	if (instruccion->cod_instruccion == SET)
 	{
-		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
-		int p2 = instruccion->p2;
-		execute_set(p1, p2);
+		// u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
+		execute_set(instruccion->p1, instruccion->p2);
 		free((instruccion->p1));
 		free(instruccion);
 	}
@@ -87,7 +87,7 @@ void execute(t_instruccion *instruccion)
 	{
 		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
 		int p2 = instruccion->p2;
-		execute_jnz(p1, p2,contexto);
+		execute_jnz(p1, p2, contexto);
 		free((instruccion->p1));
 		free(instruccion);
 	}
@@ -96,7 +96,7 @@ void execute(t_instruccion *instruccion)
 		// todo
 	}
 }
-void check_intr(){}
+void check_intr() {}
 void *servidor_interrupt()
 {
 	logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
@@ -214,15 +214,39 @@ int main(int argc, char const *argv[])
 	iniciar_thread_interrupt();
 	conexion_fd = iniciar_conexion_memoria(config, logger);
 
-	contexto->AX = 0;
-	contexto->BX = 0;
+	contexto->AX = 1;
+	contexto->BX = 2;
+	contexto->CX = 3;
+	contexto->DX = 4;
+	contexto->EAX = 5;
+	contexto->EBX = 6;
+	contexto->ECX = 7;
+	contexto->EDX = 8;
+	contexto->SI = 9;
+	contexto->DI = 10;
 	contexto->PC = 5;
 	log_info(logger, "antes AX:%i", contexto->AX);
 	log_info(logger, "antes BX:%i", contexto->BX);
+	log_info(logger, "antes CX:%i", contexto->CX);
+	log_info(logger, "antes DX:%i", contexto->DX);
+	log_info(logger, "antes EAX:%i", contexto->EAX);
+	log_info(logger, "antes EBX:%i", contexto->EBX);
+	log_info(logger, "antes ECX:%i", contexto->ECX);
+	log_info(logger, "antes EDX:%i", contexto->EDX);
+	log_info(logger, "antes SI:%i", contexto->SI);
+	log_info(logger, "antes DI:%i", contexto->DI);
 	log_info(logger, "antes PC:%i", contexto->PC);
 	ejecutar_cliclos(conexion_fd);
 	log_info(logger, "despues AX:%i", contexto->AX);
-	log_info(logger, "antes BX:%i", contexto->BX);
+	log_info(logger, "despues BX:%i", contexto->BX);
+	log_info(logger, "despues CX:%i", contexto->CX);
+	log_info(logger, "despues DX:%i", contexto->DX);
+	log_info(logger, "despues EAX:%i", contexto->EAX);
+	log_info(logger, "despues EBX:%i", contexto->EBX);
+	log_info(logger, "despues ECX:%i", contexto->ECX);
+	log_info(logger, "despues EDX:%i", contexto->EDX);
+	log_info(logger, "despues SI:%i", contexto->SI);
+	log_info(logger, "despues DI:%i", contexto->DI);
 	log_info(logger, "despues PC:%i", contexto->PC);
 
 	pthread_join(tid[0], NULL);
