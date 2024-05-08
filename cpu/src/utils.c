@@ -5,28 +5,80 @@ t_dictionary *dictionary;
 
 void execute_set(char *nombre_r_destino, int valor)
 {
-	if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
-	{
-		u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
-		*r_destino = valor;
-	}
-	else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
-	{
-		u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
-		*r_destino = valor;
-	}
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+    {
+        u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        *r_destino = valor;
+    }
+    else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
+    {
+        u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        *r_destino = valor;
+    }
 }
-void execute_sum(uint32_t *r_destino, uint32_t *r_origen)
+void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
 {
-    *r_destino = *r_destino + *r_origen;
+    int sumando = 0;
+    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
+    {
+        u_int32_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        sumando = *r_origen;
+    }
+    else if (strlen(nombre_r_origen) == 2) // caso registros de 1 byte
+    {
+        u_int8_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        sumando = *r_origen;
+    }
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+    {
+        u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        *r_destino = *r_destino + sumando ;
+    }
+    else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
+    {
+        u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        *r_destino = *r_destino + sumando ;
+    }
 }
-void execute_sub(uint32_t *r_destino, uint32_t *r_origen)
+void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8 ES UNSIGNED, NO CREO Q SEA UN PROBLEMA EN LAS PRUEBAS PERO XD
 {
-    *r_destino = *r_destino - *r_origen;
+     int sustraendo = 0;
+    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
+    {
+        u_int32_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        sustraendo = *r_origen;
+    }
+    else if (strlen(nombre_r_origen) == 2) // caso registros de 1 byte
+    {
+        u_int8_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        sustraendo = *r_origen;
+    }
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+    {
+        u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        *r_destino = *r_destino - sustraendo ;
+    }
+    else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
+    {
+        u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        *r_destino = *r_destino - sustraendo ;
+    }
 }
-void execute_jnz(uint32_t *registro, uint32_t *nuevo_pc, registros_t *contexto) //habría que ver si hay alguna forma para no pasar el contexto
+void execute_jnz(char *nombre_r,uint32_t nuevo_pc, registros_t *contexto) // habría que ver si hay alguna forma para no pasar el contexto
 {
-    if(*registro!=0) contexto->PC = nuevo_pc;
+   
+    if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI")) // caso registros de 4 byte
+    {
+        u_int32_t *registro = dictionary_get(dictionary, nombre_r);
+        if (*registro != 0)
+        contexto->PC = nuevo_pc;
+    }
+    else if (strlen(nombre_r) == 2) // caso registros de 1 byte
+    {
+        u_int8_t *registro = dictionary_get(dictionary, nombre_r);
+        if (*registro != 0)
+        contexto->PC = nuevo_pc;
+    }
 }
 
 void *serializar_paquete(t_paquete *paquete, int bytes)

@@ -35,21 +35,21 @@ t_instruccion *fetch(int conexion_fd, int PC)
 	memset(instruccion, 0, sizeof(t_instruccion));
 	/// aca se haría send a socket de memoria y recv instruccion
 	/// esto es para ver si anda, sirve de base para la deserializacion.
-	instruccion->cod_instruccion = SET;
+	// instruccion->cod_instruccion = SET;
+	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	// strcpy(instruccion->p1, "EDX");
+	// instruccion->p2 = 37;
+
+	//  instruccion->cod_instruccion = SUB;
+	//  instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	//  strcpy(instruccion->p1, "EBX");
+	//  instruccion->p2 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	//  strcpy(instruccion->p2, "SI");
+
+	instruccion->cod_instruccion = JNZ;
 	instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	strcpy(instruccion->p1, "EDX");
-	instruccion->p2 = 37;
-
-	// instruccion->cod_instruccion = SUB;
-	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	// strcpy(instruccion->p1, "AX");
-	// instruccion->p2 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	// strcpy(instruccion->p2, "BX");
-
-	// instruccion->cod_instruccion = JNZ;
-	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	// strcpy(instruccion->p1, "AX");
-	// instruccion->p2 = 31;
+	strcpy(instruccion->p1, "BX");
+	instruccion->p2 = 31;
 
 	contexto->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
 	return instruccion;
@@ -67,27 +67,24 @@ void execute(t_instruccion *instruccion)
 	}
 	if (instruccion->cod_instruccion == SUM)
 	{
-		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
-		u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
-		execute_sum(p1, p2);
+		// u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
+		// u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
+		execute_sum(instruccion->p1, instruccion->p2);
 		free((instruccion->p1));
 		free((instruccion->p2));
 		free(instruccion);
 	}
 	if (instruccion->cod_instruccion == SUB)
 	{
-		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
-		u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
-		execute_sub(p1, p2);
+		execute_sub(instruccion->p1, instruccion->p2);
 		free((instruccion->p1));
 		free((instruccion->p2));
 		free(instruccion);
 	}
 	if (instruccion->cod_instruccion == JNZ)
 	{
-		u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
-		int p2 = instruccion->p2;
-		execute_jnz(p1, p2, contexto);
+		u_int32_t p2 = instruccion->p2;
+		execute_jnz(instruccion->p1, p2, contexto);
 		free((instruccion->p1));
 		free(instruccion);
 	}
@@ -215,7 +212,7 @@ int main(int argc, char const *argv[])
 	conexion_fd = iniciar_conexion_memoria(config, logger);
 
 	contexto->AX = 1;
-	contexto->BX = 2;
+	contexto->BX = 0;
 	contexto->CX = 3;
 	contexto->DX = 4;
 	contexto->EAX = 5;

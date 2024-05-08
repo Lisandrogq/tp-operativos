@@ -37,9 +37,9 @@ void execute(t_instruccion *instruccion);
 void check_intr();
 
 void execute_set(char *nombre_r_destino, int valor);
-void execute_sum(uint32_t *r_destino, uint32_t *r_origen);
-void execute_sub(uint32_t *r_destino, uint32_t *r_origen);
-void execute_jnz(uint32_t *registro, uint32_t *nuevo_pc, registros_t *contexto);
+void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
+void execute_sub(char *nombre_r_destino, char *nombre_r_origen);
+void execute_jnz(char *nombre_r,uint32_t nuevo_pc, registros_t *contexto);
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);

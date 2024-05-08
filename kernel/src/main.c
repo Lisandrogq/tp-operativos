@@ -17,7 +17,7 @@ pthread_mutex_t operacion_mutex;
 int operacion;
 int next_pid = 0; // REVISAR SI ESTO NECESITA SEMAFORO
 
-void *consola(){
+void *consola(){ //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
 	char *linea;
     while (1) {
         linea = readline(">");
