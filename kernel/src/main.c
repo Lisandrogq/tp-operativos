@@ -13,20 +13,32 @@ t_log *logger;
 t_config *config;
 pthread_t tid[3];
 
-pthread_mutex_t operacion_mutex;
-int operacion;
-int next_pid = 0; // REVISAR SI ESTO NECESITA SEMAFORO
 
-void *consola(){ //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
+void *consola()
+{ //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
 	char *linea;
-    while (1) {
-        linea = readline(">");
-        if (!linea) {
-            break;
-        }
-        
-        free(linea);
+	char *instruccion[2];
+	while (1)
+	{
+		linea = readline(">");
+		instruccion[0] = malloc(39);//CAMBIAR 39 POR ALGO!!!!!
+		instruccion[1] = malloc(39);
+		instruccion[0] = strtok(linea, " ");
+		instruccion[1] = strtok(NULL, " ");
+		if (strcmp(linea, "\0") == 0)
+		{
+			free(linea);
+			continue;
+		}
+
+		if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
+		{
+			iniciar_proceso(instruccion[1]);
+		}
+
+		free(linea);
 	}
+
 }
 
 void *cliente_cpu_dispatch()
@@ -45,7 +57,7 @@ void *cliente_cpu_dispatch()
 	conexion_fd = crear_conexion(ip, puerto, logger);
 	int resultado = handshake(conexion_fd);
 
-	//hay que enviar pcb//
+	// hay que enviar pcb//
 
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
@@ -72,7 +84,7 @@ void *cliente_cpu_interrupt()
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE INTERRUPT", conexion_fd);
 	return 0;
 }
-void *cliente_memoria()
+int inicializar_cliente_memoria()
 {
 
 	int conexion_fd;
@@ -89,14 +101,9 @@ void *cliente_memoria()
 	int resultado = handshake(conexion_fd);
 	if (resultado == -1)
 		return;
-	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
-	enviar_operacion(MENSAJE, "segundo mensaje", conexion_fd);
-	pcb_t * pcb = crear_pcb(1);
-	enviar_operacion_PCB(CREAR_PCB, *pcb, conexion_fd);
-	enviar_operacion_PCB(ELIMINAR_PCB, *pcb, conexion_fd); 
-	eliminar_pcb(pcb);
-	esperar_iniciar_proceso("pathxd", conexion_fd);
-	return 0;
+	
+	pthread_mutex_unlock(&mutex_socket_memoria);
+	return conexion_fd;
 }
 
 int *servidor()
@@ -139,31 +146,13 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 	liberar_conexion(conexion);
 }
 
-// FUNCIONES DE CONSOLA
-void esperar_iniciar_proceso(char *path, int conexion_fd)
-{
-	while (1) // revisar
-	{
-		pthread_mutex_lock(&operacion_mutex);
-
-		if (operacion == 0)
-		{
-			next_pid++;
-			//enviar_operacion(CREAR_PCB, "next_pid", conexion_fd);
-		}
-
-		// else{		//--algo así va a ser necesario cuando soportemos varias ops por consola. o consumidor productor
-		// 	pthread_mutex_lock(&operacion_mutex); 
-		// }
-	}
-}
-
 
 int main(int argc, char const *argv[])
 {
 
-	pthread_mutex_init(&operacion_mutex, NULL);
-	pthread_mutex_lock (&operacion_mutex);
+	consola();
+	pthread_mutex_init(&mutex_socket_memoria, NULL);
+	pthread_mutex_lock(&mutex_socket_memoria);
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
 	config = iniciar_config();
@@ -194,21 +183,12 @@ int main(int argc, char const *argv[])
 	}
 	log_info(logger, "El thread cliente_cpu_dispatch inició su ejecución");
 
-	err = pthread_create(&(tid[3]), NULL, cliente_memoria, NULL);
-	if (err != 0)
-	{
-		log_error(logger, "Hubo un problema al crear el thread cliente_memoria:[%s]", strerror(err));
-		return err;
-	}
-	log_info(logger, "El thread cliente_memoria inició su ejecución");
+	socket_memoria =inicializar_cliente_memoria();
 
-	// esto se escribe por consola:
-	operacion = INICIAR_PROCESO;
-	pthread_mutex_unlock(&operacion_mutex);
+
 
 	pthread_join(tid[0], NULL);
 	pthread_detach(tid[1]);
 	pthread_detach(tid[2]);
-	pthread_join(tid[3], NULL);
 	return 0;
 }

@@ -19,6 +19,10 @@
 
 #include <utils/utils_generales.h>
 
+extern int next_pid;
+extern int socket_memoria;
+extern pthread_mutex_t mutex_socket_memoria;
+extern int operacion;
 typedef enum
 {	//habría q ver como podemos unificar esto en un solo archivo
 	INICIAR_PROCESO,
@@ -26,8 +30,8 @@ typedef enum
 }kernel_opcode;
 
 //Cliente
+void iniciar_proceso(char *path);
 void enviar_operacion(int cod_op ,char *mensaje, int socket_cliente);
-void esperar_iniciar_proceso_PCB(char *path,int conexion_fd);
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);

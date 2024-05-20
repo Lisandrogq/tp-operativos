@@ -2,7 +2,11 @@
 #include <errno.h>
 
 extern t_log *logger;
+int next_pid;
 
+pthread_mutex_t mutex_socket_memoria;
+int operacion;
+int socket_memoria;
 //
 void *serializar_paquete(t_paquete *paquete, int bytes)
 {
@@ -17,6 +21,18 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
     desplazamiento += paquete->buffer->size;
 
     return magic;
+}
+void iniciar_proceso(char *path){
+
+    pcb_t *nuevo_pcb = crear_pcb(next_pid);
+    next_pid++;
+    pthread_mutex_lock(&mutex_socket_memoria);
+    crear_estructuras_administrativas(path,nuevo_pcb->pid,socket_memoria);
+    pthread_mutex_unlock(&mutex_socket_memoria);
+}
+void crear_estructuras_administrativas(char*path,int pid,int socket_memoria){
+
+//TO DO
 }
 
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)

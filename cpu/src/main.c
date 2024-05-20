@@ -198,6 +198,8 @@ int main(int argc, char const *argv[])
 	memset(contexto, 0, sizeof(registros_t));
 	dictionary = inicializar_diccionario();
 
+	
+
 	t_log *logger;
 	t_config *config;
 	logger = iniciar_logger();
