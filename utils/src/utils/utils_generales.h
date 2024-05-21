@@ -58,6 +58,7 @@ typedef enum
 	CREAR_ESTRUC_ADMIN,
 	OPERACION_CPU_1,
 	ELIMINAR_PCB,
+	//ELIMINAR_ESTRUC_ADMIN,
 } op_code;
 
 typedef enum

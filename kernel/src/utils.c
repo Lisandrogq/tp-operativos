@@ -31,6 +31,13 @@ void iniciar_proceso(char *path, int tam){
     solicitar_crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
+/*void finalizar_proceso(int pid){
+
+    pthread_mutex_lock(&mutex_socket_memoria);
+    solicitar_eliminar_estructuras_administrativas(pid,socket_memoria);
+    pthread_mutex_unlock(&mutex_socket_memoria);
+}*/
+
 void solicitar_crear_estructuras_administrativas(int tam, char*path, int pid,int socket_memoria){
     
     t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -57,6 +64,38 @@ void solicitar_crear_estructuras_administrativas(int tam, char*path, int pid,int
     free(a_enviar);
  
 }
+
+/*void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria) {
+
+    t_paquete *paquete = crear_paquete();
+    paquete->codigo_operacion = ELIMINAR_ESTRUC_ADMIN;
+    agregar_a_paquete(paquete, &pid, sizeof(int));
+    enviar_paquete(paquete, socket_memoria);
+    eliminar_paquete(paquete);
+}
+
+void ejecutar_script(const char *path) {
+
+    FILE *archivo = fopen(path, "r");
+    if (archivo == NULL) {
+        printf("Error: No se pudo abrir el archivo");
+        return;
+    }
+
+    char comando[100]; // Asumimos que ninguna línea del archivo tiene más de 100 caracteres
+    while (fgets(comando, sizeof(comando), archivo) != NULL) {
+
+        char *posicion_salto_linea = strchr(comando, '\n');
+        if (posicion_salto_linea != NULL) {
+            *posicion_salto_linea = '\0';
+        }
+
+        printf("Ejecutando comando: %s\n", comando);
+        system(comando); 
+    }
+
+    fclose(archivo);
+}*/
 
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)
 {
