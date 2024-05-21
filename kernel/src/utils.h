@@ -28,9 +28,9 @@ typedef enum
 	INICIAR_PROCESO,
 
 }kernel_opcode;
-
+void crear_estructuras_administrativas(int tam, char*path,int pid,int socket_memoria);
 //Cliente
-void iniciar_proceso(char *path);
+void iniciar_proceso(char *path, int tam);
 void enviar_operacion(int cod_op ,char *mensaje, int socket_cliente);
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
 int handshake(int socket_cliente);

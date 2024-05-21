@@ -19,6 +19,12 @@
 #define PUERTO_MEMORIA "4446"
 #define PUERTO_CPU_INTERRUPT "4447"
 
+typedef struct
+{	
+	int tam;
+    char*path;
+    int pid;
+} struct_administrativas;
 typedef enum
 { // habría q ver como podemos unificar esto en un solo archivo
 	SET,

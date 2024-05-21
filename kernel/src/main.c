@@ -21,8 +21,8 @@ void *consola()
 	while (1)
 	{
 		linea = readline(">");
-		instruccion[0] = malloc(39);//CAMBIAR 39 POR ALGO!!!!!
-		instruccion[1] = malloc(39);
+		instruccion[0] = malloc(strlen(linea));//CAMBIAR 39 POR ALGO!!!!!
+		instruccion[1] = malloc(strlen(linea));
 		instruccion[0] = strtok(linea, " ");
 		instruccion[1] = strtok(NULL, " ");
 		if (strcmp(linea, "\0") == 0)
@@ -32,8 +32,9 @@ void *consola()
 		}
 
 		if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
-		{
-			iniciar_proceso(instruccion[1]);
+		{	
+			int tam = sizeof(strlen(linea));
+			iniciar_proceso(instruccion[1], tam);
 		}
 
 		free(linea);

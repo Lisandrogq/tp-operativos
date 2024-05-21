@@ -22,17 +22,37 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
 
     return magic;
 }
-void iniciar_proceso(char *path){
+void iniciar_proceso(char *path, int tam){
 
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
     next_pid++;
     pthread_mutex_lock(&mutex_socket_memoria);
-    crear_estructuras_administrativas(path,nuevo_pcb->pid,socket_memoria);
+    crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
-void crear_estructuras_administrativas(char*path,int pid,int socket_memoria){
+void crear_estructuras_administrativas(int tam, char*path, int pid,int socket_memoria){
+    
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    buffer->size = sizeof(int) *2+ tam;
+    buffer->stream = malloc(buffer->size);
+    buffer->offset = 0;
 
-//TO DO
+    memcpy(buffer->stream + buffer->offset, &tam, sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, &path, tam);
+    buffer->offset += tam;
+
+    memcpy(buffer->stream + buffer->offset, &pid, sizeof(int));
+    int bytes = buffer->size + 2 * sizeof(int);
+
+    void *a_enviar = serializar_paquete(buffer, bytes);
+
+    send(socket_memoria, a_enviar, bytes, 0);
+
+    free(a_enviar);
+    free(buffer->stream);
+    free(buffer);
 }
 
 void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)

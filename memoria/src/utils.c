@@ -142,6 +142,24 @@ void *recibir_buffer(int *size, int socket_cliente)
 
 	return buffer;
 }
+struct_administrativas *recibir_estructuras_administrativas(int socket_cliente){
+	t_buffer* buffer = malloc(sizeof(t_buffer));
+	recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
+	buffer->stream = malloc(buffer->size);
+	recv(socket_cliente, buffer->stream, buffer->size, 0);
+
+	struct_administrativas* estructura = malloc(sizeof(pcb_t));
+	void* stream = buffer->stream;
+	memcpy(&(estructura->tam), stream, sizeof(int));
+    stream += sizeof(int);
+	estructura->path = malloc(estructura->tam);
+	memcpy(&(estructura->path), stream, sizeof(int));
+    stream += estructura->tam;
+	memcpy(&(estructura->pid), stream, sizeof(registros_t));
+	free(buffer->stream);
+	free(buffer);
+	return estructura;
+}
 pcb_t *recibir_paquete(int socket_cliente){
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
