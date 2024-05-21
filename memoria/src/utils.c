@@ -27,33 +27,36 @@ char *leer_codigo(char *path)
 	return codigo;
 	fclose(file);
 }
-void int_to_char(int pid,char*pid_str){
-	
+void int_to_char(int pid, char *pid_str)
+{
+
 	snprintf(pid_str, sizeof(pid_str), "%d", pid);
-	
 }
 void crear_estructuras_administrativas(struct_administrativas *e_admin)
 {
 	char *codigo = leer_codigo(e_admin->path);
-	char pid_str[5]="";
-	int_to_char(e_admin->pid,pid_str);
+	char pid_str[5] = "";
+	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
 }
-struct_administrativas *recibir_estructuras_administrativas(int socket_memoria) {}
 
-void handle_kerel_client(int socket_memoria)
+void handle_kerel_client(int socket)
 {
-	// DESERIALIZAR
-	int cod_op = recibir_operacion(socket_memoria);
-	switch (cod_op)
-	{
-	case CREAR_ESTRUC_ADMIN:
-		struct_administrativas *e_admin = recibir_estructuras_administrativas(socket_memoria);
-		crear_estructuras_administrativas(e_admin);
-		break;
 
-	default:
-		break;
+	bool conexion_terminada = false;
+	while (!conexion_terminada)
+	{
+		int cod_op = recibir_operacion(socket);
+		switch (cod_op)
+		{
+		case CREAR_ESTRUC_ADMIN:
+			struct_administrativas *e_admin = recibir_estructuras_administrativas(socket);
+			crear_estructuras_administrativas(e_admin);
+			break;
+
+		default:
+			break;
+		}
 	}
 }
 void *client_handler(void *arg)
@@ -64,12 +67,14 @@ void *client_handler(void *arg)
 	{
 	case 0:
 		log_info(logger, "se conecto el modulo kernel");
+		handle_kerel_client(socket_cliente);
 		break;
 	case 1:
 		log_info(logger, "se conecto el modulo cpu");
 		break;
 	case 2:
 		log_info(logger, "se conecto el modulo memoria");
+		
 		break;
 	case 3:
 		log_info(logger, "se conecto el modulo io");
@@ -197,26 +202,28 @@ void *recibir_buffer(int *size, int socket_cliente)
 
 	return buffer;
 }
-struct_administrativas *recibir_estructuras_administrativas(int socket_cliente){
-	t_buffer* buffer = malloc(sizeof(t_buffer));
+struct_administrativas *recibir_estructuras_administrativas(int socket_cliente)
+{
+	t_buffer *buffer = malloc(sizeof(t_buffer));
 	recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-	struct_administrativas* estructura = malloc(sizeof(pcb_t));
-	void* stream = buffer->stream;
+	struct_administrativas *estructura = malloc(sizeof(pcb_t));
+	void *stream = buffer->stream;
 	memcpy(&(estructura->tam), stream, sizeof(int));
-    stream += sizeof(int);
+	stream += sizeof(int);
 	estructura->path = malloc(estructura->tam);
 	memcpy(&(estructura->path), stream, sizeof(int));
-    stream += estructura->tam;
+	stream += estructura->tam;
 	memcpy(&(estructura->pid), stream, sizeof(registros_t));
 	free(buffer->stream);
 	free(buffer);
 	return estructura;
 }
-pcb_t *recibir_paquete(int socket_cliente){
-	t_paquete* paquete = malloc(sizeof(t_paquete));
+pcb_t *recibir_paquete(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
 
 	recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0);

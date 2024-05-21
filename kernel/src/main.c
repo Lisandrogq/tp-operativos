@@ -151,7 +151,6 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 int main(int argc, char const *argv[])
 {
 
-	consola();
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria);
 	logger = iniciar_logger();
@@ -187,6 +186,7 @@ int main(int argc, char const *argv[])
 	socket_memoria =inicializar_cliente_memoria();
 
 
+	consola();
 
 	pthread_join(tid[0], NULL);
 	pthread_detach(tid[1]);
