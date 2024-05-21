@@ -23,7 +23,7 @@ char *leer_codigo(char *path)
 		strcat(codigo, linea);
 	}
 
-	printf("%s", codigo);
+	printf("%s\n", codigo);
 	return codigo;
 	fclose(file);
 }

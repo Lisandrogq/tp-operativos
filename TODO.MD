@@ -1,6 +1,6 @@
 ## CHECKPOINT 2 ##
-- [ ] Funcion crear_estructuras_administrativas
-- [ ] recibir estructuras_administrativas en memoria
+- [X] Funcion crear_estructuras_administrativas
+- [X] recibir estructuras_administrativas en memoria
 
 
 - [ ] Pensar check interrupt: tiene acceso al socket de dispatch e interrupt? hace un recv no bloqueante para chequear intrs?
