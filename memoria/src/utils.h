@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <commons/log.h>
-#include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 #include <string.h>
 #include <assert.h>
 #include <utils/utils_generales.h>
@@ -15,6 +15,12 @@
 #include <semaphore.h>
 
 extern t_log *logger;
+extern t_dictionary *dictionary_codigos;
+void int_to_char(int pid,char*pid_str);
+struct_administrativas * recibir_estructuras_administrativas(int socket_memoria);
+void crear_estructuras_administrativas(struct_administrativas *e_admin);
+void handle_kerel_client(int socket_memoria);
+void *client_handler(void *arg);
 void handle_crear_pcb(int socket_cliente);
 void *recibir_buffer(int *, int);
 void* client_handler(void *arg);

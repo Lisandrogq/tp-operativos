@@ -1,7 +1,61 @@
 #include "utils.h"
 #include <errno.h>
-t_log *logger;
 
+t_log *logger;
+t_dictionary *dictionary_codigos;
+char *leer_codigo(char *path)
+{
+	// leer el pseudocodigo
+	FILE *file;
+	fopen(path, "r");
+	char *codigo;
+	file = fopen("file.txt", "r");
+
+	fseek(file, 0, SEEK_END);
+	int file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	codigo = malloc(file_size);
+	memset(codigo, 0, file_size);
+
+	char linea[100];
+	while (fgets(linea, 100, file))
+	{
+		strcat(codigo, linea);
+	}
+
+	printf("%s", codigo);
+	return codigo;
+	fclose(file);
+}
+void int_to_char(int pid,char*pid_str){
+	
+	snprintf(pid_str, sizeof(pid_str), "%d", pid);
+	
+}
+void crear_estructuras_administrativas(struct_administrativas *e_admin)
+{
+	char *codigo = leer_codigo(e_admin->path);
+	char pid_str[5]="";
+	int_to_char(e_admin->pid,pid_str);
+	dictionary_put(dictionary_codigos, pid_str, codigo);
+}
+struct_administrativas *recibir_estructuras_administrativas(int socket_memoria) {}
+
+void handle_kerel_client(int socket_memoria)
+{
+	// DESERIALIZAR
+	int cod_op = recibir_operacion(socket_memoria);
+	switch (cod_op)
+	{
+	case CREAR_ESTRUC_ADMIN:
+		struct_administrativas *e_admin = recibir_estructuras_administrativas(socket_memoria);
+		crear_estructuras_administrativas(e_admin);
+		break;
+
+	default:
+		break;
+	}
+}
 void *client_handler(void *arg)
 {
 	int socket_cliente = *(int *)arg;
@@ -29,7 +83,7 @@ void *client_handler(void *arg)
 	while (!conexion_terminada)
 	{
 		int cod_op = recibir_operacion(socket_cliente);
-		log_warning(logger,"codop:%i",cod_op); 
+		log_warning(logger, "codop:%i", cod_op);
 		switch (cod_op)
 		{
 		case OPERACION_KERNEL_1:
@@ -50,11 +104,12 @@ void *client_handler(void *arg)
 			break;
 		case CREAR_PCB:
 			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			pcb_t* pcb = malloc(sizeof(pcb_t));
+			pcb_t *pcb = malloc(sizeof(pcb_t));
 			pcb = recibir_paquete(socket_cliente);
 			log_info(logger, "Pid: %i", pcb->pid);
 			log_info(logger, "Quantum: %i", pcb->quantum);
 			log_info(logger, "Registros: %i", pcb->registros->AX);
+			// FREEE??
 			break;
 		case ELIMINAR_PCB:
 			pcb = recibir_paquete(socket_cliente);
@@ -168,13 +223,13 @@ pcb_t *recibir_paquete(int socket_cliente){
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
 
-	pcb_t* pcb = malloc(sizeof(pcb_t));
+	pcb_t *pcb = malloc(sizeof(pcb_t));
 	pcb->registros = malloc(sizeof(registros_t));
-	void* stream = paquete->buffer->stream;
+	void *stream = paquete->buffer->stream;
 	memcpy(&(pcb->pid), stream, sizeof(int));
-    stream += sizeof(int);
+	stream += sizeof(int);
 	memcpy(&(pcb->quantum), stream, sizeof(int));
-    stream += sizeof(int);
+	stream += sizeof(int);
 	memcpy(pcb->registros, stream, sizeof(registros_t));
 	eliminar_paquete(paquete);
 	return pcb;
