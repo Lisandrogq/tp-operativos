@@ -12,7 +12,7 @@
 t_log *logger;
 t_config *config;
 pthread_t tid[3];
-
+sem_t hay_procesos;
 
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
@@ -35,13 +35,15 @@ void *consola()
 		{	
 			int tam = sizeof(strlen(linea));
 			iniciar_proceso(instruccion[1], tam);
+			sem_post(&hay_procesos);
 		}
 
 		free(linea);
 	}
 
 }
-
+void planificar(){//to do esta funcion elegue el proceso a ser ejecutado y lo marca como exec
+}
 void *cliente_cpu_dispatch()
 {
 
@@ -62,6 +64,22 @@ void *cliente_cpu_dispatch()
 
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
+	sem_wait(&hay_procesos);
+	planificar(); 
+	log_info(logger, "DESPUES DE PLANIFICAR");
+	int motivo_desalojo = proceso_CPU(DISPATCH,&lista_pcbs[0],conexion_fd); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta
+	log_info(logger, "ARRIBA DEL SWIATCH:%i", motivo_desalojo);
+	switch (motivo_desalojo)
+	{
+	case PRUEBA:
+		//soy una prueba
+		log_info(logger, "FUNCIONE");
+		break;
+	
+	default:
+		log_info(logger, "Entre al switch pero al defaulr");
+		break;
+	}
 	return 0;
 }
 
@@ -175,6 +193,7 @@ int main(int argc, char const *argv[])
 	}
 	log_info(logger, "El thread cliente_cpu_interrupt inició su ejecución");
 
+	sem_init(&hay_procesos, 0, 0); // no se si es el lugar correcto para inicializarlo
 	err = pthread_create(&(tid[2]), NULL, cliente_cpu_dispatch, NULL);
 	if (err != 0)
 	{

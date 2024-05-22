@@ -141,7 +141,35 @@ int handshake(int socket_cliente)
     }
     return result;
 }
+void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
+{
 
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    buffer->size = sizeof(int) *2 + sizeof(registros_t)+ sizeof(state_t);
+    buffer->stream = malloc(buffer->size);
+    buffer->offset = 0;
+
+    memcpy(buffer->stream + buffer->offset, &motivo_desalojo, sizeof(int));
+    buffer->offset += sizeof(int);
+    
+    memcpy(buffer->stream + buffer->offset, &pcb.pid, sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, &pcb.quantum, sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, pcb.registros, sizeof(registros_t));
+    buffer->offset += sizeof(registros_t);
+
+    memcpy(buffer->stream + buffer->offset, &pcb.state, sizeof(state_t)); 
+    int bytes = buffer->size + 2 * sizeof(int);
+
+    void *a_enviar = serializar_paquete(buffer, bytes);
+
+    send(socket_cliente, a_enviar, bytes, 0);
+
+    free(a_enviar);
+}
 void crear_buffer(t_paquete *paquete)
 {
     paquete->buffer = malloc(sizeof(t_buffer));
@@ -201,6 +229,7 @@ void *client_handler_dispatch(int socket_cliente)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
+        log_warning(logger,"enviar operacion: codop:%i",cod_op );
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -218,6 +247,13 @@ void *client_handler_dispatch(int socket_cliente)
         case MENSAJE:
             // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
             recibir_mensaje(socket_cliente);
+            break;
+        case DISPATCH:
+            log_info(logger, "Entre al switch");
+            pcb_t *pcb = recibir_paquete(socket_cliente);
+            //ejecutar instruccion uno a uno desde memoria
+            enviar_PCB_Desalojo(0, *pcb, socket_cliente);
+            log_info(logger, "YA ENVIE");
             break;
         case -1:
             log_info(logger, "Se desconecto algun cliente");

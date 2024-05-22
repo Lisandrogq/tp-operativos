@@ -49,7 +49,7 @@ typedef enum
 } instruction_code;
 
 typedef enum
-{ // habría q ver como podemos unificar esto en un solo archivo
+{ 
 	MENSAJE,
 	PAQUETE,
 	OPERACION_IO_1,
@@ -58,11 +58,20 @@ typedef enum
 	CREAR_ESTRUC_ADMIN,
 	OPERACION_CPU_1,
 	ELIMINAR_PCB,
+	DISPATCH,
 	//ELIMINAR_ESTRUC_ADMIN,
 } op_code;
+typedef enum
+{ 
+	PRUEBA,
+	RELOJ,
+	ENTRADA_SALIDA,
+
+	//ELIMINAR_ESTRUC_ADMIN,
+} interrućiones;
 
 typedef enum
-{ // habría q ver como podemos unificar esto en un solo archivo
+{ 
 	HS_KERNEL,
 	HS_CPU,
 	HS_MEMORIA,
@@ -115,6 +124,7 @@ typedef struct
 } t_paquete;
 
 pcb_t *crear_pcb(int pid);
+pcb_t *recibir_paquete(int socket_cliente);
 void eliminar_pcb(pcb_t* pcb);
 void eliminar_paquete(t_paquete* paquete);
 

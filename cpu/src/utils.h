@@ -64,5 +64,6 @@ int recibir_operacion(int);
 int handshake_Server(int);
 int terminarServidor(int, int);
 void recibir_operacion1(int socket_cliente);
+void *serializar_paquete(t_paquete *paquete, int bytes);
 
 #endif /* UTILS_H_ */

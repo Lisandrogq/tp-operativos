@@ -3,7 +3,7 @@
 
 extern t_log *logger;
 int next_pid;
-
+pcb_t lista_pcbs[100]; 
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
 int socket_memoria;
@@ -25,9 +25,10 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
 void iniciar_proceso(char *path, int tam){
 
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
+    lista_pcbs[0] = *nuevo_pcb;
+    //Aca se deberia actulizar la lista de pcbs para poder accederlo en main
     next_pid++;
     pthread_mutex_lock(&mutex_socket_memoria);
-    printf("estoy vivo mal xxxxd");
     solicitar_crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
@@ -96,16 +97,39 @@ void ejecutar_script(const char *path) {
 
     fclose(archivo);
 }*/
+int proceso_CPU(int cod_op, pcb_t *pcb, int socket_cliente){
+    enviar_PCB(cod_op, *pcb, socket_cliente); //MSG_WAITALL
+    int motivo_desalojo = -1;
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    recv(socket_cliente, &(buffer->size), sizeof(uint32_t), MSG_WAITALL);
+	
+    buffer->stream = malloc(buffer->size);
+	recv(socket_cliente, buffer->stream, buffer->size,0);
+	void *stream = buffer->stream;
+    memcpy(&motivo_desalojo, stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(pcb->pid), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(pcb->quantum), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(pcb->registros, stream, sizeof(registros_t));
+    stream += sizeof(registros_t);
+    memcpy(&(pcb->state), stream, sizeof(state_t));
+    return motivo_desalojo;
 
-void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)
+
+}
+
+
+
+void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)
 {
-    
     log_warning(logger,"enviar operacion: codop:%i",cod_op );
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = cod_op;
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->buffer->size = sizeof(int) *2 + sizeof(registros_t);
+    paquete->buffer->size = sizeof(int) *2 + sizeof(registros_t)+ sizeof(state_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
     
@@ -116,7 +140,10 @@ void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente)
     paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, pcb.registros, sizeof(registros_t));
-    int bytes = paquete->buffer->size + 2 * sizeof(int);
+    paquete->buffer->offset += sizeof(registros_t);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.state, sizeof(state_t)); // esto no hace falta para la cpu
+    int bytes = paquete->buffer->size + 2* sizeof(int);
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 

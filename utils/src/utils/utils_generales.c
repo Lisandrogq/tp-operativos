@@ -4,7 +4,28 @@ void decir_hola(char* quien) {
     printf("Hola desde %s!!\n", quien);
 }
 
+pcb_t *recibir_paquete(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
 
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	pcb_t *pcb = malloc(sizeof(pcb_t));
+	pcb->registros = malloc(sizeof(registros_t));
+	void *stream = paquete->buffer->stream;
+	memcpy(&(pcb->pid), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(pcb->quantum), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(pcb->registros, stream, sizeof(registros_t));
+    stream += sizeof(registros_t);
+    memcpy(&(pcb->state), stream, sizeof(state_t));
+	eliminar_paquete(paquete);
+	return pcb;
+}
 int crear_conexion(char *ip, char *puerto,t_log *logger)
 {
     struct addrinfo hints;

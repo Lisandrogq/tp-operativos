@@ -18,7 +18,7 @@
 #include<readline/readline.h>
 
 #include <utils/utils_generales.h>
-
+extern pcb_t lista_pcbs[100]; 
 extern int next_pid;
 extern int socket_memoria;
 extern pthread_mutex_t mutex_socket_memoria;
@@ -32,7 +32,7 @@ void solicitar_crear_estructuras_administrativas(int tam, char*path, int pid,int
 //Cliente
 void iniciar_proceso(char *path, int tam);
 void enviar_operacion(int cod_op ,char *mensaje, int socket_cliente);
-void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
+void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente);
 int handshake(int socket_cliente);
 t_paquete* crear_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
@@ -44,7 +44,7 @@ void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
 
-
+int proceso_CPU(int cod_op, pcb_t *pcb, int socket_cliente);
 //Server
 extern t_log* logger;
 
@@ -56,7 +56,6 @@ int recibir_operacion(int);
 int handshake_Server(int);
 int terminarServidor(int,int);
 void recibir_operacion1(int socket_cliente);
-void enviar_operacion_PCB(int cod_op, pcb_t pcb, int socket_cliente);
 pcb_t *crear_pcb(int pid);
 
 #endif /* UTILS_H_ */
