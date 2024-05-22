@@ -16,6 +16,9 @@
 
 extern t_log *logger;
 extern t_dictionary *dictionary_codigos;
+
+void devolver_siguiente_instruction(fetch_t *p_info,int socket_cliente);
+fetch_t *recibir_process_info(int socket_cliente);
 void int_to_char(int pid,char*pid_str);
 struct_administrativas * recibir_estructuras_administrativas(int socket_memoria);
 void crear_estructuras_administrativas(struct_administrativas *e_admin);

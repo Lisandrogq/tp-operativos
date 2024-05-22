@@ -21,17 +21,8 @@
 
 extern t_dictionary *dictionary;
 // Cliente
-typedef struct
-{
-	int cod_instruccion;
-	void *p1;
-	void *p2;
-	void *p3;
-	void *p4;
-	void *p5;
-} t_instruccion;
-
-t_instruccion *fetch(int conexion_fd, int PC);
+void *serializar_paquete(t_paquete *paquete, int bytes);
+t_instruccion *fetch(int PC);
 void decode();
 void execute(t_instruccion *instruccion);
 void check_intr();

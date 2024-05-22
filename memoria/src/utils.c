@@ -39,10 +39,35 @@ void crear_estructuras_administrativas(struct_administrativas *e_admin)
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
 }
+void handle_cpu_client(int socket_cliente)
+{
+	log_info(logger, "ESTOY EN EL HANDLER DEL CPU");
 
+	bool conexion_terminada = false;
+	while (!conexion_terminada)
+	{
+		int cod_op = recibir_operacion(socket_cliente);
+		log_info(logger, "codop:%i", cod_op);
+		switch (cod_op)
+		{
+
+		case FETCH:
+			log_info(logger, "recibi un fetch!!!!!");
+			fetch_t *p_info = recibir_process_info(socket_cliente);
+			log_info(logger, "after");
+			log_info(logger, "pid:%i", p_info->pid);
+			log_info(logger, "pc:%i", p_info->pc);
+			devolver_siguiente_instruction(p_info, socket_cliente);
+			break;
+		case -1:
+			return -1;
+		default:
+			break;
+		}
+	}
+}
 void handle_kerel_client(int socket)
 {
-
 	bool conexion_terminada = false;
 	while (!conexion_terminada)
 	{
@@ -71,64 +96,66 @@ void *client_handler(void *arg)
 		break;
 	case 1:
 		log_info(logger, "se conecto el modulo cpu");
+		handle_cpu_client(socket_cliente);
 		break;
 	case 2:
 		log_info(logger, "se conecto el modulo memoria");
-		
+
 		break;
 	case 3:
 		log_info(logger, "se conecto el modulo io");
 		break;
+
 	default:
 		log_warning(logger, "Cliente desconocido por memoria server.");
 		return;
 	}
 
-	bool conexion_terminada = false;
-	while (!conexion_terminada)
-	{
-		int cod_op = recibir_operacion(socket_cliente);
-		log_warning(logger, "codop:%i", cod_op);
-		switch (cod_op)
-		{
-		case OPERACION_KERNEL_1:
-			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			recibir_operacion1(socket_cliente);
-			break;
-		case OPERACION_CPU_1:
-			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			recibir_operacion1(socket_cliente);
-			break;
-		case OPERACION_IO_1:
-			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			recibir_operacion1(socket_cliente);
-			break;
-		case MENSAJE:
-			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			recibir_mensaje(socket_cliente);
-			break;
-		case CREAR_PCB:
-			// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-			pcb_t *pcb = malloc(sizeof(pcb_t));
-			pcb = recibir_paquete(socket_cliente);
-			log_info(logger, "Pid: %i", pcb->pid);
-			log_info(logger, "Quantum: %i", pcb->quantum);
-			log_info(logger, "Registros: %i", pcb->registros->AX);
-			// FREEE??
-			break;
-		case ELIMINAR_PCB:
-			pcb = recibir_paquete(socket_cliente);
-			eliminar_pcb(pcb);
-			break;
-		case -1:
-			log_info(logger, "Se desconecto algun cliente");
-			conexion_terminada = true;
-			break;
-		default:
-			log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-			break;
-		}
-	}
+	// bool conexion_terminada = false;
+	// while (!conexion_terminada)
+	// {
+	// 	int cod_op = recibir_operacion(socket_cliente);
+	// 	log_warning(logger, "codop:%i", cod_op);
+	// 	switch (cod_op)
+	// 	{
+	// 	case OPERACION_KERNEL_1:
+	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+	// 		recibir_operacion1(socket_cliente);
+	// 		break;
+	// 	case OPERACION_CPU_1:
+	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+	// 		recibir_operacion1(socket_cliente);
+	// 		break;
+	// 	case OPERACION_IO_1:
+	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+	// 		recibir_operacion1(socket_cliente);
+	// 		break;
+	// 	case MENSAJE:
+	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+	// 		recibir_mensaje(socket_cliente);
+	// 		break;
+	// 	case CREAR_PCB:
+	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
+	// 		pcb_t *pcb = malloc(sizeof(pcb_t));
+	// 		pcb = recibir_paquete(socket_cliente);
+	// 		log_info(logger, "Pid: %i", pcb->pid);
+	// 		log_info(logger, "Quantum: %i", pcb->quantum);
+	// 		log_info(logger, "Registros: %i", pcb->registros->AX);
+	// 		// FREEE??
+	// 		break;
+	// 	case ELIMINAR_PCB:
+	// 		pcb = recibir_paquete(socket_cliente);
+	// 		eliminar_pcb(pcb);
+	// 		break;
+	// 	case -1:
+	// 		log_info(logger, "Se desconecto algun cliente");
+	// 		conexion_terminada = true;
+	// 		break;
+	// 	default:
+	// 		log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+	// 		break;
+	// 	}
+	// }
 	close(socket_cliente);
 }
 
@@ -202,6 +229,55 @@ void *recibir_buffer(int *size, int socket_cliente)
 
 	return buffer;
 }
+char *get_linea_buscada(const char *input_string, int linea_buscada)
+{
+	char *lines[100];
+	int line_count = 0;
+	char *copy = strdup(input_string); // Make a copy of input_string to avoid modifying the original
+	char *token = strtok(copy, "\n");
+
+	while (token != NULL && line_count <= linea_buscada)
+	{
+		lines[line_count] = strdup(token);
+		line_count++;
+		token = strtok(NULL, "\n");
+	}
+
+	free(copy); // Free the memory allocated by strdup
+
+	return lines[linea_buscada];
+}
+
+void devolver_siguiente_instruction(fetch_t *p_info, int socket_cliente)
+{
+	char *linea; // esto debería ser dinamico y en un malloc, creo, mejro si no:p.
+	char pid_str[5] = "";
+	int_to_char(p_info->pid, pid_str);
+	char *codigo = dictionary_get(dictionary_codigos, pid_str);
+	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
+	log_info(logger, "LINEA:%s", linea);
+}
+
+fetch_t *recibir_process_info(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	fetch_t *p_info = malloc(sizeof(fetch_t));
+	void *stream = paquete->buffer->stream;
+	memcpy(&(p_info->pid), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(p_info->pc), stream, sizeof(int));
+
+	eliminar_paquete(paquete);
+
+	return p_info;
+}
+
 struct_administrativas *recibir_estructuras_administrativas(int socket_cliente)
 {
 	t_buffer *buffer = malloc(sizeof(t_buffer));

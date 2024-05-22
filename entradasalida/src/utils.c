@@ -27,7 +27,7 @@ void enviar_operacion(int cod_op,char *mensaje, int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int);
+    int bytes = paquete->buffer->size + 2 * sizeof(int);//ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -82,7 +82,7 @@ int handshake(int socket_cliente)
 
     void enviar_paquete(t_paquete * paquete, int socket_cliente)
     {
-        int bytes = paquete->buffer->size + 2 * sizeof(int);
+        int bytes = paquete->buffer->size + 2 * sizeof(int);//ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
         void *a_enviar = serializar_paquete(paquete, bytes);
 
         send(socket_cliente, a_enviar, bytes, 0);

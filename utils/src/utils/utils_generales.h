@@ -19,6 +19,21 @@
 #define PUERTO_MEMORIA "4446"
 #define PUERTO_CPU_INTERRUPT "4447"
 
+
+typedef struct
+{
+	int cod_instruccion;
+	void *p1;
+	void *p2;
+	void *p3;
+	void *p4;
+	void *p5;
+} t_instruccion;
+typedef struct
+{	
+    int pid;
+	int pc;
+} fetch_t;
 typedef struct
 {	
 	int tam;
@@ -59,6 +74,7 @@ typedef enum
 	OPERACION_CPU_1,
 	ELIMINAR_PCB,
 	DISPATCH,
+	FETCH,
 	//ELIMINAR_ESTRUC_ADMIN,
 } op_code;
 typedef enum

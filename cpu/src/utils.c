@@ -3,6 +3,8 @@
 
 t_dictionary *dictionary;
 
+
+
 void execute_set(char *nombre_r_destino, int valor)
 {
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
@@ -115,7 +117,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int);
+    int bytes = paquete->buffer->size + 2 * sizeof(int);//ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -197,7 +199,7 @@ void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 
 void enviar_paquete(t_paquete *paquete, int socket_cliente)
 {
-    int bytes = paquete->buffer->size + 2 * sizeof(int);
+    int bytes = paquete->buffer->size + 2 * sizeof(int);//ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
     void *a_enviar = serializar_paquete(paquete, bytes);
 
     send(socket_cliente, a_enviar, bytes, 0);
