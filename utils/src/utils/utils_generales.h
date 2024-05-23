@@ -157,4 +157,5 @@ t_paquete* crear_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void *serializar_paquete(t_paquete *paquete, int bytes);
 void enviar_paquete(t_paquete *paquete, int socket_cliente);
+void liberar_conexion(int socket_cliente);
 #endif

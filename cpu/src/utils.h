@@ -33,7 +33,6 @@ void execute_jnz(char *nombre_r,uint32_t nuevo_pc, registros_t *contexto);
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
-void liberar_conexion(int socket_cliente);
 t_log *iniciar_logger(void);
 t_config *iniciar_config(void);
 void leer_consola(t_log *);

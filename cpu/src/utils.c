@@ -156,10 +156,6 @@ void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
 
     free(a_enviar);
 }
-void liberar_conexion(int socket_cliente)
-{
-    close(socket_cliente);
-}
 
 // Server
 t_log *logger;

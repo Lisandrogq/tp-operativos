@@ -17,5 +17,4 @@
 // void enviar_mensaje(char* mensaje, int socket_cliente);
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
-void liberar_conexion(int socket_cliente);
 #endif /* UTILS_H_ */
