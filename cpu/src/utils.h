@@ -21,7 +21,6 @@
 
 extern t_dictionary *dictionary;
 // Cliente
-void *serializar_paquete(t_paquete *paquete, int bytes);
 t_instruccion *fetch(int PC);
 void decode();
 void execute(t_instruccion *instruccion);
@@ -34,9 +33,6 @@ void execute_jnz(char *nombre_r,uint32_t nuevo_pc, registros_t *contexto);
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
-t_paquete *crear_paquete(void);
-void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio);
-void enviar_paquete(t_paquete *paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 t_log *iniciar_logger(void);
 t_config *iniciar_config(void);
@@ -55,6 +51,6 @@ int recibir_operacion(int);
 int handshake_Server(int);
 int terminarServidor(int, int);
 void recibir_operacion1(int socket_cliente);
-void *serializar_paquete(t_paquete *paquete, int bytes);
+
 
 #endif /* UTILS_H_ */

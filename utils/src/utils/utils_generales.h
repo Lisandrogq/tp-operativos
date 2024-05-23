@@ -84,7 +84,7 @@ typedef enum
 	ENTRADA_SALIDA,
 
 	//ELIMINAR_ESTRUC_ADMIN,
-} interrućiones;
+} interrupciones;
 
 typedef enum
 { 
@@ -143,6 +143,7 @@ pcb_t *crear_pcb(int pid);
 pcb_t *recibir_paquete(int socket_cliente);
 void eliminar_pcb(pcb_t* pcb);
 void eliminar_paquete(t_paquete* paquete);
+void crear_buffer(t_paquete *paquete);
 
 /**
  * @fn    decir_hola
@@ -152,4 +153,8 @@ void decir_hola(char *quien);
 int crear_conexion(char *ip, char *puerto, t_log *logger);
 int esperar_cliente(int socket_servidor, void *client_handler(void *));
 int iniciar_servidor(char *PUERTO, t_log *logger);
+t_paquete* crear_paquete(void);
+void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
+void *serializar_paquete(t_paquete *paquete, int bytes);
+void enviar_paquete(t_paquete *paquete, int socket_cliente);
 #endif
