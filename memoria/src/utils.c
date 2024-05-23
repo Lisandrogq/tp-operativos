@@ -47,14 +47,11 @@ void handle_cpu_client(int socket_cliente)
 	while (!conexion_terminada)
 	{
 		int cod_op = recibir_operacion(socket_cliente);
-		log_info(logger, "codop:%i", cod_op);
 		switch (cod_op)
 		{
 
 		case FETCH:
-			log_info(logger, "recibi un fetch!!!!!");
 			fetch_t *p_info = recibir_process_info(socket_cliente);
-			log_info(logger, "after");
 			log_info(logger, "pid:%i", p_info->pid);
 			log_info(logger, "pc:%i", p_info->pc);
 			devolver_siguiente_instruction(p_info, socket_cliente);
@@ -255,7 +252,11 @@ void devolver_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 	int_to_char(p_info->pid, pid_str);
 	char *codigo = dictionary_get(dictionary_codigos, pid_str);
 	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
-	log_info(logger, "LINEA:%s", linea);
+	//HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE
+	log_info(logger, "LINEA LEIDA:%s", linea);
+	//USAR LA FUNCION DE CHARLES PARA SEPARAR LA LINEA EN SUS PALABRAS 
+	//CREAR INSTRUCCION_T y GUARDARLAS EN P1,P2...
+	//serializar y mandar.
 }
 
 fetch_t *recibir_process_info(int socket_cliente)

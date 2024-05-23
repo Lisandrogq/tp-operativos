@@ -75,6 +75,7 @@ typedef enum
 	ELIMINAR_PCB,
 	DISPATCH,
 	FETCH,
+	SIGUENTE_INSTRUCCION,
 	//ELIMINAR_ESTRUC_ADMIN,
 } op_code;
 typedef enum

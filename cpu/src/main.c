@@ -21,10 +21,11 @@ void ejecutar_cliclos()
 	while (!terminar_modulo)
 	{
 		t_instruccion *instruccion = fetch(contexto->PC); // hace falta enviar el pid??
-		decode();										  // por ahora no sabemos q hacer en decode
-		execute(instruccion);
-		check_intr();
-		terminar_modulo = true;
+		//decode();										  // por ahora no sabemos q hacer en decode
+		//execute(instruccion);
+		//check_intr();
+		//terminar_modulo = true;
+		sleep(3);
 	}
 }
 
@@ -48,7 +49,7 @@ t_instruccion *fetch(int PC)
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, &PC, sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
-	int bytes = paquete->buffer->size + 2 * sizeof(int); //ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+	int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
 	void *a_enviar = serializar_paquete(paquete, bytes);
 	/////
@@ -58,8 +59,8 @@ t_instruccion *fetch(int PC)
 	free(a_enviar);
 	eliminar_paquete(paquete);
 
-	recv(socket_memoria, instruccion, sizeof(t_instruccion), MSG_WAITALL);//DEBE ESPERAR LA RESPUESTA
-	
+	//recv(socket_memoria, instruccion, sizeof(t_instruccion), MSG_WAITALL); // DEBE ESPERAR LA RESPUESTA
+
 	/// aca se haría send a socket de memoria y recv instruccion
 	/// esto es para ver si anda, sirve de base para la deserializacion.
 	// instruccion->cod_instruccion = SET;
@@ -73,10 +74,10 @@ t_instruccion *fetch(int PC)
 	//  instruccion->p2 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
 	//  strcpy(instruccion->p2, "SI");
 
-	instruccion->cod_instruccion = JNZ;
-	instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	strcpy(instruccion->p1, "BX");
-	instruccion->p2 = 31;
+	// instruccion->cod_instruccion = JNZ;
+	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
+	// strcpy(instruccion->p1, "BX");
+	// instruccion->p2 = 31;
 
 	contexto->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
 	return instruccion;
