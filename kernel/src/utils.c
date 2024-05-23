@@ -37,7 +37,7 @@ void solicitar_crear_estructuras_administrativas(int tam, char*path, int pid,int
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam, sizeof(int));
     paquete->buffer->offset += sizeof(int);
 
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &path, tam);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, path, tam);
     paquete->buffer->offset += tam;
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
@@ -84,7 +84,7 @@ void ejecutar_script(const char *path) {
     fclose(archivo);
 }*/
 int proceso_CPU(int cod_op, pcb_t *pcb, int socket_cliente){
-    enviar_PCB(cod_op, *pcb, socket_cliente); //MSG_WAITALL
+    enviar_PCB(cod_op, *pcb, socket_cliente); 
     int motivo_desalojo = -1;
     t_buffer *buffer = malloc(sizeof(t_buffer));
     recv(socket_cliente, &(buffer->size), sizeof(uint32_t), MSG_WAITALL);

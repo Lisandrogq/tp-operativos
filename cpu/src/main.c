@@ -20,21 +20,23 @@ void ejecutar_cliclos()
 {
 	while (!terminar_modulo)
 	{
-		t_instruccion *instruccion = fetch(contexto->PC); // hace falta enviar el pid??
-		//decode();										  // por ahora no sabemos q hacer en decode
-		//execute(instruccion);
-		//check_intr();
-		//terminar_modulo = true;
-		sleep(3);
+		int status = 0;
+		sem_wait(&hay_proceso);
+		while (status != -1)
+		{
+			t_strings_instruccion *instruccion = fetch(contexto->PC); // hace falta enviar el pid??
+			decode();												  // por ahora no sabemos q hacer en decode
+			status = execute(instruccion);
+
+			// check_intr();
+			sleep(3);
+		}
 	}
 }
 
-t_instruccion *fetch(int PC)
+void solicitar_siguiente_instruccion()
 {
-	t_instruccion *instruccion;
-	instruccion = malloc(sizeof(t_instruccion));
-	memset(instruccion, 0, sizeof(t_instruccion));
-	/////
+
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = FETCH;
@@ -46,20 +48,92 @@ t_instruccion *fetch(int PC)
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid_exec, sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
-	memcpy(paquete->buffer->stream + paquete->buffer->offset, &PC, sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(contexto->PC), sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
 	int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
 	void *a_enviar = serializar_paquete(paquete, bytes);
-	/////
 
-	log_info(logger, "programcounter: %i", PC);
+	log_info(logger, "programcounter: %i", contexto->PC);
 	send(socket_memoria, a_enviar, bytes, 0);
 	free(a_enviar);
 	eliminar_paquete(paquete);
+}
 
-	//recv(socket_memoria, instruccion, sizeof(t_instruccion), MSG_WAITALL); // DEBE ESPERAR LA RESPUESTA
+t_strings_instruccion *recibir_siguiente_instruccion()
+{
+	int codop = recibir_operacion(socket_memoria); // m lo saco de encima pq esta en el paquete xd
+
+	t_buffer *buffer = malloc(sizeof(t_buffer));
+	recv(socket_memoria, &(buffer->size), sizeof(uint32_t), 0);
+	buffer->stream = malloc(buffer->size);
+	recv(socket_memoria, buffer->stream, buffer->size, 0);
+
+	t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion));
+	memset(palabras, 0, sizeof(t_strings_instruccion));
+
+	void *stream = buffer->stream;
+	memcpy(&(palabras->tamcod), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->cod_instruccion = malloc(palabras->tamcod);
+	memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
+	stream += palabras->tamcod;
+
+	memcpy(&(palabras->tamp1), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->p1 = malloc(palabras->tamp1);
+	memcpy((palabras->p1), stream, palabras->tamp1);
+	stream += palabras->tamp1;
+
+	memcpy(&(palabras->tamp2), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->p2 = malloc(palabras->tamp2);
+	memcpy((palabras->p2), stream, palabras->tamp2);
+	stream += palabras->tamp2;
+
+	memcpy(&(palabras->tamp3), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->p3 = malloc(palabras->tamp3);
+	memcpy((palabras->p3), stream, palabras->tamp3);
+	stream += palabras->tamp3;
+
+	memcpy(&(palabras->tamp4), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->p4 = malloc(palabras->tamp4);
+	memcpy((palabras->p4), stream, palabras->tamp4);
+	stream += palabras->tamp4;
+
+	memcpy(&(palabras->tamp5), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->p5 = malloc(palabras->tamp5);
+	memcpy((palabras->p5), stream, palabras->tamp5);
+	stream += palabras->tamp5;
+
+	free(buffer->stream);
+	free(buffer);
+	return palabras;
+}
+
+t_strings_instruccion *fetch(int PC)
+{
+	// ACA IRÍA UN WAIT('HAY_PROCESO_PARA_EJECUTAR') QUE SE ACTUALIZA CUANDO SE RECIBE UN CONTEXTO EN DISPATCH;
+
+	solicitar_siguiente_instruccion();
+	t_strings_instruccion *palabras = recibir_siguiente_instruccion();
+	log_info(logger, "palabra[0]: %s", palabras->cod_instruccion);
+	log_info(logger, "palabra[1]: %s", palabras->p1);
+	log_info(logger, "palabra[2]: %s", palabras->p2);
+	log_info(logger, "palabra[3]: %s", palabras->p3);
+	log_info(logger, "palabra[4]: %s", palabras->p4);
+	log_info(logger, "palabra[5]: %s", palabras->p5);
+
+	contexto->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
+
+	return palabras;
+	/////
+
+	// recv(socket_memoria, instruccion, sizeof(t_instruccion), MSG_WAITALL); // DEBE ESPERAR LA RESPUESTA
 
 	/// aca se haría send a socket de memoria y recv instruccion
 	/// esto es para ver si anda, sirve de base para la deserializacion.
@@ -78,22 +152,22 @@ t_instruccion *fetch(int PC)
 	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
 	// strcpy(instruccion->p1, "BX");
 	// instruccion->p2 = 31;
-
-	contexto->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
-	return instruccion;
 }
 void decode() {}
-void execute(t_instruccion *instruccion)
+int execute(t_strings_instruccion *instruccion)
 {
 
-	if (instruccion->cod_instruccion == SET)
+	if (strcmp(instruccion->cod_instruccion, "SET") == 0)
 	{
-		// u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
-		execute_set(instruccion->p1, instruccion->p2);
+
+		int num = *(instruccion->p2) - '0';
+		log_info(logger, "num:%s", instruccion->p2);
+		execute_set(instruccion->p1, num);
 		free((instruccion->p1));
 		free(instruccion);
+		return 0;
 	}
-	if (instruccion->cod_instruccion == SUM)
+	if (strcmp(instruccion->cod_instruccion, "SUM") == 0)
 	{
 		// u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
 		// u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
@@ -101,24 +175,33 @@ void execute(t_instruccion *instruccion)
 		free((instruccion->p1));
 		free((instruccion->p2));
 		free(instruccion);
+		return 0;
 	}
-	if (instruccion->cod_instruccion == SUB)
+	if (strcmp(instruccion->cod_instruccion, "SUB") == 0)
 	{
 		execute_sub(instruccion->p1, instruccion->p2);
 		free((instruccion->p1));
 		free((instruccion->p2));
 		free(instruccion);
+		return 0;
 	}
-	if (instruccion->cod_instruccion == JNZ)
+	if (strcmp(instruccion->cod_instruccion, "JNZ") == 0)
 	{
 		u_int32_t p2 = instruccion->p2;
 		execute_jnz(instruccion->p1, p2, contexto);
 		free((instruccion->p1));
 		free(instruccion);
+		return 0;
 	}
-	if (instruccion->cod_instruccion == IO_GEN_SLEEP)
+	if (strcmp(instruccion->cod_instruccion, "EXIT") == 0)
+	{
+		sem_post(&desalojar);
+		return -1;
+	}
+	if (strcmp(instruccion->cod_instruccion, "IO_GEN_SLEEP") == 0)
 	{
 		// todo
+		return 0;
 	}
 }
 void check_intr() {}
@@ -222,6 +305,8 @@ t_dictionary *inicializar_diccionario()
 
 int main(int argc, char const *argv[])
 {
+	sem_init(&hay_proceso, 0, 0);
+	sem_init(&desalojar, 0, 0);
 	contexto = malloc(sizeof(registros_t));
 	memset(contexto, 0, sizeof(registros_t));
 	dictionary = inicializar_diccionario();

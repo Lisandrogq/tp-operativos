@@ -7,9 +7,9 @@ char *leer_codigo(char *path)
 {
 	// leer el pseudocodigo
 	FILE *file;
-	fopen(path, "r");
+
 	char *codigo;
-	file = fopen("file.txt", "r");
+	file = fopen(path, "r");
 
 	fseek(file, 0, SEEK_END);
 	int file_size = ftell(file);
@@ -54,7 +54,8 @@ void handle_cpu_client(int socket_cliente)
 			fetch_t *p_info = recibir_process_info(socket_cliente);
 			log_info(logger, "pid:%i", p_info->pid);
 			log_info(logger, "pc:%i", p_info->pc);
-			devolver_siguiente_instruction(p_info, socket_cliente);
+			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
+			enviar_instruccion(palabras, socket_cliente);
 			break;
 		case -1:
 			return -1;
@@ -73,6 +74,7 @@ void handle_kerel_client(int socket)
 		{
 		case CREAR_ESTRUC_ADMIN:
 			struct_administrativas *e_admin = recibir_estructuras_administrativas(socket);
+			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
 			break;
 
@@ -230,7 +232,7 @@ char *get_linea_buscada(const char *input_string, int linea_buscada)
 {
 	char *lines[100];
 	int line_count = 0;
-	char *copy = strdup(input_string); // Make a copy of input_string to avoid modifying the original
+	char *copy = strdup(input_string);
 	char *token = strtok(copy, "\n");
 
 	while (token != NULL && line_count <= linea_buscada)
@@ -244,19 +246,111 @@ char *get_linea_buscada(const char *input_string, int linea_buscada)
 
 	return lines[linea_buscada];
 }
+char **separar_linea_en_parametros(const char *input_string)
+{
+	char **palabras = malloc(sizeof(char *) * 6); // max 1 instruccion + 5 params
+	memset(palabras, 0, sizeof(char *) * 6);
+	int word_count = 0;
+	char *copy = strdup(input_string);
+	char *token = strtok(copy, " ");
 
-void devolver_siguiente_instruction(fetch_t *p_info, int socket_cliente)
+	while (token != NULL && word_count <= 5)
+	{
+		palabras[word_count] = strdup(token);
+		word_count++;
+		token = strtok(NULL, " ");
+	}
+	free(copy); // Free the memory allocated by strdup
+
+	for (int i = 0; i < 6; i++)
+	{
+		log_warning(logger, "linea %i: %s", i, palabras[i]);
+	}
+	return palabras;
+}
+char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 {
 	char *linea; // esto debería ser dinamico y en un malloc, creo, mejro si no:p.
 	char pid_str[5] = "";
 	int_to_char(p_info->pid, pid_str);
 	char *codigo = dictionary_get(dictionary_codigos, pid_str);
 	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
-	//HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE
+	// HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE
 	log_info(logger, "LINEA LEIDA:%s", linea);
-	//USAR LA FUNCION DE CHARLES PARA SEPARAR LA LINEA EN SUS PALABRAS 
-	//CREAR INSTRUCCION_T y GUARDARLAS EN P1,P2...
-	//serializar y mandar.
+	char **palabras = separar_linea_en_parametros(linea);
+	return palabras;
+}
+int enviar_instruccion(char **palabras, int socket_cliente)
+{
+	int t0 = strlen(palabras[0]) + 1;
+	int t1 = 0;
+	int t2 = 0;
+	int t3 = 0;
+	int t4 = 0;
+	int t5 = 0;
+	if (palabras[1] != 0) /// esto es feo, pero bueno es lo que hay.
+	{
+		t1=strlen(palabras[1]) + 1;
+		if (palabras[2] != 0)
+		{
+			t2=strlen(palabras[2]) + 1;
+			if (palabras[3] != 0)
+			{
+				t3 = strlen(palabras[3]) + 1;
+				if (palabras[4] != 0)
+				{
+					t4 = strlen(palabras[4]) + 1;
+					if (palabras[5] != 0)
+						t5 = strlen(palabras[5]) + 1;
+				}
+			}
+		}
+	}
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->codigo_operacion = SIGUENTE_INSTRUCCION;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = t0 + t1 + t2 + t3 + t4 + t5 + 6 * sizeof(int); //!!!#!"#capaz el 5*sizeof(int) debería ser calculado
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	memset(paquete->buffer->stream, 0, paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	// si alguno de los tams es 0, no se escribe nada en ese parametro osea queda todo 0
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &t0, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, palabras[0], t0);
+	paquete->buffer->offset += t0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &t1, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, palabras[1], t1);
+	paquete->buffer->offset += t1;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &t2, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, palabras[2], t2);
+	paquete->buffer->offset += t2;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &t3, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, palabras[3], t3);
+	paquete->buffer->offset += t3;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &t4, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, palabras[4], t4);
+	paquete->buffer->offset += t4;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &t5, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, palabras[5], t5);
+	paquete->buffer->offset += t5;
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+	send(socket_cliente, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
 }
 
 fetch_t *recibir_process_info(int socket_cliente)
@@ -291,9 +385,9 @@ struct_administrativas *recibir_estructuras_administrativas(int socket_cliente)
 	memcpy(&(estructura->tam), stream, sizeof(int));
 	stream += sizeof(int);
 	estructura->path = malloc(estructura->tam);
-	memcpy(&(estructura->path), stream, sizeof(int));
+	memcpy((estructura->path), stream, estructura->tam); // este sizeof(int) no debería ser estructura->tam???
 	stream += estructura->tam;
-	memcpy(&(estructura->pid), stream, sizeof(registros_t));
+	memcpy(&(estructura->pid), stream, sizeof(int)); // REGISTROS_T?????
 	free(buffer->stream);
 	free(buffer);
 	return estructura;

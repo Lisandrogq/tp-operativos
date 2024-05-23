@@ -21,6 +21,20 @@
 
 
 typedef struct
+{	int tamcod;
+	char* cod_instruccion;
+	int tamp1;
+	char *p1;
+	int tamp2;
+	char *p2;
+	int tamp3;
+	char *p3;
+	int tamp4;
+	char *p4;
+	int tamp5;
+	char *p5;
+} t_strings_instruccion;
+typedef struct
 {
 	int cod_instruccion;
 	void *p1;

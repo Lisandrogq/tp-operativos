@@ -46,6 +46,7 @@ int inicializar_cliente_kernel()
 
 int main(void)
 {
+	
 	logger = iniciar_logger();
 	logger = log_create("IO.log","IO_MateLavado",1,LOG_LEVEL_INFO);
 	config = iniciar_config();
@@ -67,7 +68,7 @@ int main(void)
 	log_info(logger, "El thread cliente-kernel inició su ejecución");
 
 	pthread_join(tid[0], NULL); //join para que no termine el main creo que puede llegar a terminar igual
-	pthread_join(tid[1], NULL);
+	pthread_join(tid[1], NULL); 
 	
 
 }

@@ -2,8 +2,8 @@
 #include <errno.h>
 
 t_dictionary *dictionary;
-
-
+sem_t hay_proceso;
+sem_t desalojar;
 
 void execute_set(char *nombre_r_destino, int valor)
 {
@@ -34,17 +34,17 @@ void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
-        *r_destino = *r_destino + sumando ;
+        *r_destino = *r_destino + sumando;
     }
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
         u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
-        *r_destino = *r_destino + sumando ;
+        *r_destino = *r_destino + sumando;
     }
 }
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8 ES UNSIGNED, NO CREO Q SEA UN PROBLEMA EN LAS PRUEBAS PERO XD
 {
-     int sustraendo = 0;
+    int sustraendo = 0;
     if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
     {
         u_int32_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
@@ -58,28 +58,28 @@ void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
-        *r_destino = *r_destino - sustraendo ;
+        *r_destino = *r_destino - sustraendo;
     }
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
         u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
-        *r_destino = *r_destino - sustraendo ;
+        *r_destino = *r_destino - sustraendo;
     }
 }
-void execute_jnz(char *nombre_r,uint32_t nuevo_pc, registros_t *contexto) // habría que ver si hay alguna forma para no pasar el contexto
+void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // habría que ver si hay alguna forma para no pasar el contexto
 {
-   
+
     if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI")) // caso registros de 4 byte
     {
         u_int32_t *registro = dictionary_get(dictionary, nombre_r);
         if (*registro != 0)
-        contexto->PC = nuevo_pc;
+            contexto->PC = nuevo_pc;
     }
     else if (strlen(nombre_r) == 2) // caso registros de 1 byte
     {
         u_int8_t *registro = dictionary_get(dictionary, nombre_r);
         if (*registro != 0)
-        contexto->PC = nuevo_pc;
+            contexto->PC = nuevo_pc;
     }
 }
 int esperar_cliente_cpu(int socket_servidor)
@@ -101,7 +101,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int);//ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+    int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -131,13 +131,13 @@ void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
 {
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    buffer->size = sizeof(int) *2 + sizeof(registros_t)+ sizeof(state_t);
+    buffer->size = sizeof(int) * 2 + sizeof(registros_t) + sizeof(state_t);
     buffer->stream = malloc(buffer->size);
     buffer->offset = 0;
 
     memcpy(buffer->stream + buffer->offset, &motivo_desalojo, sizeof(int));
     buffer->offset += sizeof(int);
-    
+
     memcpy(buffer->stream + buffer->offset, &pcb.pid, sizeof(int));
     buffer->offset += sizeof(int);
 
@@ -147,7 +147,7 @@ void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
     memcpy(buffer->stream + buffer->offset, pcb.registros, sizeof(registros_t));
     buffer->offset += sizeof(registros_t);
 
-    memcpy(buffer->stream + buffer->offset, &pcb.state, sizeof(state_t)); 
+    memcpy(buffer->stream + buffer->offset, &pcb.state, sizeof(state_t));
     int bytes = buffer->size + 2 * sizeof(int);
 
     void *a_enviar = serializar_paquete(buffer, bytes);
@@ -177,7 +177,7 @@ void *client_handler_dispatch(int socket_cliente)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
-        log_warning(logger,"enviar operacion: codop:%i",cod_op );
+        log_warning(logger, "enviar operacion: codop:%i", cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -197,11 +197,10 @@ void *client_handler_dispatch(int socket_cliente)
             recibir_mensaje(socket_cliente);
             break;
         case DISPATCH:
-            log_info(logger, "Entre al switch");
             pcb_t *pcb = recibir_paquete(socket_cliente);
-            //ejecutar instruccion uno a uno desde memoria
+            sem_post(&hay_proceso);
+            sem_wait(&desalojar);
             enviar_PCB_Desalojo(0, *pcb, socket_cliente);
-            log_info(logger, "YA ENVIE");
             break;
         case -1:
             log_info(logger, "Se desconecto algun cliente");

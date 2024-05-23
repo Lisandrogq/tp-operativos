@@ -21,7 +21,7 @@ void *consola()
 	while (1)
 	{
 		linea = readline(">");
-		instruccion[0] = malloc(strlen(linea));//CAMBIAR 39 POR ALGO!!!!!
+		instruccion[0] = malloc(strlen(linea)); // CAMBIAR 39 POR ALGO!!!!!
 		instruccion[1] = malloc(strlen(linea));
 		instruccion[0] = strtok(linea, " ");
 		instruccion[1] = strtok(NULL, " ");
@@ -32,17 +32,17 @@ void *consola()
 		}
 
 		if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
-		{	
-			int tam = sizeof(strlen(linea));
+		{
+			int tam = 1 + sizeof(strlen(linea));
 			iniciar_proceso(instruccion[1], tam);
 			sem_post(&hay_procesos);
 		}
 
 		free(linea);
 	}
-
 }
-void planificar(){//to do esta funcion elegue el proceso a ser ejecutado y lo marca como exec
+void planificar()
+{ // to do esta funcion elegue el proceso a ser ejecutado y lo marca como exec
 }
 void *cliente_cpu_dispatch()
 {
@@ -65,17 +65,17 @@ void *cliente_cpu_dispatch()
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
 	sem_wait(&hay_procesos);
-	planificar(); 
+	planificar();
 	log_info(logger, "DESPUES DE PLANIFICAR");
-	int motivo_desalojo = proceso_CPU(DISPATCH,&lista_pcbs[0],conexion_fd); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta
+	int motivo_desalojo = proceso_CPU(DISPATCH, &lista_pcbs[0], conexion_fd); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta
 	log_info(logger, "ARRIBA DEL SWIATCH:%i", motivo_desalojo);
 	switch (motivo_desalojo)
 	{
 	case PRUEBA:
-		//soy una prueba
+		// soy una prueba
 		log_info(logger, "FUNCIONE");
 		break;
-	
+
 	default:
 		log_info(logger, "Entre al switch pero al defaulr");
 		break;
@@ -120,7 +120,7 @@ int inicializar_cliente_memoria()
 	int resultado = handshake(conexion_fd);
 	if (resultado == -1)
 		return;
-	
+
 	pthread_mutex_unlock(&mutex_socket_memoria);
 	return conexion_fd;
 }
@@ -165,7 +165,6 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 	liberar_conexion(conexion);
 }
 
-
 int main(int argc, char const *argv[])
 {
 
@@ -202,8 +201,7 @@ int main(int argc, char const *argv[])
 	}
 	log_info(logger, "El thread cliente_cpu_dispatch inició su ejecución");
 
-	socket_memoria =inicializar_cliente_memoria();
-
+	socket_memoria = inicializar_cliente_memoria();
 
 	consola();
 

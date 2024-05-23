@@ -20,10 +20,13 @@
 
 
 extern t_dictionary *dictionary;
+extern sem_t hay_proceso;
+extern sem_t desalojar;
+
 // Cliente
-t_instruccion *fetch(int PC);
+t_strings_instruccion *fetch(int PC);
 void decode();
-void execute(t_instruccion *instruccion);
+int execute(t_strings_instruccion *instruccion);
 void check_intr();
 
 void execute_set(char *nombre_r_destino, int valor);

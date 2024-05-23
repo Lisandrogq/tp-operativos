@@ -12,7 +12,8 @@
 			"initializer_list": "c",
 			"utility": "c",
 			"atomic": "c",
-			"numbers": "c"
+			"numbers": "c",
+			"random": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},
