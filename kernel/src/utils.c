@@ -3,18 +3,20 @@
 
 extern t_log *logger;
 int next_pid;
-pcb_t lista_pcbs[100]; 
+extern t_list *lista_pcbs_ready;
+extern t_list *lista_pcbs_bloqueado;
+extern t_list *lista_pcbs_exec;
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
+int contador;
 int socket_memoria;
 //
 void iniciar_proceso(char *path, int tam){
-
+    
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
-    lista_pcbs[0] = *nuevo_pcb;
-    //Aca se deberia actulizar la lista de pcbs para poder accederlo en main
+    list_add(lista_pcbs_ready, nuevo_pcb);
     next_pid++;
-    pthread_mutex_lock(&mutex_socket_memoria);
+    pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
     solicitar_crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
@@ -102,10 +104,19 @@ int proceso_CPU(int cod_op, pcb_t *pcb, int socket_cliente){
     stream += sizeof(registros_t);
     memcpy(&(pcb->state), stream, sizeof(state_t));
     return motivo_desalojo;
-
-
 }
+void retirar_pcb_bloqueado(pcb_t pcb, int index){
+    pcb.state = READY_S;
+    list_add(lista_pcbs_ready, list_remove(lista_pcbs_bloqueado, index));
+}
+int planificar_fifo(int socket_cliente){
 
+    pcb_t *pcb = list_get(lista_pcbs_ready, 0);
+    list_remove(lista_pcbs_bloqueado, 0);
+    list_add(lista_pcbs_exec, pcb);
+    pcb->state = EXEC_S;
+    return proceso_CPU(DISPATCH,pcb,socket_cliente); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta
+}
 
 
 void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)

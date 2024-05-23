@@ -13,6 +13,9 @@ t_log *logger;
 t_config *config;
 pthread_t tid[3];
 sem_t hay_procesos;
+t_list *lista_pcbs_ready;
+t_list *lista_pcbs_bloqueado;
+t_list *lista_pcbs_exec;
 
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
@@ -40,9 +43,7 @@ void *consola()
 
 		free(linea);
 	}
-}
-void planificar()
-{ // to do esta funcion elegue el proceso a ser ejecutado y lo marca como exec
+
 }
 void *cliente_cpu_dispatch()
 {
@@ -51,11 +52,12 @@ void *cliente_cpu_dispatch()
 	char *ip;
 	char *puerto;
 	char *modulo;
-
+	char *algoritmo;
 	modulo = config_get_string_value(config, "MODULO");
 	log_info(logger, "Este es el modulo: %s", modulo);
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
+	algoritmo = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
 	conexion_fd = crear_conexion(ip, puerto, logger);
 	int resultado = handshake(conexion_fd);
@@ -64,20 +66,31 @@ void *cliente_cpu_dispatch()
 
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
+	
 	sem_wait(&hay_procesos);
-	planificar();
-	log_info(logger, "DESPUES DE PLANIFICAR");
-	int motivo_desalojo = proceso_CPU(DISPATCH, &lista_pcbs[0], conexion_fd); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta
-	log_info(logger, "ARRIBA DEL SWIATCH:%i", motivo_desalojo);
+	int motivo_desalojo=0;
+	if(algoritmo == "FIFO"){
+		motivo_desalojo = planificar_fifo(conexion_fd);
+	}else if(algoritmo=="RR"){
+		//planificar_rr();
+	}else{
+		//planificar_vrr();
+	}
+	
 	switch (motivo_desalojo)
 	{
+	case FIN:
+		pcb_t *pcb = list_get(lista_pcbs_exec, 0);
+    	list_remove(lista_pcbs_exec, 0);
+		pcb->state = EXIT_S;
+		break;
 	case PRUEBA:
 		// soy una prueba
 		log_info(logger, "FUNCIONE");
 		break;
 
 	default:
-		log_info(logger, "Entre al switch pero al defaulr");
+		log_info(logger, "Entre al switch pero al default");
 		break;
 	}
 	return 0;
@@ -135,8 +148,14 @@ int *servidor()
 	}
 	log_info(logger, "kernel servidor-escucha iniciado correctamente");
 	esperar_cliente(server_fd, client_handler);
-	log_warning(logger, "Termino el servidor");
-	// habría que ver cuando se termina el servidor, asi se cierra el server_fd
+
+	/* Al recibir una petición de I/O de parte de la CPU primero se deberá validar que exista y esté conectada la interfaz solicitada, en caso contrario, se deberá enviar el proceso a EXIT.
+	En caso de que la interfaz exista y esté conectada, se deberá validar que la interfaz admite la operación solicitada, en caso de que no sea así, se deberá enviar el proceso a EXIT.
+	De cumplirse todos los requisitos anteriores, el Kernel enviará el proceso al estado BLOCKED y a partir de este punto pueden darse 2 situaciones:
+	El caso en el que la interfaz de I/O esté libre: En este caso el Kernel deberá solicitar la operación al dispositivo correspondiente. 
+	En el caso de que exista algún proceso haciendo uso de la Interfaz de I/O, el proceso que acaba de solicitar la operación de I/O deberá esperar la finalización del anterior antes de poder hacer uso de la misma.
+	Una vez la operación finalice, el Kernel recibirá una notificación y desbloqueará dicho proceso para que esté listo para continuar con su ejecución cuando le toque según el algoritmo. */
+
 }
 t_log *iniciar_logger(void)
 {
@@ -170,6 +189,9 @@ int main(int argc, char const *argv[])
 
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria);
+	t_list *lista_pcbs_ready = list_create();
+	t_list *lista_pcbs_bloqueado = list_create();
+	t_list *lista_pcbs_exec = list_create();
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
 	config = iniciar_config();

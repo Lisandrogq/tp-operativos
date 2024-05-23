@@ -25,7 +25,7 @@ int inicializar_cliente_memoria() // todavia no se usa
 	return conexion_fd;
 }
 int inicializar_cliente_kernel()
-{
+{	
 	int conexion_fd;
 	char *ip;
 	char *puerto;
@@ -37,6 +37,16 @@ int inicializar_cliente_kernel()
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
 
 	conexion_fd = crear_conexion(ip, puerto, logger);
+
+	t_list *lista = list_create();
+	list_add(lista,2);
+	int retorno = list_get(lista, 0);
+	log_info(logger, "Valor: %i", retorno);
+	list_add(lista,8);
+	list_remove(lista,0);
+	retorno = list_get(lista, 0);
+	log_info(logger, "Valor: %i", retorno);
+	
 	int resultado = handshake(conexion_fd);
 	if (resultado == -1)
 		return;

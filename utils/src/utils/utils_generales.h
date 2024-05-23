@@ -97,6 +97,7 @@ typedef enum
 	PRUEBA,
 	RELOJ,
 	ENTRADA_SALIDA,
+	FIN,
 
 	//ELIMINAR_ESTRUC_ADMIN,
 } interrupciones;

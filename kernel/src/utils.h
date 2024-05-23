@@ -39,8 +39,9 @@ t_config* iniciar_config(void);
 void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
-
+void retirar_pcb_bloqueado(pcb_t pcb, int index);
 int proceso_CPU(int cod_op, pcb_t *pcb, int socket_cliente);
+int planificar_fifo(int socket_cliente);
 //Server
 extern t_log* logger;
 
