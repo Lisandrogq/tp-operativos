@@ -3,9 +3,9 @@
 
 extern t_log *logger;
 int next_pid;
-extern t_list *lista_pcbs_ready;
-extern t_list *lista_pcbs_bloqueado;
-extern t_list *lista_pcbs_exec;
+t_list *lista_pcbs_ready;
+t_list *lista_pcbs_bloqueado;
+t_list *lista_pcbs_exec;
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
 int contador;
@@ -14,7 +14,7 @@ int socket_memoria;
 void iniciar_proceso(char *path, int tam){
     
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
-    list_add(lista_pcbs_ready, nuevo_pcb); //Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
+    int error = list_add(lista_pcbs_ready, nuevo_pcb); //Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
     next_pid++;
     pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
     solicitar_crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);

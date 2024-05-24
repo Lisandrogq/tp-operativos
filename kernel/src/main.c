@@ -13,10 +13,6 @@ t_log *logger;
 t_config *config;
 pthread_t tid[3];
 sem_t hay_procesos;
-t_list *lista_pcbs_ready;
-t_list *lista_pcbs_bloqueado;
-t_list *lista_pcbs_exec;
-
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
 	char *linea;
@@ -55,7 +51,7 @@ void *cliente_cpu_dispatch()
 	char *algoritmo;
 	int quantum;
 	modulo = config_get_string_value(config, "MODULO");
-	log_info(logger, "Este es el modulo: %s", modulo);
+	log_info(logger, "Este es el modulo:%s", modulo);
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
 	algoritmo = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
@@ -69,10 +65,12 @@ void *cliente_cpu_dispatch()
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
 	
 	sem_wait(&hay_procesos);
-	int motivo_desalojo=0;
-	if(algoritmo == "FIFO"){
+	int motivo_desalojo=-1;
+	if(strcmp(algoritmo, "FIFO")== 0){
 		motivo_desalojo = planificar_fifo(conexion_fd);
-	}else if(algoritmo=="RR"){
+		pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0);
+		log_info(logger, "Registro AX: %i", pcb_prueba->registros->AX);
+	}else if(strcmp(algoritmo, "RR")== 0){
 		motivo_desalojo = planificar_rr(conexion_fd);
 	}else{
 		//planificar_vrr();
@@ -86,10 +84,10 @@ void *cliente_cpu_dispatch()
 		pcb->state = EXIT_S;
 		break;
 	case RELOJ:
-		pcb_t *pcb = list_get(lista_pcbs_exec, 0);
+		pcb_t *pcb_reloj = list_get(lista_pcbs_exec, 0);
     	list_remove(lista_pcbs_exec, 0);
-		pcb->state = READY_S;
-		list_add(lista_pcbs_ready, pcb);
+		pcb_reloj->state = READY_S;
+		list_add(lista_pcbs_ready, pcb_reloj);
 		break;
 	case PRUEBA:
 		// soy una prueba
@@ -196,9 +194,9 @@ int main(int argc, char const *argv[])
 
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria);
-	t_list *lista_pcbs_ready = list_create();
-	t_list *lista_pcbs_bloqueado = list_create();
-	t_list *lista_pcbs_exec = list_create();
+	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
+	lista_pcbs_bloqueado = list_create();
+	lista_pcbs_exec = list_create();
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
 	config = iniciar_config();

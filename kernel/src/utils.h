@@ -23,6 +23,9 @@ extern int next_pid;
 extern int socket_memoria;
 extern pthread_mutex_t mutex_socket_memoria;
 extern int operacion;
+extern t_list *lista_pcbs_ready;
+extern t_list *lista_pcbs_bloqueado;
+extern t_list *lista_pcbs_exec;
 typedef enum
 {	//habría q ver como podemos unificar esto en un solo archivo
 	INICIAR_PROCESO,
