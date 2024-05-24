@@ -90,7 +90,7 @@ typedef enum
 	DISPATCH,
 	FETCH,
 	SIGUENTE_INSTRUCCION,
-	//ELIMINAR_ESTRUC_ADMIN,
+	ELIMINAR_ESTRUC_ADMIN,
 } op_code;
 typedef enum
 { 

@@ -73,6 +73,9 @@ void *cliente_cpu_dispatch()
 	}else if(strcmp(algoritmo, "RR")== 0){
 		motivo_desalojo = planificar_rr(conexion_fd);
 	}else{
+		/* if(strcmp(algoritmo, "VRR")== 0){
+			motivo_desalojo = planificar_vrr(conexion_fd);
+		} */
 		//planificar_vrr();
 	}
 	

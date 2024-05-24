@@ -39,4 +39,6 @@ int handshake(int socket_cliente)
     return result;
 }
 
-
+void interfaz_generica(int conexion_fd, int *tiempo_Unidad_Trabajo){
+    sleep(*tiempo_Unidad_Trabajo*10);
+}

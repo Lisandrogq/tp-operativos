@@ -30,11 +30,27 @@ int inicializar_cliente_kernel()
 	char *ip;
 	char *puerto;
 	char *modulo;
+	char *tipo_Interfaz;
+	int	*tiempo_Unidad_Trabajo;
+	/*char* ip_Memoria;
+	char* puerto_Memoria;
+	char path_Base_Dialfs;
+	int block_Size;
+	int block_Count;
+	int retraso_Compactacion;*/
 
-	modulo = config_get_string_value(config, "MODULO");
-	log_info(logger, "Este es el modulo: %s", modulo);
+
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
+	//ip_Memoria = config_get_string_value(config, "IP_MEMORIA");
+	//puerto_Memoria = config_get_string_value(config, "PUERTO_MEMORIA");
+	tipo_Interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
+	tiempo_Unidad_Trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	//path_Base_Dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
+	//block_Size = config_get_int_value(config, "BLOCK_SIZE");
+	//block_Count = config_get_int_value(config, "BLOCK_COUNT");
+	//retraso_Compactacion = config_get_int_value(config, "RETRASO_COMPACTACION");
+
 
 	conexion_fd = crear_conexion(ip, puerto, logger);
 
@@ -50,6 +66,23 @@ int inicializar_cliente_kernel()
 	int resultado = handshake(conexion_fd);
 	if (resultado == -1)
 		return;
+
+	if(strcmp(tipo_Interfaz,"GENERICA") == 0){
+		interfaz_generica(conexion_fd, tiempo_Unidad_Trabajo);
+	}
+/*
+	if(strcmp(tipo_Interfaz,"STDIN") == 0){
+		//interfaz_stdin(conexion_fd);
+	}
+
+	if(strcmp(tipo_Interfaz,"STDOUT") == 0{
+		//interfaz_stdout(conexion_fd);
+	}
+
+	if(strcmp(tipo_Interfaz,"FS") == 0{
+		//interfaz_fs(conexion_fd, path_Base_Dialfs, block_Size, block_Count, retraso_Compactacion);
+	}
+	*/
 	
 	return conexion_fd;
 }

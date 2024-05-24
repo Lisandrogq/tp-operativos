@@ -20,12 +20,12 @@ void iniciar_proceso(char *path, int tam){
     solicitar_crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
-/*void finalizar_proceso(int pid){
+void finalizar_proceso(int pid){
 
     pthread_mutex_lock(&mutex_socket_memoria);
     solicitar_eliminar_estructuras_administrativas(pid,socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
-}*/
+}
 
 void solicitar_crear_estructuras_administrativas(int tam, char*path, int pid,int socket_memoria){
     
@@ -54,7 +54,7 @@ void solicitar_crear_estructuras_administrativas(int tam, char*path, int pid,int
  
 }
 
-/*void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria) {
+void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria) {
 
     t_paquete *paquete = crear_paquete();
     paquete->codigo_operacion = ELIMINAR_ESTRUC_ADMIN;
@@ -84,7 +84,8 @@ void ejecutar_script(const char *path) {
     }
 
     fclose(archivo);
-}*/
+}
+
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente){
     enviar_PCB(cod_op, *pcb, socket_cliente); 
     int motivo_desalojo = -1;

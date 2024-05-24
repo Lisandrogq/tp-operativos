@@ -13,6 +13,13 @@
 #include <assert.h>
 #include <utils/utils_generales.h>
 
+typedef enum{
+    GENERICA,
+    STDIN,
+    STDOUT,
+    FS,
+}interfaz;
+
 // Cliente
 // void enviar_mensaje(char* mensaje, int socket_cliente);
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
