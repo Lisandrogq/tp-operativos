@@ -53,12 +53,13 @@ void *cliente_cpu_dispatch()
 	char *puerto;
 	char *modulo;
 	char *algoritmo;
+	int quantum;
 	modulo = config_get_string_value(config, "MODULO");
 	log_info(logger, "Este es el modulo: %s", modulo);
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
 	algoritmo = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
-
+	quantum = config_get_int_value(config, "QUANTUM");
 	conexion_fd = crear_conexion(ip, puerto, logger);
 	int resultado = handshake(conexion_fd);
 
@@ -72,7 +73,7 @@ void *cliente_cpu_dispatch()
 	if(algoritmo == "FIFO"){
 		motivo_desalojo = planificar_fifo(conexion_fd);
 	}else if(algoritmo=="RR"){
-		//planificar_rr();
+		motivo_desalojo = planificar_rr(conexion_fd);
 	}else{
 		//planificar_vrr();
 	}

@@ -42,6 +42,7 @@ void terminar_programa(int, t_log*, t_config*);
 void retirar_pcb_bloqueado(pcb_t pcb, int index);
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente);
 int planificar_fifo(int socket_cliente);
+int planificar_rr(int socket_cliente);
 //Server
 extern t_log* logger;
 
