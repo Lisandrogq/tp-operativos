@@ -85,6 +85,12 @@ void *cliente_cpu_dispatch()
     	list_remove(lista_pcbs_exec, 0);
 		pcb->state = EXIT_S;
 		break;
+	case RELOJ:
+		pcb_t *pcb = list_get(lista_pcbs_exec, 0);
+    	list_remove(lista_pcbs_exec, 0);
+		pcb->state = READY_S;
+		list_add(lista_pcbs_ready, pcb);
+		break;
 	case PRUEBA:
 		// soy una prueba
 		log_info(logger, "FUNCIONE");
