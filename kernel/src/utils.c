@@ -14,7 +14,7 @@ int socket_memoria;
 void iniciar_proceso(char *path, int tam){
     
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
-    list_add(lista_pcbs_ready, nuevo_pcb);
+    list_add(lista_pcbs_ready, nuevo_pcb); //Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
     next_pid++;
     pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
     solicitar_crear_estructuras_administrativas(tam,path,nuevo_pcb->pid,socket_memoria);
@@ -85,9 +85,10 @@ void ejecutar_script(const char *path) {
 
     fclose(archivo);
 }*/
-int proceso_CPU(int cod_op, pcb_t *pcb, int socket_cliente){
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente){
     enviar_PCB(cod_op, *pcb, socket_cliente); 
     int motivo_desalojo = -1;
+    
     t_buffer *buffer = malloc(sizeof(t_buffer));
     recv(socket_cliente, &(buffer->size), sizeof(uint32_t), MSG_WAITALL);
 	
@@ -115,7 +116,7 @@ int planificar_fifo(int socket_cliente){
     list_remove(lista_pcbs_bloqueado, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
-    return proceso_CPU(DISPATCH,pcb,socket_cliente); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta
+    return enviar_proceso_a_ejecutar(DISPATCH,pcb,socket_cliente); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
 }
 
 
