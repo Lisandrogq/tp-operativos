@@ -113,7 +113,7 @@ void retirar_pcb_bloqueado(pcb_t pcb, int index){
 int planificar_fifo(int socket_cliente){
 
     pcb_t *pcb = list_get(lista_pcbs_ready, 0);
-    list_remove(lista_pcbs_bloqueado, 0);
+    list_remove(lista_pcbs_ready, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
     return enviar_proceso_a_ejecutar(DISPATCH,pcb,socket_cliente); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo

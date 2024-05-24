@@ -82,34 +82,51 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 
 	memcpy(&(palabras->tamp1), stream, sizeof(int));
 	stream += sizeof(int);
-	palabras->p1 = malloc(palabras->tamp1);
-	memcpy((palabras->p1), stream, palabras->tamp1);
-	stream += palabras->tamp1;
+	if (palabras->tamp1 != 0)
+	{
+		palabras->p1 = malloc(palabras->tamp1);
+		memcpy((palabras->p1), stream, palabras->tamp1);
+		stream += palabras->tamp1;
 
-	memcpy(&(palabras->tamp2), stream, sizeof(int));
-	stream += sizeof(int);
-	palabras->p2 = malloc(palabras->tamp2);
-	memcpy((palabras->p2), stream, palabras->tamp2);
-	stream += palabras->tamp2;
+		memcpy(&(palabras->tamp2), stream, sizeof(int));
+		stream += sizeof(int);
+		if (palabras->tamp2 != 0)
+		{
+			palabras->p2 = malloc(palabras->tamp2);
+			memcpy((palabras->p2), stream, palabras->tamp2);
+			stream += palabras->tamp2;
 
-	memcpy(&(palabras->tamp3), stream, sizeof(int));
-	stream += sizeof(int);
-	palabras->p3 = malloc(palabras->tamp3);
-	memcpy((palabras->p3), stream, palabras->tamp3);
-	stream += palabras->tamp3;
+			memcpy(&(palabras->tamp3), stream, sizeof(int));
+			stream += sizeof(int);
+			if (palabras->tamp3 != 0)
+			{
 
-	memcpy(&(palabras->tamp4), stream, sizeof(int));
-	stream += sizeof(int);
-	palabras->p4 = malloc(palabras->tamp4);
-	memcpy((palabras->p4), stream, palabras->tamp4);
-	stream += palabras->tamp4;
+				palabras->p3 = malloc(palabras->tamp3);
+				memcpy((palabras->p3), stream, palabras->tamp3);
+				stream += palabras->tamp3;
 
-	memcpy(&(palabras->tamp5), stream, sizeof(int));
-	stream += sizeof(int);
-	palabras->p5 = malloc(palabras->tamp5);
-	memcpy((palabras->p5), stream, palabras->tamp5);
-	stream += palabras->tamp5;
+				memcpy(&(palabras->tamp4), stream, sizeof(int));
+				stream += sizeof(int);
+				if (palabras->tamp4 != 0)
+				{
 
+					palabras->p4 = malloc(palabras->tamp4);
+					memcpy((palabras->p4), stream, palabras->tamp4);
+					stream += palabras->tamp4;
+
+					memcpy(&(palabras->tamp5), stream, sizeof(int));
+					stream += sizeof(int);
+					if (palabras->tamp5 != 0)
+					{
+						palabras->p5 = malloc(palabras->tamp5);
+						memcpy((palabras->p5), stream, palabras->tamp5);
+						stream += palabras->tamp5;
+					}
+				}
+			}
+		}
+	}
+	// en algun lugar(afuera de esto) hay q hacerle malloc a las palabras.
 	free(buffer->stream);
 	free(buffer);
 	return palabras;
@@ -154,13 +171,14 @@ t_strings_instruccion *fetch(int PC)
 	// instruccion->p2 = 31;
 }
 void decode() {}
+
 int execute(t_strings_instruccion *instruccion)
 {
 
 	if (strcmp(instruccion->cod_instruccion, "SET") == 0)
 	{
 
-		int num = *(instruccion->p2) - '0';
+		int num = atoi((instruccion->p2));
 		log_info(logger, "num:%s", instruccion->p2);
 		execute_set(instruccion->p1, num);
 		free((instruccion->p1));
