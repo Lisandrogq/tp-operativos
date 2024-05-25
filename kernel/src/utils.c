@@ -6,11 +6,12 @@ int next_pid;
 t_list *lista_pcbs_ready;
 t_list *lista_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
+t_list *lista_IO;
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
 int contador;
 int socket_memoria;
-//
+sem_t hay_IO;
 void iniciar_proceso(char *path, int tam)
 {
 
@@ -93,7 +94,7 @@ void ejecutar_script(const char *path) {
     }
 
     fclose(archivo);
-}*/
+}
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
@@ -214,28 +215,11 @@ void *client_handler(void *arg)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente); // REVISARESTO
-
         switch (cod_op)
         {
-        case OPERACION_KERNEL_1:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_operacion1(socket_cliente);
-            break;
-        case OPERACION_CPU_1:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_operacion1(socket_cliente);
-            break;
-        case OPERACION_IO_1:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_operacion1(socket_cliente);
-            break;
-        case MENSAJE:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_mensaje(socket_cliente);
-            break;
-        case -1:
-            log_info(logger, "Se desconecto algun cliente");
-            conexion_terminada = true;
+        case CREACION_IO:
+            t_interfaz *interfaz =recibir_IO(socket_cliente);
+            list_add(lista_IO, interfaz); // talvez sea necesario una lista por tipo de io para hacer la busqueda mas rapido
             break;
         default:
             log_warning(logger, "Operacion desconocida. No quieras meter la pata");
@@ -244,21 +228,26 @@ void *client_handler(void *arg)
     }
     close(socket_cliente);
 }
+t_interfaz *recibir_IO(int socket_cliente){	
+	t_buffer *buffer = malloc(sizeof(t_buffer));
+	recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
+	buffer->stream = malloc(buffer->size);
+	recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-int recibir_operacion(int socket_cliente)
-{
-    int cod_op;
-    if (recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
-    {
-        return cod_op;
-    }
-    else
-    {
-        close(socket_cliente);
-        return -1;
-    }
+	t_interfaz *estructura = malloc(sizeof(t_interfaz));
+	void *stream = buffer->stream;
+	memcpy(&(estructura->largo), stream, sizeof(int));
+	stream += sizeof(int);
+	estructura->nombre = malloc(estructura->largo);
+	memcpy((estructura->nombre), stream, estructura->largo); 
+	stream += estructura->largo;
+	memcpy(&(estructura->tipo), stream, sizeof(int)); 
+	stream += sizeof(int);
+	memcpy(&(estructura->estado), stream, sizeof(int)); 
+	free(buffer->stream);
+	free(buffer);
+	return estructura;
 }
-
 int handshake_Server(int socket_cliente)
 {
 

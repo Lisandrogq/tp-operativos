@@ -269,20 +269,6 @@ void *client_handler_interrupt(int socket_cliente)
     close(socket_cliente);
 }
 
-int recibir_operacion(int socket_cliente)
-{
-    int cod_op;
-    if (recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
-    {
-        return cod_op;
-    }
-    else
-    {
-        close(socket_cliente);
-        return -1;
-    }
-}
-
 int handshake_Server(int socket_cliente)
 {
 

@@ -49,7 +49,6 @@ void *recibir_buffer(int *, int);
 void *client_handler_interrupt(int socket_cliente);
 void *client_handler_dispatch(int socket_cliente);
 void recibir_mensaje(int);
-int recibir_operacion(int);
 int handshake_Server(int);
 int terminarServidor(int, int);
 void recibir_operacion1(int socket_cliente);

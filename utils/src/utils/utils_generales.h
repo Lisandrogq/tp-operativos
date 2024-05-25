@@ -76,7 +76,13 @@ typedef enum
 	IO_FS_READ,
 	EXIT_P,
 } instruction_code;
-
+typedef struct
+{
+    int largo;
+	char *nombre;
+	int estado;
+	int tipo;
+} t_interfaz;
 typedef enum
 { 
 	MENSAJE,
@@ -91,6 +97,8 @@ typedef enum
 	FETCH,
 	SIGUENTE_INSTRUCCION,
 	ELIMINAR_ESTRUC_ADMIN,
+	CREACION_IO,
+	SOLICITAR_IO,
 } op_code;
 typedef enum
 { 
@@ -174,4 +182,5 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void *serializar_paquete(t_paquete *paquete, int bytes);
 void enviar_paquete(t_paquete *paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
+int recibir_operacion(int);
 #endif

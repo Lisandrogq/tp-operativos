@@ -101,7 +101,19 @@ int esperar_cliente(int socket_servidor, void *client_handler (void*))
 		pthread_detach(thread); // creo q debería ser detach pq la condicion de terminacion de sistema es externa
 	}
 }
-
+int recibir_operacion(int socket_cliente)
+{
+    int cod_op;
+    if (recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
+    {
+        return cod_op;
+    }
+    else
+    {
+        close(socket_cliente);
+        return -1;
+    }
+}
 
 int iniciar_servidor(char* PUERTO,t_log *logger)
 {

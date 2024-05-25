@@ -18,10 +18,17 @@ typedef enum{
     STDIN,
     STDOUT,
     FS,
-}interfaz;
-
+}tipo_interfaz;
+typedef enum{
+    DISPONIBLE,
+    BLOQUEADO,
+    EXIT,
+}estado_interfaz;
 // Cliente
 // void enviar_mensaje(char* mensaje, int socket_cliente);
+void iniciar_interfaz_generica();
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
+t_interfaz *crear_estrcutura_io(int tipo);
+void enviar_interfaz(int cod_op, t_interfaz interfaz, int socket_cliente);
 #endif /* UTILS_H_ */

@@ -29,7 +29,6 @@ void handle_crear_pcb(int socket_cliente);
 void *recibir_buffer(int *, int);
 void* client_handler(void *arg);
 void recibir_mensaje(int);
-int recibir_operacion(int);
 void recibir_operacion1(int socket_cliente);
 int handshake_Server(int);
 int terminarServidor(int, int);

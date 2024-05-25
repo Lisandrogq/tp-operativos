@@ -26,6 +26,8 @@ extern int operacion;
 extern t_list *lista_pcbs_ready;
 extern t_list *lista_pcbs_bloqueado;
 extern t_list *lista_pcbs_exec;
+extern t_list *lista_IO;
+extern sem_t hay_IO;
 typedef enum
 {	//habría q ver como podemos unificar esto en un solo archivo
 	INICIAR_PROCESO,
@@ -53,11 +55,11 @@ void* recibir_buffer(int*, int);
 
 void* client_handler(void *arg);
 void recibir_mensaje(int);
-int recibir_operacion(int);
 int handshake_Server(int);
 int terminarServidor(int,int);
 void recibir_operacion1(int socket_cliente);
 pcb_t *crear_pcb(int pid);
+t_interfaz *recibir_IO(int socket_cliente);
 
 #endif /* UTILS_H_ */
 

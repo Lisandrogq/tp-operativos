@@ -157,13 +157,6 @@ int *servidor()
 	}
 	log_info(logger, "kernel servidor-escucha iniciado correctamente");
 	esperar_cliente(server_fd, client_handler);
-
-	/* Al recibir una petición de I/O de parte de la CPU primero se deberá validar que exista y esté conectada la interfaz solicitada, en caso contrario, se deberá enviar el proceso a EXIT.
-	En caso de que la interfaz exista y esté conectada, se deberá validar que la interfaz admite la operación solicitada, en caso de que no sea así, se deberá enviar el proceso a EXIT.
-	De cumplirse todos los requisitos anteriores, el Kernel enviará el proceso al estado BLOCKED y a partir de este punto pueden darse 2 situaciones:
-	El caso en el que la interfaz de I/O esté libre: En este caso el Kernel deberá solicitar la operación al dispositivo correspondiente.
-	En el caso de que exista algún proceso haciendo uso de la Interfaz de I/O, el proceso que acaba de solicitar la operación de I/O deberá esperar la finalización del anterior antes de poder hacer uso de la misma.
-	Una vez la operación finalice, el Kernel recibirá una notificación y desbloqueará dicho proceso para que esté listo para continuar con su ejecución cuando le toque según el algoritmo. */
 }
 t_log *iniciar_logger(void)
 {
@@ -197,9 +190,11 @@ int main(int argc, char const *argv[])
 
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria);
+	sem_init(&hay_IO, 0, 0); // no se si es el lugar correcto para inicializarlo
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
 	lista_pcbs_bloqueado = list_create();
 	lista_pcbs_exec = list_create();
+	lista_IO = list_create();
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
 	config = iniciar_config();
