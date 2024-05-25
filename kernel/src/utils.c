@@ -15,14 +15,7 @@ sem_t hay_IO;
 void iniciar_proceso(char *path, int tam)
 {
 
-    pcb_t *nuevo_pcb = crear_pcb(next_pid);
-    nuevo_pcb->pid = 0;
-    nuevo_pcb->quantum = 35;
-    nuevo_pcb->registros->AX = 58;
-    nuevo_pcb->registros->BX = 0;
-    nuevo_pcb->registros->CX = 54;
-    nuevo_pcb->registros->EDX = 132;
-    nuevo_pcb->registros->DI = 112;
+    pcb_t *nuevo_pcb = crear_pcb(next_pid);//se estan creando con el PID SIEMPRE EN 0
 
     int error = list_add(lista_pcbs_ready, nuevo_pcb); // Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
     next_pid++;

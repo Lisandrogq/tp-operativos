@@ -63,46 +63,52 @@ void *cliente_cpu_dispatch()
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
 
-	sem_wait(&hay_procesos);
-	int motivo_desalojo = -1;
-	if (strcmp(algoritmo, "FIFO") == 0)
+	while (1)
 	{
-		motivo_desalojo = planificar_fifo(conexion_fd);
-		pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0);
-		log_info(logger, "Registro AX: %i", pcb_prueba->registros->AX);
-	}
-	else if (strcmp(algoritmo, "RR") == 0)
-	{
-		motivo_desalojo = planificar_rr(conexion_fd);
-	}
-	else
-	{
-		// planificar_vrr();
-	}
+		log_warning(logger,"antes DEL WAIT");
+		sem_wait(&hay_procesos);
+		log_error(logger,"DESPUES DEL WAIT");
+		int motivo_desalojo = -1;
+		if (strcmp(algoritmo, "FIFO") == 0)
+		{
+			motivo_desalojo = planificar_fifo(conexion_fd);
+			pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0);
+			log_info(logger, "Registro AX: %i", pcb_prueba->registros->AX);
+			log_info(logger, "Registro BX: %i", pcb_prueba->registros->BX);
+			log_info(logger, "Registro CX: %i", pcb_prueba->registros->CX);
+		}
+		else if (strcmp(algoritmo, "RR") == 0)
+		{
+			motivo_desalojo = planificar_rr(conexion_fd);
+		}
+		else
+		{
+			// planificar_vrr();
+		}
 
-	switch (motivo_desalojo)
-	{
-	case FIN:
-		pcb_t *pcb = list_get(lista_pcbs_exec, 0);
-		list_remove(lista_pcbs_exec, 0);
-		pcb->state = EXIT_S;
-		break;
-	case RELOJ:
-		pcb_t *pcb_reloj = list_get(lista_pcbs_exec, 0);
-		list_remove(lista_pcbs_exec, 0);
-		pcb_reloj->state = READY_S;
-		list_add(lista_pcbs_ready, pcb_reloj);
-		break;
-	case PRUEBA:
-		// soy una prueba
-		log_info(logger, "FUNCIONE");
-		break;
+		switch (motivo_desalojo)
+		{
+		case FIN:
+			pcb_t *pcb = list_get(lista_pcbs_exec, 0);
+			list_remove(lista_pcbs_exec, 0);
+			pcb->state = EXIT_S;
+			break;
+		case RELOJ:
+			pcb_t *pcb_reloj = list_get(lista_pcbs_exec, 0);
+			list_remove(lista_pcbs_exec, 0);
+			pcb_reloj->state = READY_S;
+			list_add(lista_pcbs_ready, pcb_reloj);
+			break;
+		case PRUEBA:
+			// soy una prueba
+			log_info(logger, "FUNCIONE");
+			break;
 
-	default:
-		log_info(logger, "Entre al switch pero al default");
-		break;
+		default:
+			log_info(logger, "Entre al switch pero al default");
+			break;
+		}
 	}
-	return 0;
 }
 
 void *cliente_cpu_interrupt()

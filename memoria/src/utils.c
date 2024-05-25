@@ -3,6 +3,7 @@
 
 t_log *logger;
 t_dictionary *dictionary_codigos;
+sem_t siguiente_instruccion;
 char *leer_codigo(char *path)
 {
 	// leer el pseudocodigo
@@ -38,6 +39,8 @@ void crear_estructuras_administrativas(struct_administrativas *e_admin)
 	char pid_str[5] = "";
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
+	//signal
+	sem_post(&siguiente_instruccion);//hay q hacerlo array
 }
 void handle_cpu_client(int socket_cliente)
 {
@@ -54,7 +57,11 @@ void handle_cpu_client(int socket_cliente)
 			fetch_t *p_info = recibir_process_info(socket_cliente);
 			log_info(logger, "pid:%i", p_info->pid);
 			log_info(logger, "pc:%i", p_info->pc);
+			//wait
+			sem_wait(&siguiente_instruccion);
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
+			sem_post(&siguiente_instruccion);
+
 			enviar_instruccion(palabras, socket_cliente);
 			break;
 		case -1:
@@ -73,6 +80,7 @@ void handle_kerel_client(int socket)
 		switch (cod_op)
 		{
 		case CREAR_ESTRUC_ADMIN:
+			// inizaliacion
 			struct_administrativas *e_admin = recibir_estructuras_administrativas(socket);
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
@@ -276,10 +284,10 @@ int enviar_instruccion(char **palabras, int socket_cliente)
 	int t5 = 0;
 	if (palabras[1] != 0) /// esto es feo, pero bueno es lo que hay.
 	{
-		t1=strlen(palabras[1]) + 1;
+		t1 = strlen(palabras[1]) + 1;
 		if (palabras[2] != 0)
 		{
-			t2=strlen(palabras[2]) + 1;
+			t2 = strlen(palabras[2]) + 1;
 			if (palabras[3] != 0)
 			{
 				t3 = strlen(palabras[3]) + 1;

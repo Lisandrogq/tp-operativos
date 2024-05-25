@@ -16,7 +16,7 @@
 
 extern t_log *logger;
 extern t_dictionary *dictionary_codigos;
-
+extern sem_t siguiente_instruccion;
 int enviar_instruccion(char **palabras, int socket_cliente);
 char** get_siguiente_instruction(fetch_t *p_info, int socket_cliente);
 fetch_t *recibir_process_info(int socket_cliente);

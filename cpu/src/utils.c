@@ -4,6 +4,9 @@
 t_dictionary *dictionary;
 sem_t hay_proceso;
 sem_t desalojar;
+registros_t *contexto;
+int pid_exec;
+
 
 void execute_set(char *nombre_r_destino, int valor)
 {
@@ -128,25 +131,17 @@ int handshake(int socket_cliente)
     return result;
 }
 void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
-{   
-    ///
-    pcb.registros->AX=99;
-    pcb.registros->BX=99;
-    pcb.quantum=99;
-    pcb.registros->DI=99;
-    pcb.registros->SI=99;
+{
 
-    //
-    int cod_op = 1;
     t_paquete *paquete = malloc(sizeof(t_buffer));
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->codigo_operacion = cod_op;
-    paquete->buffer->size = sizeof(int) *3 + sizeof(registros_t);
+    paquete->codigo_operacion = DISPATCH_RESPONSE;
+    paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
-    paquete-> buffer->offset = 0;
+    paquete->buffer->offset = 0;
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
-    paquete->buffer->offset += sizeof(int); 
+    paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.pid, sizeof(int));
     paquete->buffer->offset += sizeof(int);
@@ -168,6 +163,21 @@ void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
 // Server
 t_log *logger;
 
+t_dictionary *inicializar_diccionario(registros_t *contexto)
+{
+    dictionary = dictionary_create();
+    dictionary_put(dictionary, "AX", &(contexto->AX));
+    dictionary_put(dictionary, "BX", &(contexto->BX));
+    dictionary_put(dictionary, "CX", &(contexto->CX));
+    dictionary_put(dictionary, "DX", &(contexto->DX));
+    dictionary_put(dictionary, "EAX", &(contexto->EAX));
+    dictionary_put(dictionary, "EBX", &(contexto->EBX));
+    dictionary_put(dictionary, "ECX", &(contexto->ECX));
+    dictionary_put(dictionary, "EDX", &(contexto->EDX));
+    dictionary_put(dictionary, "SI", &(contexto->SI));
+    dictionary_put(dictionary, "DI", &(contexto->DI));
+}
+
 void *client_handler_dispatch(int socket_cliente)
 {
     int modulo = handshake_Server(socket_cliente);
@@ -185,7 +195,7 @@ void *client_handler_dispatch(int socket_cliente)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
-        log_warning(logger, "enviar operacion: codop:%i", cod_op);
+        log_warning(logger, "recibí la operacion: codop:%i", cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -207,6 +217,11 @@ void *client_handler_dispatch(int socket_cliente)
         case DISPATCH:
             pcb_t *pcb = recibir_paquete(socket_cliente);
             sem_post(&hay_proceso);
+            registros_t *registros_anteriores = contexto;
+            contexto = pcb->registros;
+            pid_exec = pcb->pid;
+            free(registros_anteriores);
+            inicializar_diccionario(pcb->registros);
             sem_wait(&desalojar);
             enviar_PCB_Desalojo(10, *pcb, socket_cliente);
             break;

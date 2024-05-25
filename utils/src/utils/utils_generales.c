@@ -159,6 +159,7 @@ pcb_t *crear_pcb(int pid)
 	memset(nuevo_pcb, 0, sizeof(pcb_t));
 
     nuevo_pcb->pid = pid;
+    printf("\nEl pid del nuevopcb es: %i\n",nuevo_pcb->pid);
     nuevo_pcb->state= READY_S;//ESTO DEBERÍA SER NEW, PERO TODAVIA NO HAY PLANIFICADOR DE LARGO PLAZO
 	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
 	memset(registros, 0, sizeof(registros_t));

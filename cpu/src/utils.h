@@ -22,12 +22,15 @@
 extern t_dictionary *dictionary;
 extern sem_t hay_proceso;
 extern sem_t desalojar;
+extern registros_t *contexto;
+extern int pid_exec;
 
 // Cliente
 t_strings_instruccion *fetch(int PC);
 void decode();
 int execute(t_strings_instruccion *instruccion);
 void check_intr();
+t_dictionary *inicializar_diccionario(registros_t *contexto);
 
 void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);

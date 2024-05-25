@@ -11,8 +11,6 @@
 
 pthread_t tid[2];
 
-registros_t *contexto;
-int pid_exec;
 bool terminar_modulo = false;
 int socket_memoria;
 
@@ -306,20 +304,7 @@ int iniciar_conexion_memoria(t_config *config, t_log *logger)
 
 	return conexion_fd;
 }
-t_dictionary *inicializar_diccionario()
-{
-	dictionary = dictionary_create();
-	dictionary_put(dictionary, "AX", &(contexto->AX));
-	dictionary_put(dictionary, "BX", &(contexto->BX));
-	dictionary_put(dictionary, "CX", &(contexto->CX));
-	dictionary_put(dictionary, "DX", &(contexto->DX));
-	dictionary_put(dictionary, "EAX", &(contexto->EAX));
-	dictionary_put(dictionary, "EBX", &(contexto->EBX));
-	dictionary_put(dictionary, "ECX", &(contexto->ECX));
-	dictionary_put(dictionary, "EDX", &(contexto->EDX));
-	dictionary_put(dictionary, "SI", &(contexto->SI));
-	dictionary_put(dictionary, "DI", &(contexto->DI));
-}
+
 
 int main(int argc, char const *argv[])
 {
@@ -327,7 +312,7 @@ int main(int argc, char const *argv[])
 	sem_init(&desalojar, 0, 0);
 	contexto = malloc(sizeof(registros_t));
 	memset(contexto, 0, sizeof(registros_t));
-	dictionary = inicializar_diccionario();
+	dictionary = inicializar_diccionario(contexto);
 
 	t_log *logger;
 	t_config *config;
@@ -340,17 +325,7 @@ int main(int argc, char const *argv[])
 	iniciar_thread_interrupt();
 	socket_memoria = iniciar_conexion_memoria(config, logger);
 
-	contexto->AX = 1;
-	contexto->BX = 0;
-	contexto->CX = 3;
-	contexto->DX = 4;
-	contexto->EAX = 5;
-	contexto->EBX = 6;
-	contexto->ECX = 7;
-	contexto->EDX = 8;
-	contexto->SI = 9;
-	contexto->DI = 10;
-	contexto->PC = 0;
+
 	// log_info(logger, "antes AX:%i", contexto->AX);
 	// log_info(logger, "antes BX:%i", contexto->BX);
 	// log_info(logger, "antes CX:%i", contexto->CX);
