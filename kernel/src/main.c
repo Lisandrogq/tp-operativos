@@ -39,7 +39,6 @@ void *consola()
 
 		free(linea);
 	}
-
 }
 void *cliente_cpu_dispatch()
 {
@@ -63,32 +62,34 @@ void *cliente_cpu_dispatch()
 
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
-	
+
 	sem_wait(&hay_procesos);
-	int motivo_desalojo=-1;
-	if(strcmp(algoritmo, "FIFO")== 0){
+	int motivo_desalojo = -1;
+	if (strcmp(algoritmo, "FIFO") == 0)
+	{
 		motivo_desalojo = planificar_fifo(conexion_fd);
 		pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0);
 		log_info(logger, "Registro AX: %i", pcb_prueba->registros->AX);
-	}else if(strcmp(algoritmo, "RR")== 0){
-		motivo_desalojo = planificar_rr(conexion_fd);
-	}else{
-		/* if(strcmp(algoritmo, "VRR")== 0){
-			motivo_desalojo = planificar_vrr(conexion_fd);
-		} */
-		//planificar_vrr();
 	}
-	
+	else if (strcmp(algoritmo, "RR") == 0)
+	{
+		motivo_desalojo = planificar_rr(conexion_fd);
+	}
+	else
+	{
+		// planificar_vrr();
+	}
+
 	switch (motivo_desalojo)
 	{
 	case FIN:
 		pcb_t *pcb = list_get(lista_pcbs_exec, 0);
-    	list_remove(lista_pcbs_exec, 0);
+		list_remove(lista_pcbs_exec, 0);
 		pcb->state = EXIT_S;
 		break;
 	case RELOJ:
 		pcb_t *pcb_reloj = list_get(lista_pcbs_exec, 0);
-    	list_remove(lista_pcbs_exec, 0);
+		list_remove(lista_pcbs_exec, 0);
 		pcb_reloj->state = READY_S;
 		list_add(lista_pcbs_ready, pcb_reloj);
 		break;
@@ -160,10 +161,9 @@ int *servidor()
 	/* Al recibir una petición de I/O de parte de la CPU primero se deberá validar que exista y esté conectada la interfaz solicitada, en caso contrario, se deberá enviar el proceso a EXIT.
 	En caso de que la interfaz exista y esté conectada, se deberá validar que la interfaz admite la operación solicitada, en caso de que no sea así, se deberá enviar el proceso a EXIT.
 	De cumplirse todos los requisitos anteriores, el Kernel enviará el proceso al estado BLOCKED y a partir de este punto pueden darse 2 situaciones:
-	El caso en el que la interfaz de I/O esté libre: En este caso el Kernel deberá solicitar la operación al dispositivo correspondiente. 
+	El caso en el que la interfaz de I/O esté libre: En este caso el Kernel deberá solicitar la operación al dispositivo correspondiente.
 	En el caso de que exista algún proceso haciendo uso de la Interfaz de I/O, el proceso que acaba de solicitar la operación de I/O deberá esperar la finalización del anterior antes de poder hacer uso de la misma.
 	Una vez la operación finalice, el Kernel recibirá una notificación y desbloqueará dicho proceso para que esté listo para continuar con su ejecución cuando le toque según el algoritmo. */
-
 }
 t_log *iniciar_logger(void)
 {

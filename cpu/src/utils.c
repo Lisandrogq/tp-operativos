@@ -128,29 +128,37 @@ int handshake(int socket_cliente)
     return result;
 }
 void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
-{
+{   
+    ///
+    pcb.registros->AX=99;
+    pcb.registros->BX=99;
+    pcb.quantum=99;
+    pcb.registros->DI=99;
+    pcb.registros->SI=99;
 
-    t_buffer *buffer = malloc(sizeof(t_buffer));
-    buffer->size = sizeof(int) * 2 + sizeof(registros_t) + sizeof(state_t);
-    buffer->stream = malloc(buffer->size);
-    buffer->offset = 0;
+    //
+    int cod_op = 1;
+    t_paquete *paquete = malloc(sizeof(t_buffer));
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->codigo_operacion = cod_op;
+    paquete->buffer->size = sizeof(int) *3 + sizeof(registros_t);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete-> buffer->offset = 0;
 
-    memcpy(buffer->stream + buffer->offset, &motivo_desalojo, sizeof(int));
-    buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
+    paquete->buffer->offset += sizeof(int); 
 
-    memcpy(buffer->stream + buffer->offset, &pcb.pid, sizeof(int));
-    buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.pid, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
 
-    memcpy(buffer->stream + buffer->offset, &pcb.quantum, sizeof(int));
-    buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.quantum, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
 
-    memcpy(buffer->stream + buffer->offset, pcb.registros, sizeof(registros_t));
-    buffer->offset += sizeof(registros_t);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, pcb.registros, sizeof(registros_t));
 
-    memcpy(buffer->stream + buffer->offset, &pcb.state, sizeof(state_t));
-    int bytes = buffer->size + 2 * sizeof(int);
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
 
-    void *a_enviar = serializar_paquete(buffer, bytes);
+    void *a_enviar = serializar_paquete(paquete, bytes);
 
     send(socket_cliente, a_enviar, bytes, 0);
 
@@ -200,7 +208,7 @@ void *client_handler_dispatch(int socket_cliente)
             pcb_t *pcb = recibir_paquete(socket_cliente);
             sem_post(&hay_proceso);
             sem_wait(&desalojar);
-            enviar_PCB_Desalojo(0, *pcb, socket_cliente);
+            enviar_PCB_Desalojo(10, *pcb, socket_cliente);
             break;
         case -1:
             log_info(logger, "Se desconecto algun cliente");

@@ -1,3 +1,7 @@
+## BUGS ##
+- [ ] si se espera mucho para mandar el INICIAR_PROCESO, el codigo no se actualiza y se rompe todo
+- [ ] si mantenes memoría y bajaste los otros modulos,cuando volves a iniciar_proceso, tira segmentation fault memoria pq no se recibe el path.
+
 ## CHECKPOINT 2 ##
 - [X] Funcion crear_estructuras_administrativas
 - [X] recibir estructuras_administrativas en memoria
