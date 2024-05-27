@@ -1,5 +1,6 @@
 #include "utils.h"
-int contador[4]; //0 es el contador para generica
+extern t_log *logger;
+int contador; //0 es el contador para generica
 void enviar_operacion(int cod_op,char *mensaje, int socket_cliente) 
 {
  	t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -52,15 +53,16 @@ t_interfaz *crear_estrcutura_io(int tipo){
 	{
 	case GENERICA:
 		t_interfaz *interfaz = malloc(sizeof(t_interfaz));
-        char *provisorio = malloc(20);
-		provisorio = "Int" + atoi(contador[GENERICA]); //Chequear esto
+        char *provisorio = "Int1"; //No tengo ni idea como hacer esto porque se tiene que compartir contador entre archivos, no se como se libera provisorio
 		memset(interfaz, 0, sizeof(t_interfaz));
 		interfaz->largo = strlen(provisorio);
 		interfaz->nombre = malloc(sizeof(interfaz->largo));
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
 		interfaz->nombre = provisorio;
-        free(provisorio);
+        log_info(logger, "Nombre: %s",interfaz->nombre);
+        log_info(logger, "Nombre: %i",interfaz->estado);
+        log_info(logger, "Nombre: %i",interfaz->tipo);
 		return interfaz;
 		break;
 	/*case GENERICA:

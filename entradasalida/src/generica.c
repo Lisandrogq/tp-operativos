@@ -4,7 +4,6 @@
 t_log *logger;
 t_config *config;
 pthread_t tid[2];
-pthread_t hilos_generica[10];
 int socket_cliente;
 int inicializar_cliente_memoria() // todavia no se usa
 {	
@@ -93,7 +92,7 @@ void iniciar_interfaz_generica(){
             interfaz_generica(tiempo_Unidad_Trabajo);
             break;
         default:
-            log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+            //log_warning(logger, "Operacion desconocida. No quieras meter la pata");
             break;
         }
 	}
