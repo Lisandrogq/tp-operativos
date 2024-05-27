@@ -36,7 +36,7 @@ pcb_t *recibir_paquete(int socket_cliente)
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
 
-	recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0);
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
 

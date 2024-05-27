@@ -64,7 +64,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	int codop = recibir_operacion(socket_memoria); // m lo saco de encima pq esta en el paquete xd
 
 	t_buffer *buffer = malloc(sizeof(t_buffer));
-	recv(socket_memoria, &(buffer->size), sizeof(uint32_t), 0);
+	recv(socket_memoria, &(buffer->size), sizeof(int), 0);
 	buffer->stream = malloc(buffer->size);
 	recv(socket_memoria, buffer->stream, buffer->size, 0);
 

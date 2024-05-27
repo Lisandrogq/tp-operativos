@@ -96,7 +96,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
     t_buffer *buffer = malloc(sizeof(t_buffer));
     int prueba = recibir_operacion(socket_cliente);
 
-    recv(socket_cliente, &(buffer->size), sizeof(uint32_t), MSG_WAITALL);
+    recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
 
     recv(socket_cliente, &motivo_desalojo, sizeof(int),0);
     buffer->stream = malloc(buffer->size);
@@ -223,7 +223,7 @@ void *client_handler(void *arg)
 }
 t_interfaz *recibir_IO(int socket_cliente){	
 	t_buffer *buffer = malloc(sizeof(t_buffer));
-	recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
+	recv(socket_cliente, &(buffer->size), sizeof(int), 0);
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 

@@ -352,7 +352,7 @@ fetch_t *recibir_process_info(int socket_cliente)
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
 
-	recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0);
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
 
@@ -370,7 +370,7 @@ fetch_t *recibir_process_info(int socket_cliente)
 struct_administrativas *recibir_estructuras_administrativas(int socket_cliente)
 {
 	t_buffer *buffer = malloc(sizeof(t_buffer));
-	recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
+	recv(socket_cliente, &(buffer->size), sizeof(int), 0);
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 

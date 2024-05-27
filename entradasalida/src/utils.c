@@ -2,9 +2,7 @@
 int contador[4]; //0 es el contador para generica
 void enviar_operacion(int cod_op,char *mensaje, int socket_cliente) 
 {
-//vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
-
-    t_paquete *paquete = malloc(sizeof(t_paquete));
+ 	t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = cod_op;
     paquete->buffer = malloc(sizeof(t_buffer));
@@ -54,13 +52,15 @@ t_interfaz *crear_estrcutura_io(int tipo){
 	{
 	case GENERICA:
 		t_interfaz *interfaz = malloc(sizeof(t_interfaz));
-		char *provisorio = "Int" + atoi(contador[GENERICA]); //Chequear esto
+        char *provisorio = malloc(20);
+		provisorio = "Int" + atoi(contador[GENERICA]); //Chequear esto
 		memset(interfaz, 0, sizeof(t_interfaz));
 		interfaz->largo = strlen(provisorio);
 		interfaz->nombre = malloc(sizeof(interfaz->largo));
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
 		interfaz->nombre = provisorio;
+        free(provisorio);
 		return interfaz;
 		break;
 	/*case GENERICA:

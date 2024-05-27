@@ -57,7 +57,8 @@ int inicializar_cliente_kernel()
 		return;
 
 	if(strcmp(tipo_Interfaz,"GENERICA") == 0){
-		pthread_create(&(hilos_generica[0]), NULL, iniciar_interfaz_generica, NULL); //hay que ver como se crean
+		 //Se crea cada una con su propio archivo
+		 iniciar_interfaz_generica();
 	}
 /*
 	if(strcmp(tipo_Interfaz,"STDIN") == 0){
