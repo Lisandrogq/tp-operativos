@@ -18,12 +18,12 @@ void ejecutar_cliclos()
 {
 	while (!terminar_modulo)
 	{
-		int status = 0;
+		int status = STATUS_OK;
 		sem_wait(&hay_proceso);
-		while (status != -1)
+		while (status !=STATUS_DESALOJADO)
 		{
-			t_strings_instruccion *instruccion = fetch(contexto->PC); // hace falta enviar el pid??
-			decode();												  // por ahora no sabemos q hacer en decode
+			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC); // hace falta enviar el pid??
+			decode();															 // por ahora no sabemos q hacer en decode
 			status = execute(instruccion);
 
 			// check_intr();
@@ -43,17 +43,16 @@ void solicitar_siguiente_instruccion()
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	paquete->buffer->offset = 0;
 
-	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid_exec, sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->pid), sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
-	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(contexto->PC), sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->registros->PC), sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
 	int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
 	void *a_enviar = serializar_paquete(paquete, bytes);
 
-	log_info(logger, "programcounter: %i", contexto->PC);
 	send(socket_memoria, a_enviar, bytes, 0);
 	free(a_enviar);
 	eliminar_paquete(paquete);
@@ -80,50 +79,48 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 
 	memcpy(&(palabras->tamp1), stream, sizeof(int));
 	stream += sizeof(int);
-	if (palabras->tamp1 != 0)
-	{
-		palabras->p1 = malloc(palabras->tamp1);
-		memcpy((palabras->p1), stream, palabras->tamp1);
-		stream += palabras->tamp1;
 
-		memcpy(&(palabras->tamp2), stream, sizeof(int));
-		stream += sizeof(int);
-		if (palabras->tamp2 != 0)
-		{
-			palabras->p2 = malloc(palabras->tamp2);
-			memcpy((palabras->p2), stream, palabras->tamp2);
-			stream += palabras->tamp2;
+	palabras->p1 = malloc(palabras->tamp1);
+	memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+	memcpy((palabras->p1), stream, palabras->tamp1);
+	stream += palabras->tamp1;
 
-			memcpy(&(palabras->tamp3), stream, sizeof(int));
-			stream += sizeof(int);
-			if (palabras->tamp3 != 0)
-			{
+	memcpy(&(palabras->tamp2), stream, sizeof(int));
+	stream += sizeof(int);
 
-				palabras->p3 = malloc(palabras->tamp3);
-				memcpy((palabras->p3), stream, palabras->tamp3);
-				stream += palabras->tamp3;
+	palabras->p2 = malloc(palabras->tamp2);
+	memset(palabras->p2, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
 
-				memcpy(&(palabras->tamp4), stream, sizeof(int));
-				stream += sizeof(int);
-				if (palabras->tamp4 != 0)
-				{
+	memcpy((palabras->p2), stream, palabras->tamp2);
+	stream += palabras->tamp2;
 
-					palabras->p4 = malloc(palabras->tamp4);
-					memcpy((palabras->p4), stream, palabras->tamp4);
-					stream += palabras->tamp4;
+	memcpy(&(palabras->tamp3), stream, sizeof(int));
+	stream += sizeof(int);
 
-					memcpy(&(palabras->tamp5), stream, sizeof(int));
-					stream += sizeof(int);
-					if (palabras->tamp5 != 0)
-					{
-						palabras->p5 = malloc(palabras->tamp5);
-						memcpy((palabras->p5), stream, palabras->tamp5);
-						stream += palabras->tamp5;
-					}
-				}
-			}
-		}
-	}
+	palabras->p3 = malloc(palabras->tamp3);
+	memset(palabras->p3, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+	memcpy((palabras->p3), stream, palabras->tamp3);
+	stream += palabras->tamp3;
+
+	memcpy(&(palabras->tamp4), stream, sizeof(int));
+	stream += sizeof(int);
+
+	palabras->p4 = malloc(palabras->tamp4);
+	memset(palabras->p4, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+	memcpy((palabras->p4), stream, palabras->tamp4);
+	stream += palabras->tamp4;
+
+	memcpy(&(palabras->tamp5), stream, sizeof(int));
+	stream += sizeof(int);
+
+	palabras->p5 = malloc(palabras->tamp5);
+	memset(palabras->p5, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+	memcpy((palabras->p5), stream, palabras->tamp5);
+	stream += palabras->tamp5;
+
 	// en algun lugar(afuera de esto) hay q hacerle malloc a las palabras.
 	free(buffer->stream);
 	free(buffer);
@@ -136,14 +133,9 @@ t_strings_instruccion *fetch(int PC)
 
 	solicitar_siguiente_instruccion();
 	t_strings_instruccion *palabras = recibir_siguiente_instruccion();
-	log_info(logger, "palabra[0]: %s", palabras->cod_instruccion);
-	log_info(logger, "palabra[1]: %s", palabras->p1);
-	log_info(logger, "palabra[2]: %s", palabras->p2);
-	log_info(logger, "palabra[3]: %s", palabras->p3);
-	log_info(logger, "palabra[4]: %s", palabras->p4);
-	log_info(logger, "palabra[5]: %s", palabras->p5);
+	log_fetch_instruccion();
 
-	contexto->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
+	pcb_exec->registros->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
 
 	return palabras;
 	/////
@@ -172,16 +164,15 @@ void decode() {}
 
 int execute(t_strings_instruccion *instruccion)
 {
-
+	log_instruccion_ejecutada(instruccion);//en teoría debería ir al final de cada if,xd
 	if (strcmp(instruccion->cod_instruccion, "SET") == 0)
 	{
 
 		int num = atoi((instruccion->p2));
-		log_info(logger, "num:%s", instruccion->p2);
 		execute_set(instruccion->p1, num);
 		free((instruccion->p1));
 		free(instruccion);
-		return 0;
+		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "SUM") == 0)
 	{
@@ -191,7 +182,7 @@ int execute(t_strings_instruccion *instruccion)
 		free((instruccion->p1));
 		free((instruccion->p2));
 		free(instruccion);
-		return 0;
+		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "SUB") == 0)
 	{
@@ -199,25 +190,26 @@ int execute(t_strings_instruccion *instruccion)
 		free((instruccion->p1));
 		free((instruccion->p2));
 		free(instruccion);
-		return 0;
+		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "JNZ") == 0)
 	{
 		u_int32_t p2 = instruccion->p2;
-		execute_jnz(instruccion->p1, p2, contexto);
+		execute_jnz(instruccion->p1, p2, pcb_exec->registros);
 		free((instruccion->p1));
 		free(instruccion);
-		return 0;
+		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "EXIT") == 0)
 	{
-		sem_post(&desalojar);
-		return -1;
+
+		devolver_pcb(FIN,*pcb_exec,socket_dispatch,instruccion);//habria que ponerle mutex a dispatch
+		return STATUS_DESALOJADO;
 	}
 	if (strcmp(instruccion->cod_instruccion, "IO_GEN_SLEEP") == 0)
 	{
-		// todo
-		return 0;
+		devolver_pcb(IO_SLEEP,*pcb_exec,socket_dispatch,instruccion);//habria que ponerle mutex a dispatch
+		return STATUS_DESALOJADO;
 	}
 }
 void check_intr() {}
@@ -235,8 +227,8 @@ void *servidor_dispatch()
 	logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
 	int server_fd = iniciar_servidor(PUERTO_CPU_DISPATCH, logger);
 	log_info(logger, "Cpu-dipatch listo para recibir");
-	int socket_cliente = esperar_cliente_cpu(server_fd);
-	client_handler_dispatch(socket_cliente);
+	socket_dispatch = esperar_cliente_cpu(server_fd);
+	client_handler_dispatch(socket_dispatch);
 }
 t_log *iniciar_logger(void)
 {
@@ -305,19 +297,17 @@ int iniciar_conexion_memoria(t_config *config, t_log *logger)
 	return conexion_fd;
 }
 
-
 int main(int argc, char const *argv[])
 {
 	sem_init(&hay_proceso, 0, 0);
 	sem_init(&desalojar, 0, 0);
-	contexto = malloc(sizeof(registros_t));
-	memset(contexto, 0, sizeof(registros_t));
-	dictionary = inicializar_diccionario(contexto);
+	dictionary = dictionary_create();
+	// dictionary = inicializar_diccionario(contexto); esto ya no hace falta, se inicializa al recibir pcb
 
 	t_log *logger;
 	t_config *config;
 	logger = iniciar_logger();
-	logger = log_create("cpu.log", "Cpu_MateLavado", 1, LOG_LEVEL_INFO);
+	logger = log_create("cpu.log", "Cpu_MateLavado", 1, LOG_LEVEL_DEBUG);
 	config = iniciar_config();
 	config = config_create("cpu.config");
 
@@ -325,30 +315,7 @@ int main(int argc, char const *argv[])
 	iniciar_thread_interrupt();
 	socket_memoria = iniciar_conexion_memoria(config, logger);
 
-
-	// log_info(logger, "antes AX:%i", contexto->AX);
-	// log_info(logger, "antes BX:%i", contexto->BX);
-	// log_info(logger, "antes CX:%i", contexto->CX);
-	// log_info(logger, "antes DX:%i", contexto->DX);
-	// log_info(logger, "antes EAX:%i", contexto->EAX);
-	// log_info(logger, "antes EBX:%i", contexto->EBX);
-	// log_info(logger, "antes ECX:%i", contexto->ECX);
-	// log_info(logger, "antes EDX:%i", contexto->EDX);
-	// log_info(logger, "antes SI:%i", contexto->SI);
-	// log_info(logger, "antes DI:%i", contexto->DI);
-	// log_info(logger, "antes PC:%i", contexto->PC);
 	ejecutar_cliclos();
-	// log_info(logger, "despues AX:%i", contexto->AX);
-	// log_info(logger, "despues BX:%i", contexto->BX);
-	// log_info(logger, "despues CX:%i", contexto->CX);
-	// log_info(logger, "despues DX:%i", contexto->DX);
-	// log_info(logger, "despues EAX:%i", contexto->EAX);
-	// log_info(logger, "despues EBX:%i", contexto->EBX);
-	// log_info(logger, "despues ECX:%i", contexto->ECX);
-	// log_info(logger, "despues EDX:%i", contexto->EDX);
-	// log_info(logger, "despues SI:%i", contexto->SI);
-	// log_info(logger, "despues DI:%i", contexto->DI);
-	// log_info(logger, "despues PC:%i", contexto->PC);
 
 	pthread_join(tid[0], NULL);
 	pthread_join(tid[1], NULL);

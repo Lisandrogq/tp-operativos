@@ -4,10 +4,8 @@
 t_dictionary *dictionary;
 sem_t hay_proceso;
 sem_t desalojar;
-registros_t *contexto;
-int pid_exec;
-
-
+pcb_t *pcb_exec;
+int socket_dispatch;
 void execute_set(char *nombre_r_destino, int valor)
 {
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
@@ -130,18 +128,17 @@ int handshake(int socket_cliente)
     }
     return result;
 }
-void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
+void devolver_pcb_por_exit(int motivo_desalojo, pcb_t pcb, int socket_cliente)
 {
+    pcb.registros->SI = 99;
+    pcb.registros->DI = 99;
 
-    t_paquete *paquete = malloc(sizeof(t_buffer));
+    t_paquete *paquete = malloc(sizeof(t_paquete));
     paquete->buffer = malloc(sizeof(t_buffer));
     paquete->codigo_operacion = DISPATCH_RESPONSE;
     paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.pid, sizeof(int));
     paquete->buffer->offset += sizeof(int);
@@ -150,8 +147,83 @@ void enviar_PCB_Desalojo(int motivo_desalojo, pcb_t pcb, int socket_cliente)
     paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, pcb.registros, sizeof(registros_t));
+    paquete->buffer->offset += sizeof(registros_t);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int); //=tam(buffer)+tam(codop)+tam(buffer->size)
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_cliente, a_enviar, bytes, 0);
+
+    free(a_enviar);
+}
+
+void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion)
+{
+    pcb.registros->SI = 99;
+    pcb.registros->DI = 99;
+    int tam_instruccion = instruccion->tamcod + instruccion->tamp1 + instruccion->tamp2 + instruccion->tamp3 + instruccion->tamp4 + instruccion->tamp5;
+    char *p1 = "Int1";
+
+    int tam_p1 = strlen(p1) + 1;
+    int tiempo = 12;
+
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->codigo_operacion = DISPATCH_RESPONSE;
+    paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t) + tam_instruccion + 6 * sizeof(int);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.pid, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.quantum, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, pcb.registros, sizeof(registros_t)); // capaz esto tiene quilombo con el padding
+    paquete->buffer->offset += sizeof(registros_t);                                                // y hay que agregar de a uno
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    // comienzo serialiacion de instruccion:
+
+    // si alguno de los tams es 0, no se escribe nada en ese parametro osea queda todo 0
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamcod, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->cod_instruccion, instruccion->tamcod);
+    paquete->buffer->offset += instruccion->tamcod;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp1, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p1, instruccion->tamp1);
+    paquete->buffer->offset += instruccion->tamp1;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp2, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p2, instruccion->tamp2);
+    paquete->buffer->offset += instruccion->tamp2;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp3, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p3, instruccion->tamp3);
+    paquete->buffer->offset += instruccion->tamp3;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp4, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p4, instruccion->tamp4);
+    paquete->buffer->offset += instruccion->tamp4;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp5, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p5, instruccion->tamp5);
+    paquete->buffer->offset += instruccion->tamp5;
+    //
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int); //=tam(buffer)+tam(codop)+tam(buffer->size)
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -165,7 +237,6 @@ t_log *logger;
 
 t_dictionary *inicializar_diccionario(registros_t *contexto)
 {
-    dictionary = dictionary_create();
     dictionary_put(dictionary, "AX", &(contexto->AX));
     dictionary_put(dictionary, "BX", &(contexto->BX));
     dictionary_put(dictionary, "CX", &(contexto->CX));
@@ -195,7 +266,7 @@ void *client_handler_dispatch(int socket_cliente)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
-        log_warning(logger, "recibí la operacion: codop:%i", cod_op);
+       //log_warning(logger, "recibí la operacion: codop:%i", cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -215,15 +286,12 @@ void *client_handler_dispatch(int socket_cliente)
             recibir_mensaje(socket_cliente);
             break;
         case DISPATCH:
+            // TODO: liberar pcb sino es la primera ejecucion
+            log_debug(logger,"Se recibio el proceso a ejecutar por dispatch");
             pcb_t *pcb = recibir_paquete(socket_cliente);
             sem_post(&hay_proceso);
-            registros_t *registros_anteriores = contexto;
-            contexto = pcb->registros;
-            pid_exec = pcb->pid;
-            free(registros_anteriores);
-            inicializar_diccionario(pcb->registros);
-            sem_wait(&desalojar);
-            enviar_PCB_Desalojo(10, *pcb, socket_cliente);
+            pcb_exec = pcb;
+            inicializar_diccionario(pcb_exec->registros);
             break;
         case -1:
             log_info(logger, "Se desconecto algun cliente");
@@ -330,4 +398,10 @@ void recibir_operacion1(int socket_cliente)
     char *buffer = recibir_buffer(&size, socket_cliente);
     log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
     free(buffer);
+}
+void log_instruccion_ejecutada(t_strings_instruccion *palabras){
+    log_info(logger,"PID: %i - Ejecutando: %s - %s %s %s %s %s",pcb_exec->pid,palabras->cod_instruccion,palabras->p1,palabras->p2,palabras->p3,palabras->p4,palabras->p5);
+}
+void log_fetch_instruccion(){
+     log_info(logger,"PID: %i - FETCH - Program Counter: %i",pcb_exec->pid,pcb_exec->registros->PC);
 }

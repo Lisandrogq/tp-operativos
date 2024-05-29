@@ -22,15 +22,15 @@
 extern t_dictionary *dictionary;
 extern sem_t hay_proceso;
 extern sem_t desalojar;
-extern registros_t *contexto;
-extern int pid_exec;
-
+extern pcb_t *pcb_exec;
+extern int socket_dispatch; 
 // Cliente
 t_strings_instruccion *fetch(int PC);
 void decode();
 int execute(t_strings_instruccion *instruccion);
 void check_intr();
 t_dictionary *inicializar_diccionario(registros_t *contexto);
+void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion);
 
 void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
@@ -55,6 +55,6 @@ void recibir_mensaje(int);
 int handshake_Server(int);
 int terminarServidor(int, int);
 void recibir_operacion1(int socket_cliente);
-
-
+void log_instruccion_ejecutada(t_strings_instruccion *palabras);
+void log_fetch_instruccion();
 #endif /* UTILS_H_ */

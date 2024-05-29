@@ -15,7 +15,7 @@ sem_t hay_IO;
 void iniciar_proceso(char *path, int tam)
 {
 
-    pcb_t *nuevo_pcb = crear_pcb(next_pid);//se estan creando con el PID SIEMPRE EN 0
+    pcb_t *nuevo_pcb = crear_pcb(next_pid); // se estan creando con el PID SIEMPRE EN 0
 
     int error = list_add(lista_pcbs_ready, nuevo_pcb); // Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
     next_pid++;
@@ -23,10 +23,11 @@ void iniciar_proceso(char *path, int tam)
     solicitar_crear_estructuras_administrativas(tam, path, nuevo_pcb->pid, socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
-void finalizar_proceso(int pid){
+void finalizar_proceso(int pid)
+{
 
     pthread_mutex_lock(&mutex_socket_memoria);
-    solicitar_eliminar_estructuras_administrativas(pid,socket_memoria);
+    solicitar_eliminar_estructuras_administrativas(pid, socket_memoria);
     pthread_mutex_unlock(&mutex_socket_memoria);
 }
 
@@ -57,7 +58,8 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
     free(a_enviar);
 }
 
-void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria) {
+void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria)
+{
 
     t_paquete *paquete = crear_paquete();
     paquete->codigo_operacion = ELIMINAR_ESTRUC_ADMIN;
@@ -66,19 +68,23 @@ void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria)
     eliminar_paquete(paquete);
 }
 
-void ejecutar_script(const char *path) {
+void ejecutar_script(const char *path)
+{
 
     FILE *archivo = fopen(path, "r");
-    if (archivo == NULL) {
+    if (archivo == NULL)
+    {
         printf("Error: No se pudo abrir el archivo");
         return;
     }
 
     char comando[100]; // Asumimos que ninguna línea del archivo tiene más de 100 caracteres
-    while (fgets(comando, sizeof(comando), archivo) != NULL) {
+    while (fgets(comando, sizeof(comando), archivo) != NULL)
+    {
 
         char *posicion_salto_linea = strchr(comando, '\n');
-        if (posicion_salto_linea != NULL) {
+        if (posicion_salto_linea != NULL)
+        {
             *posicion_salto_linea = '\0';
         }
 
@@ -97,9 +103,8 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
     int prueba = recibir_operacion(socket_cliente);
 
     recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
-
-    recv(socket_cliente, &motivo_desalojo, sizeof(int),0);
     buffer->stream = malloc(buffer->size);
+
     recv(socket_cliente, buffer->stream, buffer->size, 0);
     void *stream = buffer->stream;
 
@@ -109,8 +114,66 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
     stream += sizeof(int);
     memcpy(pcb->registros, stream, sizeof(registros_t));
     stream += sizeof(registros_t);
-   // memcpy(&(pcb->state), stream, sizeof(state_t)); // no debería
+    memcpy(&motivo_desalojo, stream, sizeof(int));
+    stream += sizeof(int);
+    // inicio deserializacion de palabras:
+
+    t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion));
+    memset(palabras, 0, sizeof(t_strings_instruccion));
+
+    memcpy(&(palabras->tamcod), stream, sizeof(int));
+    stream += sizeof(int);
+    palabras->cod_instruccion = malloc(palabras->tamcod);
+    memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
+    stream += palabras->tamcod;
+
+    memcpy(&(palabras->tamp1), stream, sizeof(int));
+    stream += sizeof(int);
+
+    palabras->p1 = malloc(palabras->tamp1);
+    memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+    memcpy((palabras->p1), stream, palabras->tamp1);
+    stream += palabras->tamp1;
+
+    memcpy(&(palabras->tamp2), stream, sizeof(int));
+    stream += sizeof(int);
+
+    palabras->p2 = malloc(palabras->tamp2);
+    memset(palabras->p2, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+    memcpy((palabras->p2), stream, palabras->tamp2);
+    stream += palabras->tamp2;
+
+    memcpy(&(palabras->tamp3), stream, sizeof(int));
+    stream += sizeof(int);
+
+    palabras->p3 = malloc(palabras->tamp3);
+    memset(palabras->p3, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+    memcpy((palabras->p3), stream, palabras->tamp3);
+    stream += palabras->tamp3;
+
+    memcpy(&(palabras->tamp4), stream, sizeof(int));
+    stream += sizeof(int);
+
+    palabras->p4 = malloc(palabras->tamp4);
+    memset(palabras->p4, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+    memcpy((palabras->p4), stream, palabras->tamp4);
+    stream += palabras->tamp4;
+
+    memcpy(&(palabras->tamp5), stream, sizeof(int));
+    stream += sizeof(int);
+
+    palabras->p5 = malloc(palabras->tamp5);
+    memset(palabras->p5, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+
+    memcpy((palabras->p5), stream, palabras->tamp5);
+    stream += palabras->tamp5;
+
+    // en algun lugar(afuera de esto) hay q hacerle malloc a las palabras.
     return motivo_desalojo;
+    // memcpy(&(pcb->state), stream, sizeof(state_t)); // no debería
 }
 void retirar_pcb_bloqueado(pcb_t pcb, int index)
 {
@@ -125,6 +188,7 @@ int planificar_fifo(int socket_cliente)
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
     return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
+    // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb
 }
 int planificar_rr(int socket_cliente)
 {
@@ -211,7 +275,7 @@ void *client_handler(void *arg)
         switch (cod_op)
         {
         case CREACION_IO:
-            t_interfaz *interfaz =recibir_IO(socket_cliente);
+            t_interfaz *interfaz = recibir_IO(socket_cliente);
             list_add(lista_IO, interfaz); // talvez sea necesario una lista por tipo de io para hacer la busqueda mas rapido
             break;
         default:
@@ -221,25 +285,26 @@ void *client_handler(void *arg)
     }
     close(socket_cliente);
 }
-t_interfaz *recibir_IO(int socket_cliente){	
-	t_buffer *buffer = malloc(sizeof(t_buffer));
-	recv(socket_cliente, &(buffer->size), sizeof(int), 0);
-	buffer->stream = malloc(buffer->size);
-	recv(socket_cliente, buffer->stream, buffer->size, 0);
+t_interfaz *recibir_IO(int socket_cliente)
+{
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
+    buffer->stream = malloc(buffer->size);
+    recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-	t_interfaz *estructura = malloc(sizeof(t_interfaz));
-	void *stream = buffer->stream;
-	memcpy(&(estructura->largo), stream, sizeof(int));
-	stream += sizeof(int);
-	estructura->nombre = malloc(estructura->largo);
-	memcpy((estructura->nombre), stream, estructura->largo); 
-	stream += estructura->largo;
-	memcpy(&(estructura->tipo), stream, sizeof(int)); 
-	stream += sizeof(int);
-	memcpy(&(estructura->estado), stream, sizeof(int)); 
-	free(buffer->stream);
-	free(buffer);
-	return estructura;
+    t_interfaz *estructura = malloc(sizeof(t_interfaz));
+    void *stream = buffer->stream;
+    memcpy(&(estructura->largo), stream, sizeof(int));
+    stream += sizeof(int);
+    estructura->nombre = malloc(estructura->largo);
+    memcpy((estructura->nombre), stream, estructura->largo);
+    stream += estructura->largo;
+    memcpy(&(estructura->tipo), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(estructura->estado), stream, sizeof(int));
+    free(buffer->stream);
+    free(buffer);
+    return estructura;
 }
 int handshake_Server(int socket_cliente)
 {

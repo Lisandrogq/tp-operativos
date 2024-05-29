@@ -36,7 +36,8 @@ void *consola()
 			iniciar_proceso(instruccion[1], tam);
 			sem_post(&hay_procesos);
 		}
-
+		if (!strcmp(instruccion[0], "ddd"))
+			return;
 		free(linea);
 	}
 }
@@ -65,17 +66,14 @@ void *cliente_cpu_dispatch()
 
 	while (1)
 	{
-		log_warning(logger,"antes DEL WAIT");
-		sem_wait(&hay_procesos);
-		log_error(logger,"DESPUES DEL WAIT");
+		log_warning(logger, "antes DEL WAIT");
+		sem_wait(&hay_procesos); // este sem debería ser un contador de procesos en ready
+		log_error(logger, "DESPUES DEL WAIT");
 		int motivo_desalojo = -1;
 		if (strcmp(algoritmo, "FIFO") == 0)
 		{
 			motivo_desalojo = planificar_fifo(conexion_fd);
-			pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0);
-			log_info(logger, "Registro AX: %i", pcb_prueba->registros->AX);
-			log_info(logger, "Registro BX: %i", pcb_prueba->registros->BX);
-			log_info(logger, "Registro CX: %i", pcb_prueba->registros->CX);
+			pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0); // creo q esto no va
 		}
 		else if (strcmp(algoritmo, "RR") == 0)
 		{
@@ -99,9 +97,15 @@ void *cliente_cpu_dispatch()
 			pcb_reloj->state = READY_S;
 			list_add(lista_pcbs_ready, pcb_reloj);
 			break;
-		case PRUEBA:
-			// soy una prueba
-			log_info(logger, "FUNCIONE");
+		case IO_SLEEP: // CAPAZ ES UN SOLO CASE PARA TODAS LAS IO_
+			pcb_t *pcb_a_bloquear = list_get(lista_pcbs_exec, 0);
+			list_remove(lista_pcbs_exec, 0);
+			pcb_a_bloquear->state = BLOCK_S;
+			// list_add(lista_pcbs_bloqueado, pcb_a_bloquear); asi debeŕia ser
+			list_add(lista_pcbs_ready, pcb_a_bloquear);
+			sem_post(&hay_procesos);
+			//ACA VA LA LOGICA DE MANDARLE A LA IO CORRESPONDIENTE EL PEDIDO 
+			//LA IO SE ENCARGA DE MANEJAR SUS PEDIDOS.
 			break;
 
 		default:
@@ -196,7 +200,7 @@ int main(int argc, char const *argv[])
 
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria);
-	sem_init(&hay_IO, 0, 0); // no se si es el lugar correcto para inicializarlo
+	sem_init(&hay_IO, 0, 0);		  // no se si es el lugar correcto para inicializarlo
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
 	lista_pcbs_bloqueado = list_create();
 	lista_pcbs_exec = list_create();

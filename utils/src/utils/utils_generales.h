@@ -107,10 +107,15 @@ typedef enum
 	RELOJ,
 	ENTRADA_SALIDA,
 	FIN,
-
+	IO_SLEEP,
 	//ELIMINAR_ESTRUC_ADMIN,
-} interrupciones;
+} motivos_desalojo;
 
+typedef enum
+{ 
+	STATUS_OK,
+	STATUS_DESALOJADO,
+} status_ciclo_ejecucion;
 typedef enum
 { 
 	HS_KERNEL,
