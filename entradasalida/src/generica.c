@@ -85,7 +85,7 @@ void *resolvedor_de_peticiones() // gran nombre
 
 		GEN_SLEEP(pedido->instruccion->p2);
 		log_warning(logger, "RESOLVI LA PETICION del pid %i", pedido->pid_solicitante);
-		informar_fin_de_tarea(socket_kernel, IO_OK);
+		informar_fin_de_tarea(socket_kernel, IO_OK,pedido->pid_solicitante);
 	}
 }
 void *receptor_de_peticiones() // la idea es q este pushee una lista y el resolvedor saque, asi se puede escuchar y resolver simultaneamente
@@ -113,11 +113,13 @@ void GEN_SLEEP(char *p2)
 	return;
 }
 
-void informar_fin_de_tarea(int socket_kernel, int status) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
+void informar_fin_de_tarea(int socket_kernel, int status, int pid) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
 {
-	/* 	int codop = FIN_IO_TASK;
+		int codop = FIN_IO_TASK;
 		send(socket_kernel, &codop, sizeof(int), 0);
-		send(socket_kernel, &status, sizeof(int), 0); */
+		send(socket_kernel, &pid, sizeof(int), 0); 
+		
+		//send(socket_kernel, &status, sizeof(int), 0); 
 }
 
 void iniciar_interfaz_generica()

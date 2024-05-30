@@ -12,7 +12,6 @@
 t_log *logger;
 t_config *config;
 pthread_t tid[3];
-sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
 	char *linea;
@@ -66,19 +65,20 @@ void *cliente_cpu_dispatch()
 
 	while (1)
 	{
-		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));; // creo q no  debería generar conflicto con los desalojos sin instruccion
-		log_warning(logger, "antes DEL WAIT");
+		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));
+		; // creo q no  debería generar conflicto con los desalojos sin instruccion
+		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
-		log_error(logger, "DESPUES DEL WAIT");
 		int motivo_desalojo = -1;
 		if (strcmp(algoritmo, "FIFO") == 0)
 		{
+			
 			motivo_desalojo = planificar_fifo(conexion_fd, instruccion_de_desalojo);
 			pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0); // creo q esto no va
 		}
 		else if (strcmp(algoritmo, "RR") == 0)
 		{
-			motivo_desalojo = planificar_rr(conexion_fd,instruccion_de_desalojo);
+			motivo_desalojo = planificar_rr(conexion_fd, instruccion_de_desalojo);
 		}
 		else
 		{
@@ -91,26 +91,30 @@ void *cliente_cpu_dispatch()
 			pcb_t *pcb = list_get(lista_pcbs_exec, 0);
 			list_remove(lista_pcbs_exec, 0);
 			pcb->state = EXIT_S;
+			log_debug(logger, "Se desalojo un proceso por exit");
+
 			break;
 		case RELOJ:
 			pcb_t *pcb_reloj = list_get(lista_pcbs_exec, 0);
 			list_remove(lista_pcbs_exec, 0);
 			pcb_reloj->state = READY_S;
 			list_add(lista_pcbs_ready, pcb_reloj);
+			log_debug(logger, "Se desalojo un proceso por clock");
+
 			break;
 		case IO_SLEEP: // CAPAZ ES UN SOLO CASE PARA TODAS LAS IO_
 			pcb_t *pcb_a_bloquear = list_get(lista_pcbs_exec, 0);
 			list_remove(lista_pcbs_exec, 0);
 			pcb_a_bloquear->state = BLOCK_S;
-			// list_add(lista_pcbs_bloqueado, pcb_a_bloquear); asi debeŕia ser
-			list_add(lista_pcbs_ready, pcb_a_bloquear);
-			sem_post(&elementos_ready);
+			list_add(lista_pcbs_bloqueado, pcb_a_bloquear);
 
-			int status = try_io_task(pcb_a_bloquear->pid, instruccion_de_desalojo); // instruccion sale del planificarfifo
+			int status = try_io_task(pcb_a_bloquear->pid, instruccion_de_desalojo); // instruccion_de_desalojo sale del planificarfifo
 			if (status == -1)
 			{
-				// bloquear proceso
+				// matar proceso
 			}
+			log_debug(logger, "Se desalojo un proceso por IO_TASK");
+
 			break;
 
 		default:
@@ -212,7 +216,7 @@ int main(int argc, char const *argv[])
 	lista_pcbs_exec = list_create();
 	dictionary_ios = dictionary_create();
 	logger = iniciar_logger();
-	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
+	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_DEBUG);
 	config = iniciar_config();
 	config = config_create("kernel.config");
 

@@ -24,6 +24,7 @@ extern int socket_memoria;
 extern pthread_mutex_t mutex_socket_memoria;
 extern int operacion;
 extern t_list *lista_pcbs_ready;
+extern sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 extern t_list *lista_pcbs_bloqueado;
 extern t_list *lista_pcbs_exec;
 extern t_dictionary *dictionary_ios;

@@ -4,6 +4,8 @@
 extern t_log *logger;
 int next_pid;
 t_list *lista_pcbs_ready;
+sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
+
 t_list *lista_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
 t_dictionary *dictionary_ios;
@@ -118,7 +120,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     stream += sizeof(int);
     // inicio deserializacion de palabras:
 
-    //palabras = malloc(sizeof(t_strings_instruccion));--este malloc se hace afuera.
+    // palabras = malloc(sizeof(t_strings_instruccion));--este malloc se hace afuera.
     memset(palabras, 0, sizeof(t_strings_instruccion));
 
     memcpy(&(palabras->tamcod), stream, sizeof(int));
@@ -175,7 +177,8 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     return motivo_desalojo;
     // memcpy(&(pcb->state), stream, sizeof(state_t)); // no debería
 }
-is_io_connected(int socket){
+is_io_connected(int socket)
+{
     return true;
 }
 int try_io_task(int pid, t_strings_instruccion *instruccion)
@@ -185,13 +188,13 @@ int try_io_task(int pid, t_strings_instruccion *instruccion)
     if (!dictionary_has_key(dictionary_ios, nombre_interfaz))
         return -1;
     t_interfaz *io = dictionary_get(dictionary_ios, nombre_interfaz);
-    if (!is_io_connected(io->socket)) // capaz la IO DEBE TENER UN MUTEX PARA EL SOCKET,si justo se le pregunta
-        return -1;                    // si existe mientras devuelve algo, se puede chingar todo. HACER ISSUE
-    pedir_io_task(pid, io, instruccion);//capaz se puede tener otro socket en io de escucha de 'is_io_connected' para evitar problema
-    return 0;                           //capaz se le manda siempre y si no responde nada, estaba desconectada??
+    if (!is_io_connected(io->socket))    // capaz la IO DEBE TENER UN MUTEX PARA EL SOCKET,si justo se le pregunta
+        return -1;                       // si existe mientras devuelve algo, se puede chingar todo. HACER ISSUE
+    pedir_io_task(pid, io, instruccion); // capaz se puede tener otro socket en io de escucha de 'is_io_connected' para evitar problema
+    return 0;                            // capaz se le manda siempre y si no responde nada, estaba desconectada??
 }
 pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!TODO: HACERLA GENERICA PARA TODAS LAS INSTRUCCIONES
-{                                                                         // ahora funciona solo con sleep
+{                                                                          // ahora funciona solo con sleep
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = IO_GEN_SLEEP;
@@ -243,22 +246,23 @@ int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_de
     list_remove(lista_pcbs_ready, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
+    log_debug(logger, "Enviando PID %i a ejecutar",pcb->pid);
+
     return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
     // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb
 }
-int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo)
+int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo)
 {
     // Fifo pero con quantum
     pcb_t *pcb = list_get(lista_pcbs_ready, 0);
     list_remove(lista_pcbs_bloqueado, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente,instruccion_de_desalojo);
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo);
 }
 
 void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)
 {
-    log_warning(logger, "enviar operacion: codop:%i", cod_op);
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = cod_op;
@@ -336,21 +340,31 @@ void *client_handler(void *arg)
             dictionary_put(dictionary_ios, interfaz->nombre, interfaz);
             break;
         case FIN_IO_TASK:
-            log_info(logger, "TERMINO LA IO ");
-            case -1:
-            log_info(logger, "SE DESCONECTO UNA IO");
-            conexion_terminada = true;
+            int pid_a_desbloquear = 34;
+            recv(socket_io, &pid_a_desbloquear, sizeof(int), 0);
+            bool is_pid(void *pcb)
+            {
+                return ((pcb_t *)pcb)->pid == pid_a_desbloquear;
+            }
+            pcb_t *pcb_a_desbloquear = list_remove_by_condition(lista_pcbs_bloqueado, is_pid); // no hay colores pq vscode no se la banca, no es bug
+            pcb_a_desbloquear->state = READY_S;
+            list_add(lista_pcbs_ready, pcb_a_desbloquear);
+            sem_post(&elementos_ready);
+            log_info(logger, "TERMINO LA IO del pid:%i", pid_a_desbloquear);
+
             break;
+        case -1:
+            log_info(logger, "SE DESCONECTO UNA IO");
+            return -1;
         default:
             log_warning(logger, "Operacion desconocida. No quieras meter la pata");
             break;
         }
-       
     }
     close(socket_io);
 }
 t_interfaz *recibir_IO(int socket_cliente)
-{   
+{
     int tam_nombre;
     t_buffer *buffer = malloc(sizeof(t_buffer));
     recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
