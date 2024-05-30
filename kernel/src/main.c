@@ -12,7 +12,7 @@
 t_log *logger;
 t_config *config;
 pthread_t tid[3];
-sem_t hay_procesos;
+sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
 	char *linea;
@@ -34,7 +34,7 @@ void *consola()
 		{
 			int tam = 1 + sizeof(strlen(linea));
 			iniciar_proceso(instruccion[1], tam);
-			sem_post(&hay_procesos);
+			sem_post(&elementos_ready);
 		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
@@ -66,18 +66,19 @@ void *cliente_cpu_dispatch()
 
 	while (1)
 	{
+		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));; // creo q no  debería generar conflicto con los desalojos sin instruccion
 		log_warning(logger, "antes DEL WAIT");
-		sem_wait(&hay_procesos); // este sem debería ser un contador de procesos en ready
+		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
 		log_error(logger, "DESPUES DEL WAIT");
 		int motivo_desalojo = -1;
 		if (strcmp(algoritmo, "FIFO") == 0)
 		{
-			motivo_desalojo = planificar_fifo(conexion_fd);
+			motivo_desalojo = planificar_fifo(conexion_fd, instruccion_de_desalojo);
 			pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0); // creo q esto no va
 		}
 		else if (strcmp(algoritmo, "RR") == 0)
 		{
-			motivo_desalojo = planificar_rr(conexion_fd);
+			motivo_desalojo = planificar_rr(conexion_fd,instruccion_de_desalojo);
 		}
 		else
 		{
@@ -103,9 +104,13 @@ void *cliente_cpu_dispatch()
 			pcb_a_bloquear->state = BLOCK_S;
 			// list_add(lista_pcbs_bloqueado, pcb_a_bloquear); asi debeŕia ser
 			list_add(lista_pcbs_ready, pcb_a_bloquear);
-			sem_post(&hay_procesos);
-			//ACA VA LA LOGICA DE MANDARLE A LA IO CORRESPONDIENTE EL PEDIDO 
-			//LA IO SE ENCARGA DE MANEJAR SUS PEDIDOS.
+			sem_post(&elementos_ready);
+
+			int status = try_io_task(pcb_a_bloquear->pid, instruccion_de_desalojo); // instruccion sale del planificarfifo
+			if (status == -1)
+			{
+				// bloquear proceso
+			}
 			break;
 
 		default:
@@ -197,6 +202,7 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 
 int main(int argc, char const *argv[])
 {
+	sem_init(&elementos_ready, 0, 0); // no se si es el lugar correcto para inicializarlo
 
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria);
@@ -204,7 +210,7 @@ int main(int argc, char const *argv[])
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
 	lista_pcbs_bloqueado = list_create();
 	lista_pcbs_exec = list_create();
-	lista_IO = list_create();
+	dictionary_ios = dictionary_create();
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_INFO);
 	config = iniciar_config();
@@ -227,7 +233,6 @@ int main(int argc, char const *argv[])
 	}
 	log_info(logger, "El thread cliente_cpu_interrupt inició su ejecución");
 
-	sem_init(&hay_procesos, 0, 0); // no se si es el lugar correcto para inicializarlo
 	err = pthread_create(&(tid[2]), NULL, cliente_cpu_dispatch, NULL);
 	if (err != 0)
 	{

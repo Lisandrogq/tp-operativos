@@ -6,7 +6,7 @@ int next_pid;
 t_list *lista_pcbs_ready;
 t_list *lista_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
-t_list *lista_IO;
+t_dictionary *dictionary_ios;
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
 int contador;
@@ -94,7 +94,7 @@ void ejecutar_script(const char *path)
 
     fclose(archivo);
 }
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
@@ -118,7 +118,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
     stream += sizeof(int);
     // inicio deserializacion de palabras:
 
-    t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion));
+    //palabras = malloc(sizeof(t_strings_instruccion));--este malloc se hace afuera.
     memset(palabras, 0, sizeof(t_strings_instruccion));
 
     memcpy(&(palabras->tamcod), stream, sizeof(int));
@@ -175,29 +175,85 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente)
     return motivo_desalojo;
     // memcpy(&(pcb->state), stream, sizeof(state_t)); // no debería
 }
+is_io_connected(int socket){
+    return true;
+}
+int try_io_task(int pid, t_strings_instruccion *instruccion)
+{
+    char *nombre_interfaz = instruccion->p1;
+
+    if (!dictionary_has_key(dictionary_ios, nombre_interfaz))
+        return -1;
+    t_interfaz *io = dictionary_get(dictionary_ios, nombre_interfaz);
+    if (!is_io_connected(io->socket)) // capaz la IO DEBE TENER UN MUTEX PARA EL SOCKET,si justo se le pregunta
+        return -1;                    // si existe mientras devuelve algo, se puede chingar todo. HACER ISSUE
+    pedir_io_task(pid, io, instruccion);//capaz se puede tener otro socket en io de escucha de 'is_io_connected' para evitar problema
+    return 0;                           //capaz se le manda siempre y si no responde nada, estaba desconectada??
+}
+pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!TODO: HACERLA GENERICA PARA TODAS LAS INSTRUCCIONES
+{                                                                         // ahora funciona solo con sleep
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+
+    paquete->codigo_operacion = IO_GEN_SLEEP;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = sizeof(int) + instruccion->tamcod + instruccion->tamp1 + instruccion->tamp2 + 3 * sizeof(int);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &(instruccion->tamcod), sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->cod_instruccion, instruccion->tamcod);
+    paquete->buffer->offset += instruccion->tamcod;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &(instruccion->tamp1), sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p1, instruccion->tamp1);
+    paquete->buffer->offset += instruccion->tamp1;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &(instruccion->tamp2), sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p2, instruccion->tamp2);
+    paquete->buffer->offset += instruccion->tamp2;
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(io->socket, a_enviar, bytes, 0);
+    free(a_enviar);
+    eliminar_paquete(paquete);
+}
+
 void retirar_pcb_bloqueado(pcb_t pcb, int index)
 {
+    //!!! agregar mutex y contador
     pcb.state = READY_S;
     list_add(lista_pcbs_ready, list_remove(lista_pcbs_bloqueado, index));
 }
-int planificar_fifo(int socket_cliente)
+int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo)
 {
 
     pcb_t *pcb = list_get(lista_pcbs_ready, 0);
     list_remove(lista_pcbs_ready, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
     // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb
 }
-int planificar_rr(int socket_cliente)
+int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo)
 {
     // Fifo pero con quantum
     pcb_t *pcb = list_get(lista_pcbs_ready, 0);
     list_remove(lista_pcbs_bloqueado, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente);
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente,instruccion_de_desalojo);
 }
 
 void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)
@@ -253,8 +309,8 @@ int handshake(int socket_cliente)
 
 void *client_handler(void *arg)
 {
-    int socket_cliente = *(int *)arg;
-    int modulo = handshake_Server(socket_cliente);
+    int socket_io = *(int *)arg;
+    int modulo = handshake_Server(socket_io);
     switch (modulo) // se debería ejecutar un handler para cada modulo
     {
     case 1:
@@ -271,22 +327,31 @@ void *client_handler(void *arg)
     bool conexion_terminada = false;
     while (!conexion_terminada)
     {
-        int cod_op = recibir_operacion(socket_cliente); // REVISARESTO
+        int cod_op = recibir_operacion(socket_io); // REVISARESTO
         switch (cod_op)
         {
         case CREACION_IO:
-            t_interfaz *interfaz = recibir_IO(socket_cliente);
-            list_add(lista_IO, interfaz); // talvez sea necesario una lista por tipo de io para hacer la busqueda mas rapido
+            t_interfaz *interfaz = recibir_IO(socket_io);
+            interfaz->socket = socket_io;
+            dictionary_put(dictionary_ios, interfaz->nombre, interfaz);
+            break;
+        case FIN_IO_TASK:
+            log_info(logger, "TERMINO LA IO ");
+            case -1:
+            log_info(logger, "SE DESCONECTO UNA IO");
+            conexion_terminada = true;
             break;
         default:
             log_warning(logger, "Operacion desconocida. No quieras meter la pata");
             break;
         }
+       
     }
-    close(socket_cliente);
+    close(socket_io);
 }
 t_interfaz *recibir_IO(int socket_cliente)
-{
+{   
+    int tam_nombre;
     t_buffer *buffer = malloc(sizeof(t_buffer));
     recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
     buffer->stream = malloc(buffer->size);
@@ -294,11 +359,11 @@ t_interfaz *recibir_IO(int socket_cliente)
 
     t_interfaz *estructura = malloc(sizeof(t_interfaz));
     void *stream = buffer->stream;
-    memcpy(&(estructura->largo), stream, sizeof(int));
+    memcpy(&tam_nombre, stream, sizeof(int));
     stream += sizeof(int);
-    estructura->nombre = malloc(estructura->largo);
-    memcpy((estructura->nombre), stream, estructura->largo);
-    stream += estructura->largo;
+    estructura->nombre = malloc(tam_nombre);
+    memcpy((estructura->nombre), stream, tam_nombre);
+    stream += tam_nombre;
     memcpy(&(estructura->tipo), stream, sizeof(int));
     stream += sizeof(int);
     memcpy(&(estructura->estado), stream, sizeof(int));

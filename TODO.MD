@@ -1,5 +1,6 @@
 # BUGS #
 - [ ] si mantenes memoría y bajaste los otros modulos,cuando volves a iniciar_proceso, tira segmentation fault memoria pq no se recibe el path.
+- [ ] SI BAJAS UNA IO Y VOLVES A PEDIR IO, SEGFAULT!
 - [x] BREAKPOINTS PUEDEn ROMPER MEMORIA(de alguna forma el codigo esta vacio)
 ____
 #### CHECKPOINT 2 ####

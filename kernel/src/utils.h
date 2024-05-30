@@ -26,7 +26,7 @@ extern int operacion;
 extern t_list *lista_pcbs_ready;
 extern t_list *lista_pcbs_bloqueado;
 extern t_list *lista_pcbs_exec;
-extern t_list *lista_IO;
+extern t_dictionary *dictionary_ios;
 extern sem_t hay_IO;
 typedef enum
 {	//habría q ver como podemos unificar esto en un solo archivo
@@ -45,9 +45,9 @@ void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
 void retirar_pcb_bloqueado(pcb_t pcb, int index);
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente);
-int planificar_fifo(int socket_cliente);
-int planificar_rr(int socket_cliente);
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente,t_strings_instruccion*instruccion_de_desalojo);
+int planificar_fifo(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo);
+int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo);
 //Server
 extern t_log* logger;
 
@@ -60,6 +60,8 @@ int terminarServidor(int,int);
 void recibir_operacion1(int socket_cliente);
 pcb_t *crear_pcb(int pid);
 t_interfaz *recibir_IO(int socket_cliente);
+int try_io_task(int pid, t_strings_instruccion *instruccion);
+pedir_io_task(int pid,t_interfaz *io, t_strings_instruccion *instruccion);
 
 #endif /* UTILS_H_ */
 

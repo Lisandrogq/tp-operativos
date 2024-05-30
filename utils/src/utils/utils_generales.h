@@ -19,10 +19,10 @@
 #define PUERTO_MEMORIA "4446"
 #define PUERTO_CPU_INTERRUPT "4447"
 
-
 typedef struct
-{	int tamcod;
-	char* cod_instruccion;
+{
+	int tamcod;
+	char *cod_instruccion;
 	int tamp1;
 	char *p1;
 	int tamp2;
@@ -44,18 +44,18 @@ typedef struct
 	void *p5;
 } t_instruccion;
 typedef struct
-{	
-    int pid;
+{
+	int pid;
 	int pc;
 } fetch_t;
 typedef struct
-{	
+{
 	int tam;
-    char*path;
-    int pid;
+	char *path;
+	int pid;
 } struct_administrativas;
-typedef enum
-{ // habría q ver como podemos unificar esto en un solo archivo
+/* typedef enum   // AL FINAL  ESTO SE HACE CON STRINGS
+{
 	SET,
 	MOV_IN,
 	MOV_OUT,
@@ -75,16 +75,21 @@ typedef enum
 	IO_FS_WRITE,
 	IO_FS_READ,
 	EXIT_P,
-} instruction_code;
+} instruction_code; */
 typedef struct
 {
-    int largo;
+	int socket; // no estoy seguro si hace falta,mepaqsi
 	char *nombre;
 	int estado;
 	int tipo;
 } t_interfaz;
+typedef struct
+{
+	t_strings_instruccion *instruccion;
+	int pid_solicitante;
+} io_task;
 typedef enum
-{ 
+{
 	MENSAJE,
 	PAQUETE,
 	OPERACION_IO_1,
@@ -99,25 +104,32 @@ typedef enum
 	SIGUENTE_INSTRUCCION,
 	ELIMINAR_ESTRUC_ADMIN,
 	CREACION_IO,
-	SOLICITAR_IO,
+	IO_GEN_SLEEP,
+	FIN_IO_TASK,
 } op_code;
+
 typedef enum
-{ 
+{
+	IO_OK,
+	IO_ERROR,
+} status_fin_io_task;
+typedef enum
+{
 	PRUEBA,
 	RELOJ,
 	ENTRADA_SALIDA,
 	FIN,
 	IO_SLEEP,
-	//ELIMINAR_ESTRUC_ADMIN,
+	// ELIMINAR_ESTRUC_ADMIN,
 } motivos_desalojo;
 
 typedef enum
-{ 
+{
 	STATUS_OK,
 	STATUS_DESALOJADO,
 } status_ciclo_ejecucion;
 typedef enum
-{ 
+{
 	HS_KERNEL,
 	HS_CPU,
 	HS_MEMORIA,
@@ -161,7 +173,7 @@ typedef struct
 {
 	int size;
 	int offset;
-	void* stream;
+	void *stream;
 } t_buffer;
 typedef struct
 {
@@ -171,8 +183,8 @@ typedef struct
 
 pcb_t *crear_pcb(int pid);
 pcb_t *recibir_paquete(int socket_cliente);
-void eliminar_pcb(pcb_t* pcb);
-void eliminar_paquete(t_paquete* paquete);
+void eliminar_pcb(pcb_t *pcb);
+void eliminar_paquete(t_paquete *paquete);
 void crear_buffer(t_paquete *paquete);
 
 /**
@@ -183,8 +195,8 @@ void decir_hola(char *quien);
 int crear_conexion(char *ip, char *puerto, t_log *logger);
 int esperar_cliente(int socket_servidor, void *client_handler(void *));
 int iniciar_servidor(char *PUERTO, t_log *logger);
-t_paquete* crear_paquete(void);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
+t_paquete *crear_paquete(void);
+void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio);
 void *serializar_paquete(t_paquete *paquete, int bytes);
 void enviar_paquete(t_paquete *paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);

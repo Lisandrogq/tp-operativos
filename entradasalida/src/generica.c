@@ -1,12 +1,17 @@
 #include "client.h"
 #include <readline/readline.h>
+#include <semaphore.h>
 
 t_log *logger;
 t_config *config;
 pthread_t tid[2];
-int socket_cliente;
+int socket_kernel;
+int *tiempo_Unidad_Trabajo;
+t_list *lista_pedidos;
+sem_t contador_pedidos;
+pthread_mutex_t count_mutex;
 int inicializar_cliente_memoria() // todavia no se usa
-{	
+{
 	int conexion_fd;
 	char *ip;
 	char *puerto;
@@ -21,90 +26,117 @@ int inicializar_cliente_memoria() // todavia no se usa
 	int resultado = handshake(conexion_fd);
 	if (resultado == -1)
 		return;
-	
+
 	return conexion_fd;
 }
-int inicializar_cliente_kernel()
-{	
+
+io_task *recibir_pedido_io(int socket_kernel)
+{
+	io_task *pedido = malloc(sizeof(io_task));
+	t_buffer *buffer = malloc(sizeof(t_buffer));
+	recv(socket_kernel, &(buffer->size), sizeof(int), 0);
+	buffer->stream = malloc(buffer->size);
+	recv(socket_kernel, buffer->stream, buffer->size, 0);
+
+	t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion));
+	pedido->instruccion = palabras;
+	memset(palabras, 0, sizeof(t_strings_instruccion));
+	void *stream = buffer->stream;
+	memcpy(&pedido->pid_solicitante, stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(palabras->tamcod), stream, sizeof(int));
+	stream += sizeof(int);
+	palabras->cod_instruccion = malloc(palabras->tamcod);
+	memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
+	stream += palabras->tamcod;
+
+	memcpy(&(palabras->tamp1), stream, sizeof(int));
+	stream += sizeof(int);
+
+	palabras->p1 = malloc(palabras->tamp1);
+	memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+	memcpy((palabras->p1), stream, palabras->tamp1);
+	stream += palabras->tamp1;
+
+	memcpy(&(palabras->tamp2), stream, sizeof(int));
+	stream += sizeof(int);
+
+	palabras->p2 = malloc(palabras->tamp2);
+	memset(palabras->p2, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+	memcpy((palabras->p2), stream, palabras->tamp2);
+	stream += palabras->tamp2;
+
+	free(buffer->stream);
+	free(buffer);
+
+	log_warning(logger, "LLEGO un pedido de sleep del pid %i", pedido->pid_solicitante);
+
+	return pedido;
+}
+void *resolvedor_de_peticiones() // gran nombre
+{
+	while (1)
+	{
+		sem_wait(&contador_pedidos);
+
+		pthread_mutex_lock(&count_mutex);
+		io_task *pedido = list_get(lista_pedidos, 0);
+		pthread_mutex_unlock(&count_mutex);
+
+		GEN_SLEEP(pedido->instruccion->p2);
+		log_warning(logger, "RESOLVI LA PETICION del pid %i", pedido->pid_solicitante);
+		informar_fin_de_tarea(socket_kernel, IO_OK);
+	}
+}
+void *receptor_de_peticiones() // la idea es q este pushee una lista y el resolvedor saque, asi se puede escuchar y resolver simultaneamente
+{
+	tiempo_Unidad_Trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	t_interfaz *nueva_interfaz = crear_estrcutura_io(GENERICA);
+	enviar_interfaz(CREACION_IO, *nueva_interfaz, socket_kernel);
+	while (nueva_interfaz->estado == DISPONIBLE)
+	{
+		int cod_op = recibir_operacion(socket_kernel);
+		if (cod_op == -1)
+			return -1;
+		io_task *pedido = recibir_pedido_io(socket_kernel);
+		sem_post(&contador_pedidos);
+		pthread_mutex_lock(&count_mutex);
+		list_add(lista_pedidos, pedido); // podría usarse una queue pero esto anda
+		pthread_mutex_unlock(&count_mutex);
+		// push lista con mutex
+	}
+}
+void GEN_SLEEP(char *p2)
+{
+	int tiempo = atoi(p2);
+	sleep(tiempo * 1);
+	return;
+}
+
+void informar_fin_de_tarea(int socket_kernel, int status) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
+{
+	/* 	int codop = FIN_IO_TASK;
+		send(socket_kernel, &codop, sizeof(int), 0);
+		send(socket_kernel, &status, sizeof(int), 0); */
+}
+
+void iniciar_interfaz_generica()
+{
 	char *ip;
 	char *puerto;
 	char *modulo;
 	char *tipo_Interfaz;
-	int	*tiempo_Unidad_Trabajo;
-	/*char* ip_Memoria;
-	char* puerto_Memoria;
-	char path_Base_Dialfs;
-	int block_Size;
-	int block_Count;
-	int retraso_Compactacion;*/
-
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
-	//ip_Memoria = config_get_string_value(config, "IP_MEMORIA");
-	//puerto_Memoria = config_get_string_value(config, "PUERTO_MEMORIA");
+
 	tipo_Interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-	//path_Base_Dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
-	//block_Size = config_get_int_value(config, "BLOCK_SIZE");
-	//block_Count = config_get_int_value(config, "BLOCK_COUNT");
-	//retraso_Compactacion = config_get_int_value(config, "RETRASO_COMPACTACION");
 
-
-	socket_cliente = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(socket_cliente);
+	socket_kernel = crear_conexion(ip, puerto, logger);
+	int resultado = handshake(socket_kernel);
 	if (resultado == -1)
 		return;
 
-	if(strcmp(tipo_Interfaz,"GENERICA") == 0){
-		 //Se crea cada una con su propio archivo
-		 iniciar_interfaz_generica();
-	}
-/*
-	if(strcmp(tipo_Interfaz,"STDIN") == 0){
-		//interfaz_stdin(conexion_fd);
-	}
-
-	if(strcmp(tipo_Interfaz,"STDOUT") == 0{
-		//interfaz_stdout(conexion_fd);
-	}
-
-	if(strcmp(tipo_Interfaz,"FS") == 0{
-		//interfaz_fs(conexion_fd, path_Base_Dialfs, block_Size, block_Count, retraso_Compactacion);
-	}
-	*/
-}
-void interfaz_generica(int tiempo_Unidad_Trabajo){
-    sleep(tiempo_Unidad_Trabajo*10);
-	
-    
-}
-void iniciar_interfaz_generica(){
-
-	int tiempo_Unidad_Trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
-	t_interfaz *nueva_interfaz = crear_estrcutura_io(GENERICA);
-	enviar_interfaz(CREACION_IO, *nueva_interfaz, crear_conexion);
-	while (nueva_interfaz->estado == DISPONIBLE)
-	{
-		int cod_op = recibir_operacion(socket_cliente);
-        switch (cod_op)
-        {
-        case SOLICITAR_IO:
-            interfaz_generica(tiempo_Unidad_Trabajo);
-            break;
-        default:
-            //log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-            break;
-        }
-	}
-    
-}
-int main(void)
-{
-	int nombre_ios = 0;
-	logger = iniciar_logger();
-	logger = log_create("IO.log","IO_MateLavado",1,LOG_LEVEL_INFO);
-	config = iniciar_config();
-	config = config_create("IO.config");
 	int err;
 	err = pthread_create(&(tid[0]), NULL, inicializar_cliente_memoria, NULL); // todavia no se usa
 	if (err != 0)
@@ -113,36 +145,58 @@ int main(void)
 		return err;
 	}
 	log_info(logger, "El thread cliente-memoria inició su ejecución");
-	err = pthread_create(&(tid[1]), NULL, inicializar_cliente_kernel, NULL);
+	err = pthread_create(&(tid[1]), NULL, receptor_de_peticiones, NULL);
 	if (err != 0)
 	{
-		log_error(logger, "Hubo un problema al crear el thread cliente-kernel:[%s]", strerror(err));
+		log_error(logger, "Hubo un problema al crear el thread receptor_de_peticiones:[%s]", strerror(err));
 		return err;
 	}
-	log_info(logger, "El thread cliente-kernel inició su ejecución");
-	pthread_join(tid[0], NULL); //join para que no termine el main creo que puede llegar a terminar igual
-	pthread_join(tid[1], NULL); 
-	
+	log_info(logger, "El thread receptor_de_peticiones inició su ejecución");
 
+	err = pthread_create(&(tid[1]), NULL, resolvedor_de_peticiones, NULL);
+	if (err != 0)
+	{
+		log_error(logger, "Hubo un problema al crear el thread resolvedor_de_peticiones:[%s]", strerror(err));
+		return err;
+	}
+
+	log_info(logger, "El thread resolvedor_de_peticiones inició su ejecución");
 }
 
-
-t_log* iniciar_logger(void)
+int main(void)
 {
-	t_log* nuevo_logger;
+	sem_init(&contador_pedidos, 0, 0);
+	pthread_mutex_init(&count_mutex, NULL);
+	pthread_mutex_unlock(&count_mutex);
+	lista_pedidos = list_create();
+	logger = iniciar_logger();
+	logger = log_create("IO.log", "IO_MateLavado", 1, LOG_LEVEL_INFO);
+	config = iniciar_config();
+	config = config_create("IO.config");
+	char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
+	if (strcmp(tipo, "GENERICA") == 0)
+	{
+		iniciar_interfaz_generica();
+	}
+	pthread_join(tid[0], NULL); // join para que no termine el main creo que puede llegar a terminar igual
+	pthread_join(tid[1], NULL);
+}
+
+t_log *iniciar_logger(void)
+{
+	t_log *nuevo_logger;
 
 	return nuevo_logger;
 }
 
-t_config* iniciar_config(void)
+t_config *iniciar_config(void)
 {
-	t_config* nuevo_config;
+	t_config *nuevo_config;
 
 	return nuevo_config;
 }
 
-
-void terminar_programa(int conexion, t_log* logger, t_config* config)
+void terminar_programa(int conexion, t_log *logger, t_config *config)
 {
 	log_destroy(logger);
 	config_destroy(config);
