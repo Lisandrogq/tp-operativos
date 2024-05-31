@@ -3,7 +3,8 @@
 
 t_log *logger;
 t_dictionary *dictionary_codigos;
-sem_t siguiente_instruccion;
+t_list *sems_espera_creacion_codigos;
+int RETARDO_RESPUESTA;
 char *leer_codigo(char *path)
 {
 	// leer el pseudocodigo
@@ -39,8 +40,10 @@ void crear_estructuras_administrativas(struct_administrativas *e_admin)
 	char pid_str[5] = "";
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
-	//signal
-	sem_post(&siguiente_instruccion);//hay q hacerlo array
+	// signal
+	sem_t *sem = malloc(sizeof(sem_t));
+	sem_init(sem, 0, 1);
+	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem);
 }
 void handle_cpu_client(int socket_cliente)
 {
@@ -57,10 +60,12 @@ void handle_cpu_client(int socket_cliente)
 			fetch_t *p_info = recibir_process_info(socket_cliente);
 			log_info(logger, "pid:%i", p_info->pid);
 			log_info(logger, "pc:%i", p_info->pc);
-			//wait
-			sem_wait(&siguiente_instruccion);
+			// wait
+			sem_t *sem = list_get(sems_espera_creacion_codigos, p_info->pid);
+			sem_wait(sem);
+			usleep(RETARDO_RESPUESTA); // MILISEGUNDOS PEDIDOS POR CONFIG(consigna);
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
-			sem_post(&siguiente_instruccion);
+			sem_post(sem);
 
 			enviar_instruccion(palabras, socket_cliente);
 			break;

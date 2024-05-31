@@ -72,9 +72,8 @@ void *cliente_cpu_dispatch()
 		int motivo_desalojo = -1;
 		if (strcmp(algoritmo, "FIFO") == 0)
 		{
-			
+
 			motivo_desalojo = planificar_fifo(conexion_fd, instruccion_de_desalojo);
-			pcb_t *pcb_prueba = list_get(lista_pcbs_exec, 0); // creo q esto no va
 		}
 		else if (strcmp(algoritmo, "RR") == 0)
 		{
@@ -88,26 +87,27 @@ void *cliente_cpu_dispatch()
 		switch (motivo_desalojo)
 		{
 		case FIN:
-			pcb_t *pcb = list_get(lista_pcbs_exec, 0);
-			list_remove(lista_pcbs_exec, 0);
+			pcb_t *pcb = list_remove(lista_pcbs_exec, 0);
 			pcb->state = EXIT_S;
 			log_debug(logger, "Se desalojo un proceso por exit");
 
 			break;
 		case RELOJ:
-			pcb_t *pcb_reloj = list_get(lista_pcbs_exec, 0);
-			list_remove(lista_pcbs_exec, 0);
+			pcb_t *pcb_reloj = list_remove(lista_pcbs_exec, 0);
 			pcb_reloj->state = READY_S;
+			pthread_mutex_lock(&mutex_lista_ready);
 			list_add(lista_pcbs_ready, pcb_reloj);
+			pthread_mutex_unlock(&mutex_lista_ready);
+
 			log_debug(logger, "Se desalojo un proceso por clock");
 
 			break;
 		case IO_SLEEP: // CAPAZ ES UN SOLO CASE PARA TODAS LAS IO_
-			pcb_t *pcb_a_bloquear = list_get(lista_pcbs_exec, 0);
-			list_remove(lista_pcbs_exec, 0);
+			pcb_t *pcb_a_bloquear = list_remove(lista_pcbs_exec, 0);
 			pcb_a_bloquear->state = BLOCK_S;
+			pthread_mutex_lock(&mutex_lista_ready);
 			list_add(lista_pcbs_bloqueado, pcb_a_bloquear);
-
+			pthread_mutex_unlock(&mutex_lista_ready);
 			int status = try_io_task(pcb_a_bloquear->pid, instruccion_de_desalojo); // instruccion_de_desalojo sale del planificarfifo
 			if (status == -1)
 			{
@@ -205,13 +205,13 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 }
 
 int main(int argc, char const *argv[])
-{
-	sem_init(&elementos_ready, 0, 0); // no se si es el lugar correcto para inicializarlo
-
+{											//creo que no hace falta mutex para exec
+	sem_init(&elementos_ready, 0, 0);
+	pthread_mutex_init(&mutex_lista_ready, NULL);
+	pthread_mutex_unlock(&mutex_lista_ready); // debe empezar desbloqueado, pq todos hacen lock primero
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
-	pthread_mutex_lock(&mutex_socket_memoria);
-	sem_init(&hay_IO, 0, 0);		  // no se si es el lugar correcto para inicializarlo
-	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
+	pthread_mutex_lock(&mutex_socket_memoria); // se libera cuando se habilita el socket
+	lista_pcbs_ready = list_create();		   // la crea aca pero cuando entra el hilo se borran los datos
 	lista_pcbs_bloqueado = list_create();
 	lista_pcbs_exec = list_create();
 	dictionary_ios = dictionary_create();

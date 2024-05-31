@@ -3,10 +3,15 @@
 #include <string.h>
 #include <commons/log.h>
 #include "utils.h"
+#include <commons/config.h>
+t_config *config;
 
 int main(int argc, char *argv[])
 {
-	sem_init(&siguiente_instruccion, 0, 0);
+	config = config_create("memoria.config");
+	RETARDO_RESPUESTA = config_get_int_value(config, "RETARDO_RESPUESTA");
+	sems_espera_creacion_codigos = list_create();
+
 	dictionary_codigos = dictionary_create();
 
 	logger = log_create("Memoria.log", "Servidor", 1, LOG_LEVEL_DEBUG);

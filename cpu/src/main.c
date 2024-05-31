@@ -27,7 +27,6 @@ void ejecutar_cliclos()
 			status = execute(instruccion);
 
 			// check_intr();
-			sleep(3);
 		}
 	}
 }

@@ -42,7 +42,7 @@ io_task *recibir_pedido_io(int socket_kernel)
 	pedido->instruccion = palabras;
 	memset(palabras, 0, sizeof(t_strings_instruccion));
 	void *stream = buffer->stream;
-	memcpy(&pedido->pid_solicitante, stream, sizeof(int));
+	memcpy(&(pedido->pid_solicitante), stream, sizeof(int));
 	stream += sizeof(int);
 	memcpy(&(palabras->tamcod), stream, sizeof(int));
 	stream += sizeof(int);
@@ -77,15 +77,18 @@ void *resolvedor_de_peticiones() // gran nombre
 {
 	while (1)
 	{
+		log_warning(logger, "ESTOY ESPERANDO PARA MANDAR ALGO");
+
 		sem_wait(&contador_pedidos);
 
 		pthread_mutex_lock(&count_mutex);
-		io_task *pedido = list_get(lista_pedidos, 0);
+		io_task *pedido = list_remove(lista_pedidos, 0);
+
 		pthread_mutex_unlock(&count_mutex);
 
 		GEN_SLEEP(pedido->instruccion->p2);
 		log_warning(logger, "RESOLVI LA PETICION del pid %i", pedido->pid_solicitante);
-		informar_fin_de_tarea(socket_kernel, IO_OK,pedido->pid_solicitante);
+		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
 	}
 }
 void *receptor_de_peticiones() // la idea es q este pushee una lista y el resolvedor saque, asi se puede escuchar y resolver simultaneamente
@@ -115,11 +118,11 @@ void GEN_SLEEP(char *p2)
 
 void informar_fin_de_tarea(int socket_kernel, int status, int pid) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
 {
-		int codop = FIN_IO_TASK;
-		send(socket_kernel, &codop, sizeof(int), 0);
-		send(socket_kernel, &pid, sizeof(int), 0); 
-		
-		//send(socket_kernel, &status, sizeof(int), 0); 
+	int codop = FIN_IO_TASK;
+	send(socket_kernel, &codop, sizeof(int), 0);
+	send(socket_kernel, &pid, sizeof(int), 0);
+
+	// send(socket_kernel, &status, sizeof(int), 0);
 }
 
 void iniciar_interfaz_generica()

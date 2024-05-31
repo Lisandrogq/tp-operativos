@@ -1,11 +1,13 @@
 #include "utils.h"
 #include <errno.h>
+#include <pthread.h>
 
 extern t_log *logger;
 int next_pid;
 t_list *lista_pcbs_ready;
+pthread_mutex_t mutex_lista_ready;
+pthread_mutex_t mutex_lista_bloqueado;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
-
 t_list *lista_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
 t_dictionary *dictionary_ios;
@@ -13,13 +15,14 @@ pthread_mutex_t mutex_socket_memoria;
 int operacion;
 int contador;
 int socket_memoria;
-sem_t hay_IO;
 void iniciar_proceso(char *path, int tam)
 {
 
     pcb_t *nuevo_pcb = crear_pcb(next_pid); // se estan creando con el PID SIEMPRE EN 0
 
+    pthread_mutex_lock(&mutex_lista_ready);
     int error = list_add(lista_pcbs_ready, nuevo_pcb); // Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
+    pthread_mutex_unlock(&mutex_lista_ready);
     next_pid++;
     pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
     solicitar_crear_estructuras_administrativas(tam, path, nuevo_pcb->pid, socket_memoria);
@@ -233,29 +236,39 @@ pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!
     eliminar_paquete(paquete);
 }
 
-void retirar_pcb_bloqueado(pcb_t pcb, int index)
+void desbloquear_pcb(int pid_a_desbloquear)
 {
-    //!!! agregar mutex y contador
-    pcb.state = READY_S;
-    list_add(lista_pcbs_ready, list_remove(lista_pcbs_bloqueado, index));
+
+    bool is_pid(void *pcb)
+    {
+        return ((pcb_t *)pcb)->pid == pid_a_desbloquear; // no hay colores pq vscode no se la banca, no es bug
+    };
+    pthread_mutex_lock(&mutex_lista_bloqueado);
+    pcb_t *pcb_a_desbloquear = list_remove_by_condition(lista_pcbs_bloqueado, is_pid);
+    pthread_mutex_unlock(&mutex_lista_bloqueado);
+
+    pthread_mutex_lock(&mutex_lista_ready);
+    list_add(lista_pcbs_ready, pcb_a_desbloquear);
+    sem_post(&elementos_ready);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    pcb_a_desbloquear->state = READY_S;
 }
 int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo)
 {
+    pthread_mutex_lock(&mutex_lista_ready);
+    pcb_t *pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    list_add(lista_pcbs_exec, pcb_a_ejecutar);
+    pcb_a_ejecutar->state = EXEC_S;
+    log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);
 
-    pcb_t *pcb = list_get(lista_pcbs_ready, 0);
-    list_remove(lista_pcbs_ready, 0);
-    list_add(lista_pcbs_exec, pcb);
-    pcb->state = EXEC_S;
-    log_debug(logger, "Enviando PID %i a ejecutar",pcb->pid);
-
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
     // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb
 }
 int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo)
 {
     // Fifo pero con quantum
-    pcb_t *pcb = list_get(lista_pcbs_ready, 0);
-    list_remove(lista_pcbs_bloqueado, 0);
+    pcb_t *pcb = list_remove(lista_pcbs_ready, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
     return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo);
@@ -324,7 +337,7 @@ void *client_handler(void *arg)
         log_info(logger, "se conecto el modulo memoria");
         break;
     case 3:
-        log_info(logger, "se conecto el modulo io");
+        log_info(logger, "se conecto alguna io");
         break;
     }
 
@@ -338,20 +351,14 @@ void *client_handler(void *arg)
             t_interfaz *interfaz = recibir_IO(socket_io);
             interfaz->socket = socket_io;
             dictionary_put(dictionary_ios, interfaz->nombre, interfaz);
+            log_info(logger, "la io conectada se llama '%s'",interfaz->nombre);
+
             break;
         case FIN_IO_TASK:
             int pid_a_desbloquear = 34;
             recv(socket_io, &pid_a_desbloquear, sizeof(int), 0);
-            bool is_pid(void *pcb)
-            {
-                return ((pcb_t *)pcb)->pid == pid_a_desbloquear;
-            }
-            pcb_t *pcb_a_desbloquear = list_remove_by_condition(lista_pcbs_bloqueado, is_pid); // no hay colores pq vscode no se la banca, no es bug
-            pcb_a_desbloquear->state = READY_S;
-            list_add(lista_pcbs_ready, pcb_a_desbloquear);
-            sem_post(&elementos_ready);
+            desbloquear_pcb(pid_a_desbloquear);
             log_info(logger, "TERMINO LA IO del pid:%i", pid_a_desbloquear);
-
             break;
         case -1:
             log_info(logger, "SE DESCONECTO UNA IO");

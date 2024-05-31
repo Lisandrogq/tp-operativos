@@ -24,11 +24,13 @@ extern int socket_memoria;
 extern pthread_mutex_t mutex_socket_memoria;
 extern int operacion;
 extern t_list *lista_pcbs_ready;
+extern pthread_mutex_t mutex_lista_ready;
 extern sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 extern t_list *lista_pcbs_bloqueado;
+extern pthread_mutex_t mutex_lista_bloqueado;
+
 extern t_list *lista_pcbs_exec;
 extern t_dictionary *dictionary_ios;
-extern sem_t hay_IO;
 typedef enum
 {	//habría q ver como podemos unificar esto en un solo archivo
 	INICIAR_PROCESO,
@@ -45,7 +47,7 @@ t_config* iniciar_config(void);
 void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
-void retirar_pcb_bloqueado(pcb_t pcb, int index);
+void desbloquear_pcb(int pid_a_desbloquear);
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente,t_strings_instruccion*instruccion_de_desalojo);
 int planificar_fifo(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo);
 int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo);
