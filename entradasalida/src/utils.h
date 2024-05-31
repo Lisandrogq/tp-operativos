@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <utils/utils_generales.h>
 
+extern char*nombre;
 typedef enum{
     GENERICA,
     STDIN,

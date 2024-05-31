@@ -168,8 +168,11 @@ void iniciar_interfaz_generica()
 	log_info(logger, "El thread resolvedor_de_peticiones inició su ejecución");
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+	nombre = "Int3";
+	//nombre=malloc(argc);
+	//strcpy(nombre,argv);
 	sem_init(&contador_pedidos, 0, 0);
 	pthread_mutex_init(&count_mutex, NULL);
 	pthread_mutex_unlock(&count_mutex);

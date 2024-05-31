@@ -1,6 +1,8 @@
 #include "utils.h"
 extern t_log *logger;
 int contador; // 0 es el contador para generica
+char*nombre;
+
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -55,10 +57,9 @@ t_interfaz *crear_estrcutura_io(int tipo)
 	{
 	case GENERICA:
 		t_interfaz *interfaz = malloc(sizeof(t_interfaz));
-		char *provisorio = "Int1";
 		memset(interfaz, 0, sizeof(t_interfaz));
-		interfaz->nombre = malloc(strlen(provisorio)+1);
-		interfaz->nombre = provisorio;
+		interfaz->nombre = malloc(strlen(nombre)+1);
+		interfaz->nombre =nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
 		interfaz->socket=0;
