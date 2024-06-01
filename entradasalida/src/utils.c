@@ -59,7 +59,7 @@ t_interfaz *crear_estrcutura_io(int tipo)
 		t_interfaz *interfaz = malloc(sizeof(t_interfaz));
 		memset(interfaz, 0, sizeof(t_interfaz));
 		interfaz->nombre = malloc(strlen(nombre)+1);
-		interfaz->nombre =nombre;
+		interfaz->nombre =nombre; // hay que hacer que sea distinto
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
 		interfaz->socket=0;

@@ -80,6 +80,9 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
     // mandar pcb a exit
 }
+    log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
+    // mandar pcb a exit
+}
 
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
 {
@@ -178,13 +181,28 @@ enviar_interrupcion(int motivo, int pid)
     free(a_enviar);
     eliminar_paquete(paquete);
 }
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras)
+void hilo_quantum(pcb_t *pcb){
+    sleep(pcb->quantum);
+    send_interrupt(socket_interrupt);
+}
+void send_interrupt(socket_interrupt){
+    
+}
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras,  char *algoritmo)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
 
+    if(strcmp(algoritmo, "RR") == 0){
+        pthread_create(0,0,hilo_quantum, pcb);
+        pthread_detach(hilo_quantum);
+        if(recibir_operacion(socket_cliente) != -1){
+            pthread_cancel(hilo_quantum);
+        }
+    }
+
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    int prueba = recibir_operacion(socket_cliente);
+    //int prueba = recibir_operacion(socket_cliente);
 
     recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
     buffer->stream = malloc(buffer->size);
@@ -351,7 +369,7 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     pthread_mutex_unlock(&mutex_lista_ready);
     pcb_a_desbloquear->state = READY_S;
 }
-int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo)
+int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char* algoritmo)
 {
     pthread_mutex_lock(&mutex_lista_ready);
     pcb_t *pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
@@ -360,16 +378,16 @@ int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_de
     pcb_a_ejecutar->state = EXEC_S;
     log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);
 
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
-    // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo,algoritmo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
+    // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb NO.
 }
-int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo)
+int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char* algoritmo)
 {
     // Fifo pero con quantum
     pcb_t *pcb = list_remove(lista_pcbs_ready, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo);
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo,algoritmo);
 }
 
 void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)

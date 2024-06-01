@@ -37,7 +37,7 @@ extern sem_t elementos_ready;				// contador de ready, si no hay, no podes plani
 extern t_dictionary *listas_pcbs_bloqueado; // Int1","int3","recurso1"...(CAPAZ CADA ELEMENTO TIENE QUE TENER UN MUTEX).
 
 extern pthread_mutex_t mutex_lista_bloqueado;
-
+extern int socket_interrupt;
 extern t_list *lista_pcbs_exec;
 extern t_dictionary *dictionary_ios;
 typedef enum
@@ -59,12 +59,14 @@ t_log *iniciar_logger(void);
 t_config *iniciar_config(void);
 void leer_consola(t_log *);
 void paquete(int);
-void terminar_programa(int, t_log *, t_config *);
+void terminar_programa(int, t_log*, t_config*);
 void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io);
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *instruccion_de_desalojo);
-int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo);
-int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo);
-// Server
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente,t_strings_instruccion*instruccion_de_desalojo, char* algoritmo);
+int planificar_fifo(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo , char* algoritmo);
+int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo, char* algoritmo);
+void hilo_quantum(pcb_t *pcb);
+//Server
+extern t_log* logger;
 
 void *recibir_buffer(int *, int);
 

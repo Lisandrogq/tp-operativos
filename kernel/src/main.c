@@ -74,11 +74,11 @@ void *cliente_cpu_dispatch()
 		if (strcmp(algoritmo, "FIFO") == 0)
 		{
 
-			motivo_desalojo = planificar_fifo(conexion_fd, instruccion_de_desalojo);
+			motivo_desalojo = planificar_fifo(conexion_fd, instruccion_de_desalojo, algoritmo);
 		}
 		else if (strcmp(algoritmo, "RR") == 0)
 		{
-			motivo_desalojo = planificar_rr(conexion_fd, instruccion_de_desalojo);
+			motivo_desalojo = planificar_rr(conexion_fd, instruccion_de_desalojo, algoritmo);
 		}
 		else
 		{
@@ -172,7 +172,6 @@ void *cliente_cpu_dispatch()
 
 void *cliente_cpu_interrupt() // esto podría no ser un hilo y simplemente genera la conexion
 {
-
 	char *ip;
 	char *puerto;
 	char *modulo;
@@ -257,7 +256,7 @@ int main(int argc, char const *argv[])
 	pthread_mutex_lock(&mutex_pcb_desalojado); // debe empezar bloqueado, solo es desbloqueado al desalojarse un proceso(por kernel)
 
 	pthread_mutex_init(&mutex_lista_ready, NULL);
-	pthread_mutex_unlock(&mutex_lista_ready); // debe empezar desbloqueado, pq todos hacen lock primero
+	pthread_mutex_unlock(&mutex_lista_ready); // debe empezar desbloqueado, pq todos hacen lock primero 
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria); // se libera cuando se habilita el socket
 	lista_pcbs_exit = list_create();
