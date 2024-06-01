@@ -8,7 +8,7 @@
 #include <semaphore.h>
 #include "utils.h"
 #include <errno.h>
-t_config *config;
+
 pthread_t tid[3];
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
@@ -127,6 +127,7 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_lock(&mutex_lista_ready);
 				list_add(lista_pcbs_ready, pcb_desalojado);
 				pthread_mutex_unlock(&mutex_lista_ready);
+				sem_post(&elementos_ready);
 				log_debug(logger, "Se desalojo un proceso por clock");
 			}
 			break;

@@ -154,19 +154,6 @@ int iniciar_servidor(char* PUERTO,t_log *logger)
 
     return socket_servidor;
 }
-pcb_t *crear_pcb(int pid)
-{// capaz hay q setear el quantum cuando sea RR
-	pcb_t *nuevo_pcb = malloc(sizeof(pcb_t));
-	memset(nuevo_pcb, 0, sizeof(pcb_t));
-
-    nuevo_pcb->pid = pid;
-    printf("\nEl pid del nuevopcb es: %i\n",nuevo_pcb->pid);
-    nuevo_pcb->state= READY_S;//ESTO DEBERÍA SER NEW, PERO TODAVIA NO HAY PLANIFICADOR DE LARGO PLAZO
-	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
-	memset(registros, 0, sizeof(registros_t));
-	nuevo_pcb->registros= registros;
-	return nuevo_pcb;
-}
 void eliminar_pcb(pcb_t *pcb){
     free(pcb->registros);
     free(pcb);

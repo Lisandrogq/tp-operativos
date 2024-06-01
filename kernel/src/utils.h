@@ -19,7 +19,7 @@
 
 #include <utils/utils_generales.h>
 extern t_log *logger;
-
+extern t_config *config;
 extern pcb_t lista_pcbs[100];
 extern int next_pid;
 extern int socket_memoria;
@@ -64,9 +64,10 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io);
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente,t_strings_instruccion*instruccion_de_desalojo, char* algoritmo);
 int planificar_fifo(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo , char* algoritmo);
 int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo, char* algoritmo);
-void hilo_quantum(pcb_t *pcb);
+void *hilo_quantum(void* parametro);
 //Server
 extern t_log* logger;
+void enviar_interrupcion(int motivo, int pid);
 
 void *recibir_buffer(int *, int);
 

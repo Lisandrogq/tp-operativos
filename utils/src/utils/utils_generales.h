@@ -204,7 +204,6 @@ typedef struct
 	t_buffer *buffer;
 } t_paquete;
 
-pcb_t *crear_pcb(int pid);
 pcb_t *recibir_paquete(int socket_cliente);
 void eliminar_pcb(pcb_t *pcb);
 void eliminar_paquete(t_paquete *paquete);

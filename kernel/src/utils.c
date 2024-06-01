@@ -4,6 +4,7 @@
 int pid_sig_term;//sirve para cuando se mata un proceso y justo salio bloqueado
 
 t_log *logger;
+t_config *config;
 int next_pid;
 t_list *lista_pcbs_ready;
 pthread_mutex_t mutex_lista_ready;
@@ -33,6 +34,19 @@ void comando_iniciar_proceso(char *path, int tam)
     int error = list_add(lista_pcbs_ready, nuevo_pcb); // Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
     pthread_mutex_unlock(&mutex_lista_ready);
     next_pid++;
+}
+pcb_t *crear_pcb(int pid)
+{
+	pcb_t *nuevo_pcb = malloc(sizeof(pcb_t));
+	memset(nuevo_pcb, 0, sizeof(pcb_t));
+    nuevo_pcb->quantum = config_get_int_value(config, "QUANTUM");
+    nuevo_pcb->pid = pid;
+    printf("\nEl pid del nuevopcb es: %i\n",nuevo_pcb->pid);
+    nuevo_pcb->state= READY_S;//ESTO DEBERÍA SER NEW, PERO TODAVIA NO HAY PLANIFICADOR DE LARGO PLAZO
+	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
+	memset(registros, 0, sizeof(registros_t));
+	nuevo_pcb->registros= registros;
+	return nuevo_pcb;
 }
 int get_pid_state(int pid_buscado)
 {
@@ -77,9 +91,6 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         solicitar_eliminar_estructuras_administrativas(pid);
         pthread_mutex_unlock(&mutex_socket_memoria);        
     }
-    log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
-    // mandar pcb a exit
-}
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
     // mandar pcb a exit
 }
@@ -158,7 +169,7 @@ void ejecutar_script(const char *path)
     fclose(archivo);
 }
 
-enviar_interrupcion(int motivo, int pid)
+void enviar_interrupcion(int motivo, int pid)
 {
     t_paquete *paquete = malloc(sizeof(t_paquete));
     paquete->codigo_operacion = INTERRUPCION;
@@ -181,12 +192,12 @@ enviar_interrupcion(int motivo, int pid)
     free(a_enviar);
     eliminar_paquete(paquete);
 }
-void hilo_quantum(pcb_t *pcb){
-    sleep(pcb->quantum);
-    send_interrupt(socket_interrupt);
-}
-void send_interrupt(socket_interrupt){
-    
+void *hilo_quantum(void *parametro){
+    pcb_t *pcb = (pcb_t*)parametro;
+    log_info(logger,"Quantum: %i", pcb->quantum);
+    usleep(pcb->quantum);
+    log_info(logger,"Sali del sleep, mando interrupcion");
+    enviar_interrupcion(CLOCK, pcb->pid);
 }
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras,  char *algoritmo)
 {
@@ -194,13 +205,17 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     int motivo_desalojo = -1;
 
     if(strcmp(algoritmo, "RR") == 0){
-        pthread_create(0,0,hilo_quantum, pcb);
-        pthread_detach(hilo_quantum);
+        pthread_t quantum;
+        pthread_create(&quantum,NULL, hilo_quantum, pcb);
+        pthread_detach(&quantum);
         if(recibir_operacion(socket_cliente) != -1){
-            pthread_cancel(hilo_quantum);
+            log_info(logger,"Cancelo");
+            pthread_cancel(&quantum);
         }
+    }else if(strcmp(algoritmo, "VRR") == 0){
+        //Cositas
     }
-
+    
     t_buffer *buffer = malloc(sizeof(t_buffer));
     //int prueba = recibir_operacion(socket_cliente);
 
