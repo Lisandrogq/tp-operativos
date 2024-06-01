@@ -87,7 +87,6 @@ void *resolvedor_de_peticiones() // gran nombre
 		pthread_mutex_unlock(&count_mutex);
 
 		GEN_SLEEP(pedido->instruccion->p2);
-		log_warning(logger, "RESOLVI LA PETICION del pid %i", pedido->pid_solicitante);
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
 	}
 }
@@ -119,10 +118,35 @@ void GEN_SLEEP(char *p2)
 void informar_fin_de_tarea(int socket_kernel, int status, int pid) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
 {
 	int codop = FIN_IO_TASK;
-	send(socket_kernel, &codop, sizeof(int), 0);
-	send(socket_kernel, &pid, sizeof(int), 0);
 
-	// send(socket_kernel, &status, sizeof(int), 0);
+	log_info(logger, "PID: %i - Operacion: SLEEP", pid);
+
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	int tam_nombre = strlen(nombre) + 1; //\0
+	paquete->codigo_operacion = codop;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int) * 2 + tam_nombre;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_nombre, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, nombre, tam_nombre);
+	paquete->buffer->offset += tam_nombre;
+
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_kernel, a_enviar, bytes, 0);
+
+	free(a_enviar);
+	eliminar_paquete(paquete);
 }
 
 void iniciar_interfaz_generica()
@@ -142,6 +166,8 @@ void iniciar_interfaz_generica()
 	if (resultado == -1)
 		return;
 
+	/// ESTA ESTRTUCTURA QUEDO DE CUANDO LAS IOS MANEJABAN SUS PEDIDOS PENDIENTES.
+	/// AHORA ESO LO HACE KERNEL, BLOCKED SE DIVIDE EN IOS Y RECURSOS
 	int err;
 	err = pthread_create(&(tid[0]), NULL, inicializar_cliente_memoria, NULL); // todavia no se usa
 	if (err != 0)
@@ -170,9 +196,9 @@ void iniciar_interfaz_generica()
 
 int main(int argc, char *argv[])
 {
-	nombre = "Int3";
-	//nombre=malloc(argc);
-	//strcpy(nombre,argv);
+	nombre = "Int1";
+	// nombre=malloc(argc);
+	// strcpy(nombre,argv);
 	sem_init(&contador_pedidos, 0, 0);
 	pthread_mutex_init(&count_mutex, NULL);
 	pthread_mutex_unlock(&count_mutex);

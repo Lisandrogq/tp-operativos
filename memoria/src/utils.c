@@ -34,7 +34,7 @@ void int_to_char(int pid, char *pid_str)
 
 	snprintf(pid_str, sizeof(pid_str), "%d", pid);
 }
-void crear_estructuras_administrativas(struct_administrativas *e_admin)
+void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 {
 	char *codigo = leer_codigo(e_admin->path);
 	char pid_str[5] = "";
@@ -44,6 +44,14 @@ void crear_estructuras_administrativas(struct_administrativas *e_admin)
 	sem_t *sem = malloc(sizeof(sem_t));
 	sem_init(sem, 0, 1);
 	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem);
+}
+void eliminar_estrucuras_administrativas(int pid_a_eliminar)
+{
+	char pid_str[5] = "";
+	int_to_char(pid_a_eliminar, pid_str);
+	char *codigo = dictionary_remove(dictionary_codigos, pid_str);//creo que no hace falta mutex para codigos
+	free(codigo);
+	log_debug(logger,"Se elimino el codigo del pid %i",pid_a_eliminar);
 }
 void handle_cpu_client(int socket_cliente)
 {
@@ -60,10 +68,10 @@ void handle_cpu_client(int socket_cliente)
 			fetch_t *p_info = recibir_process_info(socket_cliente);
 			log_info(logger, "pid:%i", p_info->pid);
 			log_info(logger, "pc:%i", p_info->pc);
-			// wait
+			usleep(RETARDO_RESPUESTA); // MILISEGUNDOS PEDIDOS POR CONFIG(consigna);
 			sem_t *sem = list_get(sems_espera_creacion_codigos, p_info->pid);
 			sem_wait(sem);
-			usleep(RETARDO_RESPUESTA); // MILISEGUNDOS PEDIDOS POR CONFIG(consigna);
+			
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
 			sem_post(sem);
 
@@ -85,12 +93,14 @@ void handle_kerel_client(int socket)
 		switch (cod_op)
 		{
 		case CREAR_ESTRUC_ADMIN:
-			// inizaliacion
-			struct_administrativas *e_admin = recibir_estructuras_administrativas(socket);
+			solicitud_creacion_t *e_admin = recibir_solicitud_de_creacion(socket);
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
 			break;
-
+		case ELIMINAR_ESTRUC_ADMIN:
+			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
+			eliminar_estrucuras_administrativas(pid_a_eliminar);
+			break;
 		default:
 			break;
 		}
@@ -372,14 +382,14 @@ fetch_t *recibir_process_info(int socket_cliente)
 	return p_info;
 }
 
-struct_administrativas *recibir_estructuras_administrativas(int socket_cliente)
+solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente)
 {
 	t_buffer *buffer = malloc(sizeof(t_buffer));
 	recv(socket_cliente, &(buffer->size), sizeof(int), 0);
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-	struct_administrativas *estructura = malloc(sizeof(pcb_t));
+	solicitud_creacion_t *estructura = malloc(sizeof(pcb_t));
 	void *stream = buffer->stream;
 	memcpy(&(estructura->tam), stream, sizeof(int));
 	stream += sizeof(int);
@@ -390,4 +400,19 @@ struct_administrativas *recibir_estructuras_administrativas(int socket_cliente)
 	free(buffer->stream);
 	free(buffer);
 	return estructura;
+}
+
+int recibir_solicitud_de_eliminacion(int socket_cliente)
+{
+	int pid_a_eliminar;
+	t_buffer *buffer = malloc(sizeof(t_buffer));
+	recv(socket_cliente, &(buffer->size), sizeof(int), 0);
+	buffer->stream = malloc(buffer->size);
+	recv(socket_cliente, buffer->stream, buffer->size, 0);
+	void *stream = buffer->stream;
+
+	memcpy(&pid_a_eliminar, stream, sizeof(int));
+	free(buffer->stream);
+	free(buffer);
+	return pid_a_eliminar;
 }

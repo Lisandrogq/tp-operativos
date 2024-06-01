@@ -6,6 +6,27 @@ sem_t hay_proceso;
 sem_t desalojar;
 pcb_t *pcb_exec;
 int socket_dispatch;
+int socket_interrupt;
+
+interrupcion_t*recibir_interrupcion(int socket_interrupt){
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+	recv(socket_interrupt, &(buffer->size), sizeof(int), 0);
+	buffer->stream = malloc(buffer->size);
+	recv(socket_interrupt, buffer->stream, buffer->size, 0);
+
+	interrupcion_t *interrupcion = malloc(sizeof(interrupcion_t));
+	memset(interrupcion, 0, sizeof(interrupcion_t));
+
+	void *stream = buffer->stream;//esto hace q no se pueda liberar la memoria de stream
+	memcpy(&(interrupcion->pid), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(interrupcion->motivo), stream, sizeof(int));
+	stream += sizeof(int);
+	
+	free(buffer->stream);
+	free(buffer);
+	return interrupcion;	
+}
 void execute_set(char *nombre_r_destino, int valor)
 {
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
@@ -266,7 +287,7 @@ void *client_handler_dispatch(int socket_cliente)
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
-       //log_warning(logger, "recibí la operacion: codop:%i", cod_op);
+        // log_warning(logger, "recibí la operacion: codop:%i", cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -287,7 +308,7 @@ void *client_handler_dispatch(int socket_cliente)
             break;
         case DISPATCH:
             // TODO: liberar pcb sino es la primera ejecucion
-            log_debug(logger,"Se recibio el proceso a ejecutar por dispatch");
+            log_debug(logger, "Se recibio el proceso a ejecutar por dispatch");
             pcb_t *pcb = recibir_paquete(socket_cliente);
             sem_post(&hay_proceso);
             pcb_exec = pcb;
@@ -319,36 +340,7 @@ void *client_handler_interrupt(int socket_cliente)
     }
 
     bool conexion_terminada = false;
-    while (!conexion_terminada)
-    {
-        int cod_op = recibir_operacion(socket_cliente);
-        switch (cod_op)
-        {
-        case OPERACION_KERNEL_1:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_operacion1(socket_cliente);
-            break;
-        case OPERACION_CPU_1:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_operacion1(socket_cliente);
-            break;
-        case OPERACION_IO_1:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_operacion1(socket_cliente);
-            break;
-        case MENSAJE:
-            // capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-            recibir_mensaje(socket_cliente);
-            break;
-        case -1:
-            log_info(logger, "Se desconecto algun cliente");
-            conexion_terminada = true;
-            break;
-        default:
-            log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-            break;
-        }
-    }
+   
     close(socket_cliente);
 }
 
@@ -399,9 +391,11 @@ void recibir_operacion1(int socket_cliente)
     log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
     free(buffer);
 }
-void log_instruccion_ejecutada(t_strings_instruccion *palabras){
-    log_info(logger,"PID: %i - Ejecutando: %s - %s %s %s %s %s",pcb_exec->pid,palabras->cod_instruccion,palabras->p1,palabras->p2,palabras->p3,palabras->p4,palabras->p5);
+void log_instruccion_ejecutada(t_strings_instruccion *palabras)
+{
+    log_info(logger, "PID: %i - Ejecutando: %s - %s %s %s %s %s", pcb_exec->pid, palabras->cod_instruccion, palabras->p1, palabras->p2, palabras->p3, palabras->p4, palabras->p5);
 }
-void log_fetch_instruccion(){
-     log_info(logger,"PID: %i - FETCH - Program Counter: %i",pcb_exec->pid,pcb_exec->registros->PC);
+void log_fetch_instruccion()
+{
+    log_info(logger, "PID: %i - FETCH - Program Counter: %i", pcb_exec->pid, pcb_exec->registros->PC);
 }

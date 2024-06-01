@@ -8,8 +8,6 @@
 #include <semaphore.h>
 #include "utils.h"
 #include <errno.h>
-
-t_log *logger;
 t_config *config;
 pthread_t tid[3];
 void *consola()
@@ -31,9 +29,14 @@ void *consola()
 
 		if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
 		{
-			int tam = 1 + sizeof(strlen(linea));
-			iniciar_proceso(instruccion[1], tam);
+			int tam = 1 + strlen(instruccion[1]);
+			comando_iniciar_proceso(instruccion[1], tam);
 			sem_post(&elementos_ready);
+		}
+		if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
+		{
+			int tam = 1 + sizeof(strlen(linea));
+			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
 		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
@@ -66,7 +69,7 @@ void *cliente_cpu_dispatch()
 	while (1)
 	{
 		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));
-		; // creo q no  debería generar conflicto con los desalojos sin instruccion
+		// creo q no  debería generar conflicto con los desalojos sin instruccion
 		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
 		int motivo_desalojo = -1;
@@ -83,51 +86,64 @@ void *cliente_cpu_dispatch()
 		{
 			// planificar_vrr();
 		}
-
-		switch (motivo_desalojo)
-		{
-		case FIN:
-			pcb_t *pcb = list_remove(lista_pcbs_exec, 0);
-			pcb->state = EXIT_S;
-			log_debug(logger, "Se desalojo un proceso por exit");
-
-			break;
-		case RELOJ:
-			pcb_t *pcb_reloj = list_remove(lista_pcbs_exec, 0);
-			pcb_reloj->state = READY_S;
-			pthread_mutex_lock(&mutex_lista_ready);
-			list_add(lista_pcbs_ready, pcb_reloj);
-			pthread_mutex_unlock(&mutex_lista_ready);
-
-			log_debug(logger, "Se desalojo un proceso por clock");
-
-			break;
-		case IO_SLEEP: // CAPAZ ES UN SOLO CASE PARA TODAS LAS IO_
-			pcb_t *pcb_a_bloquear = list_remove(lista_pcbs_exec, 0);
-			pcb_a_bloquear->state = BLOCK_S;
-			pthread_mutex_lock(&mutex_lista_ready);
-			list_add(lista_pcbs_bloqueado, pcb_a_bloquear);
-			pthread_mutex_unlock(&mutex_lista_ready);
-			int status = try_io_task(pcb_a_bloquear->pid, instruccion_de_desalojo); // instruccion_de_desalojo sale del planificarfifo
-			if (status == -1)
-			{
-				// matar proceso
-			}
-			log_debug(logger, "Se desalojo un proceso por IO_TASK");
-
-			break;
-
-		default:
-			log_info(logger, "Entre al switch pero al default");
-			break;
+		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
+		if (pid_sig_term==pcb_desalojado->pid)//SI se bloqueo justo antes de leer la INTR FINALIZAR_PROCESO Se intercepta
+		{				// el pcb para finalizarlo(esto se hace pq la consola espera hasta q sea desalojado
+						//para solicitar eliminar las estrucutras administrativas a memoría)
+			if(motivo_desalojo==IO_TASK)
+			pthread_mutex_unlock(&mutex_pcb_desalojado);
 		}
+		else
+			switch (motivo_desalojo)
+			{
+			case SUCCESS: // agregar resto de casos de fin
+				pcb_desalojado->state = EXIT_S;
+				log_debug(logger, "Se desalojo un proceso por success-exit");
+				break;
+			case INTERRUPTED_BY_USER: // agregar resto de casos de fin
+				pcb_desalojado->state = EXIT_S;
+				log_debug(logger, "Se desalojo un proceso por forced-exit");
+				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
+				break;
+			case CLOCK:
+				pcb_desalojado->state = READY_S;
+				pthread_mutex_lock(&mutex_lista_ready);
+				list_add(lista_pcbs_ready, pcb_desalojado);
+				pthread_mutex_unlock(&mutex_lista_ready);
+				log_debug(logger, "Se desalojo un proceso por clock");
+				break;
+			case IO_TASK: // CAPAZ ES UN SOLO CASE PARA TODAS LAS IO_
+				if (es_una_io_valida(pcb_desalojado->pid, instruccion_de_desalojo) == -1)
+				{
+					// matar
+					// finalizar_pcb(pcb_a_bloquear, motivo_desalojo); // liberar todo en memoría y kernel
+					log_debug(logger, "Se finalizo el pid %i por IO no valida", pcb_desalojado->pid);
+				}
+				else
+				{
+					t_interfaz *io = dictionary_get(dictionary_ios, instruccion_de_desalojo->p1);
+					pcb_desalojado->state = BLOCK_S;
+					// pthread_mutex_lock(&mutex_lista_bloqueado);
+					t_list *cola_de_io_pedido = dictionary_get(listas_pcbs_bloqueado, instruccion_de_desalojo->p1); //[1] segunda palabra
+					list_add(cola_de_io_pedido, pcb_desalojado);
+					// pthread_mutex_unlock(&mutex_lista_bloqueado);
+
+					pedir_io_task(pcb_desalojado->pid, io, instruccion_de_desalojo);
+
+					log_debug(logger, "Se desalojo un proceso por IO_TASK");
+				}
+				break;
+
+			default:
+				log_info(logger, "Entre al switch pero al default");
+				break;
+			}
 	}
 }
 
-void *cliente_cpu_interrupt()
+void *cliente_cpu_interrupt() // esto podría no ser un hilo y simplemente genera la conexion
 {
 
-	int conexion_fd;
 	char *ip;
 	char *puerto;
 	char *modulo;
@@ -137,11 +153,11 @@ void *cliente_cpu_interrupt()
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_INTERRUPT");
 
-	conexion_fd = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(conexion_fd);
+	socket_interrupt = crear_conexion(ip, puerto, logger);
+	int resultado = handshake(socket_interrupt);
 
-	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
-	enviar_operacion(MENSAJE, "SOY EL CLIENTE INTERRUPT", conexion_fd);
+	enviar_operacion(OPERACION_KERNEL_1, modulo, socket_interrupt);
+	enviar_operacion(MENSAJE, "SOY EL CLIENTE INTERRUPT", socket_interrupt);
 	return 0;
 }
 int inicializar_cliente_memoria()
@@ -205,14 +221,18 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 }
 
 int main(int argc, char const *argv[])
-{											//creo que no hace falta mutex para exec
+{ // creo que no hace falta mutex para exec
+	pid_sig_term = false;
 	sem_init(&elementos_ready, 0, 0);
+	pthread_mutex_init(&mutex_pcb_desalojado, NULL);
+	pthread_mutex_lock(&mutex_pcb_desalojado); // debe empezar bloqueado, solo es desbloqueado al desalojarse un proceso(por kernel)
+
 	pthread_mutex_init(&mutex_lista_ready, NULL);
 	pthread_mutex_unlock(&mutex_lista_ready); // debe empezar desbloqueado, pq todos hacen lock primero
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria); // se libera cuando se habilita el socket
 	lista_pcbs_ready = list_create();		   // la crea aca pero cuando entra el hilo se borran los datos
-	lista_pcbs_bloqueado = list_create();
+	listas_pcbs_bloqueado = dictionary_create();
 	lista_pcbs_exec = list_create();
 	dictionary_ios = dictionary_create();
 	logger = iniciar_logger();

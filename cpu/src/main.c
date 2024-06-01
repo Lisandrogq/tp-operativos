@@ -20,13 +20,18 @@ void ejecutar_cliclos()
 	{
 		int status = STATUS_OK;
 		sem_wait(&hay_proceso);
-		while (status !=STATUS_DESALOJADO)
+		while (status != STATUS_DESALOJADO)
 		{
 			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC); // hace falta enviar el pid??
-			decode();															 // por ahora no sabemos q hacer en decode
-			status = execute(instruccion);
 
-			// check_intr();
+			decode(); // por ahora no sabemos q hacer en decode
+
+			status = execute(instruccion);
+			if (status == STATUS_OK) // si el proceso justo desalojo en execute, la interrupcion se leera en luego de
+									// que se ejecute la siguiente ejecucion
+			{						 // revisar si esto es teoricamente correcto, creo qsi
+				check_intr(&status); // asi puede marcar el proceso como desalojado
+			}
 		}
 	}
 }
@@ -129,41 +134,19 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 t_strings_instruccion *fetch(int PC)
 {
 	// ACA IRÍA UN WAIT('HAY_PROCESO_PARA_EJECUTAR') QUE SE ACTUALIZA CUANDO SE RECIBE UN CONTEXTO EN DISPATCH;
-
+	log_fetch_instruccion();
 	solicitar_siguiente_instruccion();
 	t_strings_instruccion *palabras = recibir_siguiente_instruccion();
-	log_fetch_instruccion();
 
 	pcb_exec->registros->PC += 1; // EM LA CONSINGA DICE: HACER ESTO SI CORRESPONDE, NO SE Q SIGNIFICA
 
 	return palabras;
-	/////
-
-	// recv(socket_memoria, instruccion, sizeof(t_instruccion), MSG_WAITALL); // DEBE ESPERAR LA RESPUESTA
-
-	/// aca se haría send a socket de memoria y recv instruccion
-	/// esto es para ver si anda, sirve de base para la deserializacion.
-	// instruccion->cod_instruccion = SET;
-	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	// strcpy(instruccion->p1, "EDX");
-	// instruccion->p2 = 37;
-
-	//  instruccion->cod_instruccion = SUB;
-	//  instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	//  strcpy(instruccion->p1, "EBX");
-	//  instruccion->p2 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	//  strcpy(instruccion->p2, "SI");
-
-	// instruccion->cod_instruccion = JNZ;
-	// instruccion->p1 = malloc(sizeof(char) * 3 + 1); // xej: EAX/0
-	// strcpy(instruccion->p1, "BX");
-	// instruccion->p2 = 31;
 }
 void decode() {}
 
 int execute(t_strings_instruccion *instruccion)
 {
-	log_instruccion_ejecutada(instruccion);//en teoría debería ir al final de cada if,xd
+	log_instruccion_ejecutada(instruccion); // en teoría debería ir al final de cada if,xd
 	if (strcmp(instruccion->cod_instruccion, "SET") == 0)
 	{
 
@@ -199,26 +182,63 @@ int execute(t_strings_instruccion *instruccion)
 		free(instruccion);
 		return STATUS_OK;
 	}
-	if (strcmp(instruccion->cod_instruccion, "EXIT") == 0)
+	
+
+	if ((strstr(instruccion->cod_instruccion,"EXIT") != NULL))//Fix termporal a aparicion random de '%'o'5'
 	{
 
-		devolver_pcb(FIN,*pcb_exec,socket_dispatch,instruccion);//habria que ponerle mutex a dispatch
+		devolver_pcb(SUCCESS, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
 		return STATUS_DESALOJADO;
 	}
 	if (strcmp(instruccion->cod_instruccion, "IO_GEN_SLEEP") == 0)
 	{
-		devolver_pcb(IO_SLEEP,*pcb_exec,socket_dispatch,instruccion);//habria que ponerle mutex a dispatch
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
 		return STATUS_DESALOJADO;
 	}
 }
-void check_intr() {}
+void check_intr(int *status)
+{
+	t_strings_instruccion *instruccion_vacia = malloc(sizeof(t_strings_instruccion));
+	memset(instruccion_vacia, 0, sizeof(t_strings_instruccion));
+	int cod_op=0;
+	recv(socket_interrupt, &cod_op, sizeof(int), MSG_DONTWAIT);
+	if (cod_op == INTERRUPCION)
+	{
+		interrupcion_t *interrupcion = recibir_interrupcion(socket_interrupt);
+		if (interrupcion->pid == pcb_exec->pid)
+		{
+
+			switch (interrupcion->motivo)
+			{
+			case INTERRUPTED_BY_USER:
+				//	retornar por dispatch(mutex por las dudas)
+				// marcar como desalojado
+				devolver_pcb(INTERRUPTED_BY_USER, *pcb_exec, socket_dispatch, instruccion_vacia);
+				// liberar_pcb(pcb_exec);
+				*status = STATUS_DESALOJADO;
+				log_debug(logger, "SE DESALOJO UN PROCESO POR TERMINAR_PROCESO_INTR");
+				break;
+			case CLOCK:
+				// retornar por dispatch(mutex por las dudas)
+				//	marcar como desalojado
+				devolver_pcb(CLOCK, *pcb_exec, socket_dispatch, instruccion_vacia);
+				// liberar_pcb(pcb_exec);
+				*status = STATUS_DESALOJADO;
+				log_debug(logger, "SE DESALOJO UN PROCESO POR CLOCK_INTR");
+				break;
+			}
+		}
+	}
+	else
+		log_debug(logger, "No se recibio interrupciones");
+}
 void *servidor_interrupt()
 {
 	logger = log_create("cpu.log", "Servidor", 1, LOG_LEVEL_DEBUG);
 	int server_fd = iniciar_servidor(PUERTO_CPU_INTERRUPT, logger);
 	log_info(logger, "Cpu-interruptlisto para recibir");
-	int socket_cliente = esperar_cliente_cpu(server_fd);
-	client_handler_interrupt(socket_cliente);
+	socket_interrupt = esperar_cliente_cpu(server_fd);
+	// client_handler_interrupt(socket_interrupt);no hace falta,creo, las cosas se reciven en checkintr
 }
 
 void *servidor_dispatch()

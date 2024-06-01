@@ -19,6 +19,17 @@
 #define PUERTO_MEMORIA "4446"
 #define PUERTO_CPU_INTERRUPT "4447"
 
+typedef enum{
+    GENERICA,
+    STDIN,
+    STDOUT,
+    FS,
+}tipo_interfaz;
+typedef enum{
+    DISPONIBLE,
+    BLOQUEADO,
+    EXIT,
+}estado_interfaz;
 typedef struct
 {
 	int tamcod;
@@ -36,15 +47,6 @@ typedef struct
 } t_strings_instruccion;
 typedef struct
 {
-	int cod_instruccion;
-	void *p1;
-	void *p2;
-	void *p3;
-	void *p4;
-	void *p5;
-} t_instruccion;
-typedef struct
-{
 	int pid;
 	int pc;
 } fetch_t;
@@ -53,7 +55,13 @@ typedef struct
 	int tam;
 	char *path;
 	int pid;
-} struct_administrativas;
+} solicitud_creacion_t;
+
+typedef struct
+{
+	int pid;
+	int motivo;
+} interrupcion_t;
 /* typedef enum   // AL FINAL  ESTO SE HACE CON STRINGS
 {
 	SET,
@@ -83,6 +91,15 @@ typedef struct
 	int estado;
 	int tipo;
 } t_interfaz;
+
+typedef struct
+{
+	char *nombre;
+	int pid;
+	//capaz status o algo asi
+} t_fin_io_task;
+
+
 typedef struct
 {
 	t_strings_instruccion *instruccion;
@@ -106,6 +123,7 @@ typedef enum
 	CREACION_IO,
 	IO_GEN_SLEEP,
 	FIN_IO_TASK,
+	INTERRUPCION,
 } op_code;
 
 typedef enum
@@ -116,12 +134,17 @@ typedef enum
 typedef enum
 {
 	PRUEBA,
-	RELOJ,
+	CLOCK,
 	ENTRADA_SALIDA,
-	FIN,
-	IO_SLEEP,
+	SUCCESS,
+	INVALID_RESOURCE,
+	INVALID_INTERFACE,
+	OUT_OF_MEMORY,
+	INTERRUPTED_BY_USER,
+	IO_TASK,
 	// ELIMINAR_ESTRUC_ADMIN,
 } motivos_desalojo;
+
 
 typedef enum
 {

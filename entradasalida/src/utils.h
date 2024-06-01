@@ -14,17 +14,7 @@
 #include <utils/utils_generales.h>
 
 extern char*nombre;
-typedef enum{
-    GENERICA,
-    STDIN,
-    STDOUT,
-    FS,
-}tipo_interfaz;
-typedef enum{
-    DISPONIBLE,
-    BLOQUEADO,
-    EXIT,
-}estado_interfaz;
+
 // Cliente
 // void enviar_mensaje(char* mensaje, int socket_cliente);
 void iniciar_interfaz_generica();

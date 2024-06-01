@@ -1,39 +1,83 @@
 #include "utils.h"
 #include <errno.h>
 #include <pthread.h>
+int pid_sig_term;//sirve para cuando se mata un proceso y justo salio bloqueado
 
-extern t_log *logger;
+t_log *logger;
 int next_pid;
 t_list *lista_pcbs_ready;
 pthread_mutex_t mutex_lista_ready;
+pthread_mutex_t mutex_pcb_desalojado;
 pthread_mutex_t mutex_lista_bloqueado;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
-t_list *lista_pcbs_bloqueado;
+t_dictionary *listas_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
 t_dictionary *dictionary_ios;
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
 int contador;
 int socket_memoria;
-void iniciar_proceso(char *path, int tam)
+pthread_mutex_t mutex_socket_interrupt;
+int socket_interrupt;
+void comando_iniciar_proceso(char *path, int tam)
 {
 
     pcb_t *nuevo_pcb = crear_pcb(next_pid); // se estan creando con el PID SIEMPRE EN 0
+
+    pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
+    solicitar_crear_estructuras_administrativas(tam, path, nuevo_pcb->pid, socket_memoria);
+    pthread_mutex_unlock(&mutex_socket_memoria);
 
     pthread_mutex_lock(&mutex_lista_ready);
     int error = list_add(lista_pcbs_ready, nuevo_pcb); // Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
     pthread_mutex_unlock(&mutex_lista_ready);
     next_pid++;
-    pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
-    solicitar_crear_estructuras_administrativas(tam, path, nuevo_pcb->pid, socket_memoria);
-    pthread_mutex_unlock(&mutex_socket_memoria);
 }
-void finalizar_proceso(int pid)
+int get_pid_state(int pid_buscado)
 {
+    bool is_pid(void *pcb)
+    {
+        return ((pcb_t *)pcb)->pid == pid_buscado; // no hay colores pq vscode no se la banca, no es bug
+    };
+    int esta_ready = (int)list_any_satisfy(lista_pcbs_ready, is_pid);
+    // int esta_bloqueado = (int)list_any_satisfy(lista_pcbs_bloqueado, is_pid);hay que iterar sobre dictionary
+    //  int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
+    int esta_exec = (int)list_any_satisfy(lista_pcbs_exec, is_pid);
 
-    pthread_mutex_lock(&mutex_socket_memoria);
-    solicitar_eliminar_estructuras_administrativas(pid, socket_memoria);
-    pthread_mutex_unlock(&mutex_socket_memoria);
+    // solo uno de los esta_ debería estar en 1
+    int estado_encontrado = esta_ready * READY_S + esta_exec * EXEC_S;
+    // log_debug("se encontro el %i en el estado %i", pid_buscado, estado_encontrado);
+    return estado_encontrado;
+}
+void comando_finalizar_proceso(char *pid_str, int motivo)
+{
+    int pid = atoi(pid_str);
+    int pid_state = get_pid_state(pid);
+    if (pid_state == EXEC_S)
+    {
+        // intr a cpu y llevar a exit(creo q no hay mutex)
+        enviar_interrupcion(motivo, pid);
+        pid_sig_term =pid;
+        pthread_mutex_lock(&mutex_pcb_desalojado); // posible solucion:"bool de: ELIMINAR ESTRUCTURAS CUANDO SALGA Y WAITEARLO EN PLANIGFICACION"
+    }
+    if (pid_state == BLOCK_S)
+    {
+        // revisar situacion con IOs pendientes(issue)
+    }
+    if (pid_state == READY_S)
+    {
+    }
+    if (pid_state == NEW_S)
+    {
+    }
+    if (pid_state != -1 && pid_state != NEW_S) // si el proceso existe y no esta en new.
+    {
+        pthread_mutex_lock(&mutex_socket_memoria);
+        solicitar_eliminar_estructuras_administrativas(pid, socket_memoria);
+        pthread_mutex_unlock(&mutex_socket_memoria);
+    }
+    log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
+    // mandar pcb a exit
 }
 
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
@@ -65,12 +109,22 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
 
 void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria)
 {
-
-    t_paquete *paquete = crear_paquete();
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+    paquete->buffer = malloc(sizeof(t_buffer));
     paquete->codigo_operacion = ELIMINAR_ESTRUC_ADMIN;
-    agregar_a_paquete(paquete, &pid, sizeof(int));
-    enviar_paquete(paquete, socket_memoria);
+    paquete->buffer->size = sizeof(int);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_memoria, a_enviar, bytes, 0);
+
     eliminar_paquete(paquete);
+    free(a_enviar);
 }
 
 void ejecutar_script(const char *path)
@@ -98,6 +152,30 @@ void ejecutar_script(const char *path)
     }
 
     fclose(archivo);
+}
+
+enviar_interrupcion(int motivo, int pid)
+{
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+    paquete->codigo_operacion = INTERRUPCION;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = sizeof(int) * 2;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_interrupt, a_enviar, bytes, 0);
+
+    free(a_enviar);
+    eliminar_paquete(paquete);
 }
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras)
 {
@@ -129,6 +207,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     memcpy(&(palabras->tamcod), stream, sizeof(int));
     stream += sizeof(int);
     palabras->cod_instruccion = malloc(palabras->tamcod);
+    memset(palabras->cod_instruccion, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
     memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
     stream += palabras->tamcod;
 
@@ -180,21 +259,38 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     return motivo_desalojo;
     // memcpy(&(pcb->state), stream, sizeof(state_t)); // no debería
 }
-is_io_connected(int socket)
+bool is_io_connected(int socket)
 {
     return true;
 }
-int try_io_task(int pid, t_strings_instruccion *instruccion)
+bool io_acepta_operacion(t_interfaz *io, char *cod_instruccion)
+{
+    switch (io->tipo)
+    {
+    case GENERICA:
+        if (strcmp(cod_instruccion, "IO_GEN_SLEEP") == 0)
+            return true;
+        break;
+
+    default:
+        break;
+    }
+    return false;
+}
+int es_una_io_valida(int pid, t_strings_instruccion *instruccion)
 {
     char *nombre_interfaz = instruccion->p1;
 
     if (!dictionary_has_key(dictionary_ios, nombre_interfaz))
         return -1;
     t_interfaz *io = dictionary_get(dictionary_ios, nombre_interfaz);
-    if (!is_io_connected(io->socket))    // capaz la IO DEBE TENER UN MUTEX PARA EL SOCKET,si justo se le pregunta
-        return -1;                       // si existe mientras devuelve algo, se puede chingar todo. HACER ISSUE
-    pedir_io_task(pid, io, instruccion); // capaz se puede tener otro socket en io de escucha de 'is_io_connected' para evitar problema
-    return 0;                            // capaz se le manda siempre y si no responde nada, estaba desconectada??
+    if (!is_io_connected(io->socket))
+        return -1;
+
+    if (!io_acepta_operacion(io, instruccion->cod_instruccion))
+        return -1;
+
+    return 1;
 }
 pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!TODO: HACERLA GENERICA PARA TODAS LAS INSTRUCCIONES
 {                                                                          // ahora funciona solo con sleep
@@ -236,15 +332,16 @@ pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!
     eliminar_paquete(paquete);
 }
 
-void desbloquear_pcb(int pid_a_desbloquear)
+void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 {
 
     bool is_pid(void *pcb)
     {
         return ((pcb_t *)pcb)->pid == pid_a_desbloquear; // no hay colores pq vscode no se la banca, no es bug
     };
-    pthread_mutex_lock(&mutex_lista_bloqueado);
-    pcb_t *pcb_a_desbloquear = list_remove_by_condition(lista_pcbs_bloqueado, is_pid);
+    t_list *lista_blocked_del_io = dictionary_get(listas_pcbs_bloqueado, nombre_io);
+    pthread_mutex_lock(&mutex_lista_bloqueado); // este mutex sería de la lista capaz(no se si hace falta)
+    pcb_t *pcb_a_desbloquear = list_remove_by_condition(lista_blocked_del_io, is_pid);
     pthread_mutex_unlock(&mutex_lista_bloqueado);
 
     pthread_mutex_lock(&mutex_lista_ready);
@@ -328,37 +425,29 @@ void *client_handler(void *arg)
 {
     int socket_io = *(int *)arg;
     int modulo = handshake_Server(socket_io);
-    switch (modulo) // se debería ejecutar un handler para cada modulo
-    {
-    case 1:
-        log_info(logger, "se conecto el modulo cpu");
-        break;
-    case 2:
-        log_info(logger, "se conecto el modulo memoria");
-        break;
-    case 3:
-        log_info(logger, "se conecto alguna io");
-        break;
-    }
+    log_info(logger, "se conecto alguna io");
 
     bool conexion_terminada = false;
     while (!conexion_terminada)
     {
-        int cod_op = recibir_operacion(socket_io); // REVISARESTO
+        int cod_op = recibir_operacion(socket_io); 
         switch (cod_op)
         {
         case CREACION_IO:
             t_interfaz *interfaz = recibir_IO(socket_io);
             interfaz->socket = socket_io;
-            dictionary_put(dictionary_ios, interfaz->nombre, interfaz);
-            log_info(logger, "la io conectada se llama '%s'",interfaz->nombre);
+            dictionary_put(dictionary_ios, interfaz->nombre, interfaz); // creoq ya esta medio al pedo esta
+            t_list *list_blocked_io = list_create();
+            dictionary_put(listas_pcbs_bloqueado, interfaz->nombre, list_blocked_io);
+            log_info(logger, "la io conectada se llama '%s'", interfaz->nombre);
 
             break;
-        case FIN_IO_TASK:
-            int pid_a_desbloquear = 34;
-            recv(socket_io, &pid_a_desbloquear, sizeof(int), 0);
-            desbloquear_pcb(pid_a_desbloquear);
-            log_info(logger, "TERMINO LA IO del pid:%i", pid_a_desbloquear);
+        case FIN_IO_TASK: /// falta manejar caso en que finaliza una io a un proceso en exit
+
+            t_fin_io_task *estructura = recibir_fin_io_task(socket_io);
+            desbloquear_pcb(estructura->pid, estructura->nombre);
+            log_info(logger, "TERMINO LA IO del pid:%i que uso:%s", estructura->pid, estructura->nombre);
+            //!!!mandar siguiente task
             break;
         case -1:
             log_info(logger, "SE DESCONECTO UNA IO");
@@ -369,6 +458,29 @@ void *client_handler(void *arg)
         }
     }
     close(socket_io);
+}
+t_fin_io_task *recibir_fin_io_task(int socket_cliente)
+{
+
+    int tam_nombre;
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    recv(socket_cliente, &(buffer->size), sizeof(uint32_t), 0);
+    buffer->stream = malloc(buffer->size);
+    recv(socket_cliente, buffer->stream, buffer->size, 0);
+
+    t_fin_io_task *estructura = malloc(sizeof(t_interfaz));
+    void *stream = buffer->stream;
+    memcpy(&(estructura->pid), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&tam_nombre, stream, sizeof(int));
+    stream += sizeof(int);
+    estructura->nombre = malloc(tam_nombre);
+    memcpy((estructura->nombre), stream, tam_nombre);
+    stream += tam_nombre;
+
+    free(buffer->stream);
+    free(buffer);
+    return estructura;
 }
 t_interfaz *recibir_IO(int socket_cliente)
 {

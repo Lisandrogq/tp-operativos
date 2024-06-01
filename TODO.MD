@@ -3,12 +3,15 @@
 - [x] si mantenes memoría y bajaste los otros modulos,cuando volves a iniciar_proceso, tira segmentation fault memoria pq no se recibe el path.
 - [x] BREAKPOINTS PUEDEn ROMPER MEMORIA(de alguna forma el codigo esta vacio)
 - [ ] cambiar los tipos de 'PID' de int a U_int_X (creo que no es muy necesario, pero capaz genera inconsistencias)
+- [ ] revisar cuando se mueve el offset haciendo stream+=... , Cuando se quiera liberar stream, no se va a liberar nada, pq stream esta al final.
+- [ ] hacer issue: si se finaliza un proceso justo cuando sale por sysscall, se borran las estructuras administrativas y no se mando a exit(capaz la 'solucion' es un mutex para exec)
 ____
 #### CHECKPOINT 2 ####
 - [ ] CMD:Ejecutar Script de Operaciones, Finalizar proceso(cola exit y liberacion de recursos),Listar procesos por estado
 - [ ] check interrupt:(hay que validar q la interrupcion que llega sea de ese PID(capaz de esa rafaja de cpu tamb),creo. otra alternativa es matar el hilo que cuenta el quantum al desalojar un proceso)
 - [ ] Implementar RR
 
+- [ ] falta manejar caso en que finaliza una io a un proceso en exit(creo q con un if de sigterm está)
 - [ ] probar q ande TODO(todo).
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta(q las cosas se hagan en la fase correspondiente).
 - [x] Integrar estructura de comunicacion IO->kernel->cpu
@@ -23,3 +26,6 @@ ____
 - [ ] CMD:Iniciar planificación,Detener planificación
 - [ ] Agregar logs requeridos en consigna
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura dependería del registro mandado).
+
+
+- [ ] Aparece un '%' al final de exit en codigos. lo solucion es medio sucia, para la entrega final habría q ver q onda eso

@@ -24,7 +24,9 @@ extern sem_t hay_proceso;
 extern sem_t desalojar;
 extern pcb_t *pcb_exec;
 extern int socket_dispatch; 
+extern int socket_interrupt;
 // Cliente
+interrupcion_t*recibir_interrupcion(int socket_interrupt);
 t_strings_instruccion *fetch(int PC);
 void decode();
 int execute(t_strings_instruccion *instruccion);

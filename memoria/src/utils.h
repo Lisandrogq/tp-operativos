@@ -22,8 +22,11 @@ int enviar_instruccion(char **palabras, int socket_cliente);
 char** get_siguiente_instruction(fetch_t *p_info, int socket_cliente);
 fetch_t *recibir_process_info(int socket_cliente);
 void int_to_char(int pid,char*pid_str);
-struct_administrativas * recibir_estructuras_administrativas(int socket_memoria);
-void crear_estructuras_administrativas(struct_administrativas *e_admin);
+solicitud_creacion_t * recibir_solicitud_de_creacion(int socket_memoria);
+int recibir_solicitud_de_eliminacion(int socket_cliente);
+void eliminar_estrucuras_administrativas(int pid_a_eliminar);
+
+void crear_estructuras_administrativas(solicitud_creacion_t *e_admin);
 void handle_kerel_client(int socket_memoria);
 void *client_handler(void *arg);
 void handle_crear_pcb(int socket_cliente);
