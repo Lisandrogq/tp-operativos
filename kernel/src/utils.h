@@ -27,7 +27,8 @@ extern int socket_interrupt;
 extern pthread_mutex_t mutex_socket_interrupt;
 extern pthread_mutex_t mutex_socket_memoria;
 extern pthread_mutex_t mutex_pcb_desalojado;
-extern int pid_sig_term
+extern int pid_sig_term;
+extern t_list *lista_pcbs_exit;
 
 extern int operacion;
 extern t_list *lista_pcbs_ready;
@@ -44,6 +45,7 @@ typedef enum
 	INICIAR_PROCESO,
 
 } kernel_opcode;
+void solicitar_eliminar_estructuras_administrativas(int pid);
 int es_una_io_valida(int pid, t_strings_instruccion *instruccion);
 t_fin_io_task *recibir_fin_io_task(int socket_cliente);
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria);

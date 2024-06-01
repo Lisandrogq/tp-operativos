@@ -12,6 +12,7 @@ pthread_mutex_t mutex_lista_bloqueado;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 t_dictionary *listas_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
+t_list *lista_pcbs_exit;
 t_dictionary *dictionary_ios;
 pthread_mutex_t mutex_socket_memoria;
 int operacion;
@@ -73,8 +74,8 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     if (pid_state != -1 && pid_state != NEW_S) // si el proceso existe y no esta en new.
     {
         pthread_mutex_lock(&mutex_socket_memoria);
-        solicitar_eliminar_estructuras_administrativas(pid, socket_memoria);
-        pthread_mutex_unlock(&mutex_socket_memoria);
+        solicitar_eliminar_estructuras_administrativas(pid);
+        pthread_mutex_unlock(&mutex_socket_memoria);        
     }
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
     // mandar pcb a exit
@@ -107,7 +108,7 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
     free(a_enviar);
 }
 
-void solicitar_eliminar_estructuras_administrativas(int pid, int socket_memoria)
+void solicitar_eliminar_estructuras_administrativas(int pid)
 {
     t_paquete *paquete = malloc(sizeof(t_paquete));
     paquete->buffer = malloc(sizeof(t_buffer));
