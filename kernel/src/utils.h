@@ -27,6 +27,8 @@ extern int socket_interrupt;
 extern pthread_mutex_t mutex_socket_interrupt;
 extern pthread_mutex_t mutex_socket_memoria;
 extern pthread_mutex_t mutex_pcb_desalojado;
+extern pthread_mutex_t mutex_lista_exit;
+extern pthread_mutex_t mutex_lista_exec;
 extern int pid_sig_term;
 extern t_list *lista_pcbs_exit;
 

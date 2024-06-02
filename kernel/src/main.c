@@ -257,6 +257,13 @@ int main(int argc, char const *argv[])
 { // creo que no hace falta mutex para exec
 	pid_sig_term = -1;
 	sem_init(&elementos_ready, 0, 0);
+
+	pthread_mutex_init(&mutex_lista_exit, NULL);
+	pthread_mutex_unlock(&mutex_lista_exit);// debe empezar desbloqueado, pq todos hacen lock primero 
+
+	pthread_mutex_init (&mutex_lista_exec, NULL);
+	pthread_mutex_unlock(&mutex_lista_exec);// debe empezar desbloqueado, pq todos hacen lock primero 
+
 	pthread_mutex_init(&mutex_pcb_desalojado, NULL);
 	pthread_mutex_lock(&mutex_pcb_desalojado); // debe empezar bloqueado, solo es desbloqueado al desalojarse un proceso(por kernel)
 

@@ -10,6 +10,8 @@ t_list *lista_pcbs_ready;
 pthread_mutex_t mutex_lista_ready;
 pthread_mutex_t mutex_pcb_desalojado;
 pthread_mutex_t mutex_lista_bloqueado;
+pthread_mutex_t mutex_lista_exit;
+pthread_mutex_t mutex_lista_exec;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 t_dictionary *listas_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
@@ -115,11 +117,15 @@ void comando_listar_procesos_por_estado(){
     list_iterate(lista_pcbs_ready, (void *)imprimir_pcb);
     pthread_mutex_unlock(&mutex_lista_ready);
     log_info(logger, "Procesos en Exec:");
-    //pthread_mutex_lock(&mutex_lista_exec);
+    pthread_mutex_lock(&mutex_lista_exec);
     list_iterate(lista_pcbs_exec, (void *)imprimir_pcb);
-    //pthread_mutex_unlock(&mutex_lista_exec);
+    pthread_mutex_unlock(&mutex_lista_exec);
     log_info(logger, "Procesos en Blocked:");
     dictionary_iterator(listas_pcbs_bloqueado, (void *)imprimir_lista_bloqueado);
+    pthread_mutex_lock(&mutex_lista_exit);
+    log_info(logger, "Procesos en Exit:");
+    pthread_mutex_unlock(&mutex_lista_exit);
+    list_iterate(lista_pcbs_exit, (void *)imprimir_pcb);
 }
 
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
