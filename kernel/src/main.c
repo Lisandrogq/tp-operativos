@@ -38,6 +38,10 @@ void *consola()
 			int tam = 1 + sizeof(strlen(linea));
 			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
 		}
+		if(!strcmp(instruccion[0], "ESTADO_PROCESO"))
+		{
+			comando_listar_procesos_por_estado();
+		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
 		free(linea);

@@ -95,6 +95,27 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     // mandar pcb a exit
 }
 
+void* imprimir_pcb(pcb_t *pcb){
+    log_info(logger, "PID: %i", pcb->pid);
+    log_info(logger, "Quantum: %i", pcb->quantum);
+    printf("\n");
+    return 0;
+}
+
+
+void comando_listar_procesos_por_estado(){
+    log_info(logger, "Procesos en Ready:");
+    pthread_mutex_lock(&mutex_lista_ready);
+    list_iterate(lista_pcbs_ready, (void *)imprimir_pcb);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    log_info(logger, "Procesos en Exec:");
+    //pthread_mutex_lock(&mutex_lista_exec);
+    list_iterate(lista_pcbs_exec, (void *)imprimir_pcb);
+    //pthread_mutex_unlock(&mutex_lista_exec);
+    log_info(logger, "Procesos en Blocked:");
+    dictionary_iterator(listas_pcbs_bloqueado, (void *)imprimir_pcb);
+}
+
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
 {
 
