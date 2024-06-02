@@ -44,6 +44,66 @@ void *consola()
 		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
+		if(!strcmp(instruccion[0], "EJECUTAR_SCRIPT"))
+		{
+			/* Ejecutar Script de Comandos: Se encargará de abrir un archivo de comandos que se encontrará en la máquina donde corra el Kernel, el mismo contendrá una secuencia de comandos y se los deberá ejecutar uno a uno hasta finalizar el archivo.
+			Nomenclatura: EJECUTAR_SCRIPT [PATH] */
+
+			log_info(logger, "Ejecutar Script de Comandos");
+			//abro el archivo como lectura//
+			FILE *archivo = fopen(instruccion[1], "r");
+			if (archivo == NULL)
+			{
+				log_error(logger, "No se pudo abrir el archivo");
+				free(linea);
+				continue;
+			}
+			else{
+				log_info(logger, "abrio");
+			}
+			//pasar a una funcion en utils.c
+			char *linea = NULL;
+			size_t len = 0;
+			ssize_t read;
+
+			//Mientras haya lineas en el archivo//
+			while ((read = getline(&linea, &len, archivo)) != -1)
+			{
+				char *instruccion[2];
+				instruccion[0] = malloc(strlen(linea)); 
+				instruccion[1] = malloc(strlen(linea));
+				instruccion[0] = strtok(linea, " ");
+				instruccion[1] = strtok(NULL, " ");
+				if (strcmp(linea, "\0") == 0)
+				{
+					free(linea);
+					continue;
+				}
+				//HAY QUE EJECUTAR CADA COMANDO//
+				//seguro hay que ver como hacerlo sin repetir logica//
+				//¿generar una funcion que se repita?//
+				if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
+				{
+					int tam = 1 + strlen(instruccion[1]);
+					comando_iniciar_proceso(instruccion[1], tam);
+					sem_post(&elementos_ready);
+				}
+				if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
+				{
+					int tam = 1 + sizeof(strlen(linea));
+					comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
+				}
+				if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
+				{
+					comando_listar_procesos_por_estado();
+				}
+				if (!strcmp(instruccion[0], "ddd"))
+					return;
+				free(linea);
+			}
+			//cierra el archivo//
+			fclose(archivo); 
+		}
 		free(linea);
 	}
 }
