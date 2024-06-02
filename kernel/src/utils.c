@@ -102,6 +102,12 @@ void* imprimir_pcb(pcb_t *pcb){
     return 0;
 }
 
+void* imprimir_lista_bloqueado(char* nombre_io, t_list *lista){
+    printf("IO: %s\n", nombre_io);
+    list_iterate(lista, (void *)imprimir_pcb);
+    printf("\n");
+    return 0;
+}
 
 void comando_listar_procesos_por_estado(){
     log_info(logger, "Procesos en Ready:");
@@ -113,7 +119,7 @@ void comando_listar_procesos_por_estado(){
     list_iterate(lista_pcbs_exec, (void *)imprimir_pcb);
     //pthread_mutex_unlock(&mutex_lista_exec);
     log_info(logger, "Procesos en Blocked:");
-    dictionary_iterator(listas_pcbs_bloqueado, (void *)imprimir_pcb);
+    dictionary_iterator(listas_pcbs_bloqueado, (void *)imprimir_lista_bloqueado);
 }
 
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
