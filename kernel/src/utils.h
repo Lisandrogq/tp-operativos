@@ -38,7 +38,6 @@ extern pthread_mutex_t mutex_lista_ready;
 extern sem_t elementos_ready;				// contador de ready, si no hay, no podes planificar.
 extern t_dictionary *dictionary_pcbs_bloqueado; // "Int1","int3","recurso1"...cada elemento
 											/// es un struct con lista y contador y mutex de acceso
-
 typedef struct
 {
 

@@ -9,7 +9,7 @@ int next_pid;
 t_list *lista_pcbs_ready;
 pthread_mutex_t mutex_lista_ready;
 pthread_mutex_t mutex_pcb_desalojado;
-//pthread_mutex_t mutex_lista_bloqueado;
+// pthread_mutex_t mutex_lista_bloqueado;
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_lista_exec;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
@@ -39,16 +39,16 @@ void comando_iniciar_proceso(char *path, int tam)
 }
 pcb_t *crear_pcb(int pid)
 {
-	pcb_t *nuevo_pcb = malloc(sizeof(pcb_t));
-	memset(nuevo_pcb, 0, sizeof(pcb_t));
+    pcb_t *nuevo_pcb = malloc(sizeof(pcb_t));
+    memset(nuevo_pcb, 0, sizeof(pcb_t));
     nuevo_pcb->quantum = config_get_int_value(config, "QUANTUM");
     nuevo_pcb->pid = pid;
-    printf("\nEl pid del nuevopcb es: %i\n",nuevo_pcb->pid);
-    nuevo_pcb->state= READY_S;//ESTO DEBERÍA SER NEW, PERO TODAVIA NO HAY PLANIFICADOR DE LARGO PLAZO
-	registros_t *registros = malloc(sizeof(registros_t));//CHEQUEAR esto, creo q esta bien
-	memset(registros, 0, sizeof(registros_t));
-	nuevo_pcb->registros= registros;
-	return nuevo_pcb;
+    printf("\nEl pid del nuevopcb es: %i\n", nuevo_pcb->pid);
+    nuevo_pcb->state = READY_S;                           // ESTO DEBERÍA SER NEW, PERO TODAVIA NO HAY PLANIFICADOR DE LARGO PLAZO
+    registros_t *registros = malloc(sizeof(registros_t)); // CHEQUEAR esto, creo q esta bien
+    memset(registros, 0, sizeof(registros_t));
+    nuevo_pcb->registros = registros;
+    return nuevo_pcb;
 }
 int get_pid_state(int pid_buscado)
 {
@@ -152,14 +152,25 @@ void* imprimir_pcb(pcb_t *pcb){
     return 0;
 }
 
-void* imprimir_lista_bloqueado(char* nombre_io, t_list *lista){
-    printf("IO: %s\n", nombre_io);
-    list_iterate(lista, (void *)imprimir_pcb);
+void *imprimir_pcb_bloqueado(elemento_cola_io *elemento_cola)
+{
+    pcb_t *pcb = elemento_cola->pcb;
+    log_info(logger, "PID: %i, PC: %i, Q: %i", pcb->pid, pcb->registros->PC, pcb->quantum);
     printf("\n");
     return 0;
 }
 
-void comando_listar_procesos_por_estado(){
+void *imprimir_lista_bloqueado(char *nombre_io, t_cola_io *struct_interfaz)
+{
+    t_list *lista = struct_interfaz->cola_de_io_pedido;
+    printf("IO: %s\n", nombre_io);
+    list_iterate(lista, (void *)imprimir_pcb_bloqueado);
+    printf("\n");
+    return 0;
+}
+
+void comando_listar_procesos_por_estado()
+{
     log_info(logger, "Procesos en Ready:");
     pthread_mutex_lock(&mutex_lista_ready);
     list_iterate(lista_pcbs_ready, (void *)imprimir_pcb);
@@ -169,7 +180,7 @@ void comando_listar_procesos_por_estado(){
     list_iterate(lista_pcbs_exec, (void *)imprimir_pcb);
     pthread_mutex_unlock(&mutex_lista_exec);
     log_info(logger, "Procesos en Blocked:");
-    dictionary_iterator(listas_pcbs_bloqueado, (void *)imprimir_lista_bloqueado);
+    dictionary_iterator(dictionary_pcbs_bloqueado, (void *)imprimir_lista_bloqueado);
     pthread_mutex_lock(&mutex_lista_exit);
     log_info(logger, "Procesos en Exit:");
     pthread_mutex_unlock(&mutex_lista_exit);
@@ -273,32 +284,38 @@ void enviar_interrupcion(int motivo, int pid)
     free(a_enviar);
     eliminar_paquete(paquete);
 }
-void *hilo_quantum(void *parametro){
-    pcb_t *pcb = (pcb_t*)parametro;
-    log_info(logger,"Quantum: %i", pcb->quantum);
+void *hilo_quantum(void *parametro)
+{
+    pcb_t *pcb = (pcb_t *)parametro;
+    log_info(logger, "Quantum: %i", pcb->quantum);
     usleep(pcb->quantum);
-    log_info(logger,"Sali del sleep, mando interrupcion");
+    log_info(logger, "Sali del sleep, mando interrupcion");
     enviar_interrupcion(CLOCK, pcb->pid);
 }
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras,  char *algoritmo)
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras, char *algoritmo)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
 
-    if(strcmp(algoritmo, "RR") == 0){
+    if (strcmp(algoritmo, "RR") == 0)
+    {
         pthread_t quantum;
-        pthread_create(&quantum,NULL, hilo_quantum, pcb);
+        pthread_create(&quantum, NULL, hilo_quantum, pcb);
         pthread_detach(&quantum);
-        if(recibir_operacion(socket_cliente) != -1){
-            log_info(logger,"Cancelo");
+        if (recibir_operacion(socket_cliente) != -1)
+        {
+            log_info(logger, "Cancelo");
             pthread_cancel(&quantum);
         }
-    }else if(strcmp(algoritmo, "VRR") == 0){
-        //Cositas
     }
-    
+    else if (strcmp(algoritmo, "VRR") == 0)
+    {
+        // Cositas
+    }
+
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    //int prueba = recibir_operacion(socket_cliente);
+    //REVISAR: SI ESTA LINEA ESTA COMENTADA: ANDA RR, SINO, ANDA FIFO 
+   // int prueba = recibir_operacion(socket_cliente); // sancho volves a comentar esta linea y te voy a buscar
 
     recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
     buffer->stream = malloc(buffer->size);
@@ -466,7 +483,7 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     pthread_mutex_unlock(&mutex_lista_ready);
     pcb_a_desbloquear->state = READY_S;
 }
-int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char* algoritmo)
+int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
     pthread_mutex_lock(&mutex_lista_ready);
     pcb_t *pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
@@ -475,16 +492,16 @@ int planificar_fifo(int socket_cliente, t_strings_instruccion *instruccion_de_de
     pcb_a_ejecutar->state = EXEC_S;
     log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);
 
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo,algoritmo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo, algoritmo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
     // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb NO.
 }
-int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char* algoritmo)
+int planificar_rr(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
     // Fifo pero con quantum
     pcb_t *pcb = list_remove(lista_pcbs_ready, 0);
     list_add(lista_pcbs_exec, pcb);
     pcb->state = EXEC_S;
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo,algoritmo);
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb, socket_cliente, instruccion_de_desalojo, algoritmo);
 }
 
 void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)
