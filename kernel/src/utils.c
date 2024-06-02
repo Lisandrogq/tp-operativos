@@ -1,7 +1,7 @@
 #include "utils.h"
 #include <errno.h>
 #include <pthread.h>
-int pid_sig_term;//sirve para cuando se mata un proceso y justo salio bloqueado
+int pid_sig_term; // sirve para cuando se mata un proceso y justo salio bloqueado
 
 t_log *logger;
 t_config *config;
@@ -9,11 +9,11 @@ int next_pid;
 t_list *lista_pcbs_ready;
 pthread_mutex_t mutex_lista_ready;
 pthread_mutex_t mutex_pcb_desalojado;
-pthread_mutex_t mutex_lista_bloqueado;
+//pthread_mutex_t mutex_lista_bloqueado;
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_lista_exec;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
-t_dictionary *listas_pcbs_bloqueado;
+t_dictionary *dictionary_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
 t_list *lista_pcbs_exit;
 t_dictionary *dictionary_ios;
@@ -52,48 +52,96 @@ pcb_t *crear_pcb(int pid)
 }
 int get_pid_state(int pid_buscado)
 {
+    int esta_bloqueado = false;
     bool is_pid(void *pcb)
     {
         return ((pcb_t *)pcb)->pid == pid_buscado; // no hay colores pq vscode no se la banca, no es bug
     };
+    bool is_pid_in_blocked(void *elemento)
+    {
+        return ((elemento_cola_io *)elemento)->pcb->pid == pid_buscado; // requeiere otra lista pq los elementos son structs
+    };
+    void *is_pid_in_list(char *nombre_io, t_cola_io *struct_cola)
+    {
+        t_list *lista = struct_cola->cola_de_io_pedido;
+        if (!esta_bloqueado)
+            esta_bloqueado = list_any_satisfy(lista, is_pid_in_blocked); // no hay colores pq vscode no se la banca, no es bug
+        else
+            return;
+    };
     int esta_ready = (int)list_any_satisfy(lista_pcbs_ready, is_pid);
-    // int esta_bloqueado = (int)list_any_satisfy(lista_pcbs_bloqueado, is_pid);hay que iterar sobre dictionary
-    //  int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
+    dictionary_iterator(dictionary_pcbs_bloqueado, is_pid_in_list);
+    // int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
     int esta_exec = (int)list_any_satisfy(lista_pcbs_exec, is_pid);
 
     // solo uno de los esta_ debería estar en 1
-    int estado_encontrado = esta_ready * READY_S + esta_exec * EXEC_S;
+    int estado_encontrado = esta_ready * READY_S + esta_exec * EXEC_S + esta_bloqueado * BLOCK_S; // new
     // log_debug("se encontro el %i en el estado %i", pid_buscado, estado_encontrado);
     return estado_encontrado;
 }
+
 void comando_finalizar_proceso(char *pid_str, int motivo)
 {
-    int pid = atoi(pid_str);
-    int pid_state = get_pid_state(pid);
+    int pid_a_terminar = atoi(pid_str);
+    int pid_state = get_pid_state(pid_a_terminar);
+    pcb_t *pcb_a_terminar;
+
+    bool is_pid(void *pcb) /// NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
+    {
+        return ((pcb_t *)pcb)->pid == pid_a_terminar; // no hay colores pq vscode no se la banca, no es bug
+    };
+    bool is_pid_in_blocked(void *elemento) /// NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
+    {
+        return ((elemento_cola_io *)elemento)->pcb->pid == pid_a_terminar; // no hay colores pq vscode no se la banca, no es bug
+    };
+    void *eliminar_de_bloqueado_si_corresponde(char *nombre_io, t_cola_io *struct_io) // NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
+    {
+        t_list *lista = struct_io->cola_de_io_pedido;
+        sem_t *sem = struct_io->elementos_cola_io;
+        // wait mutex
+        elemento_cola_io *a_borrar = list_find(lista, is_pid_in_blocked);
+        if (a_borrar != NULL)
+        {
+            pcb_a_terminar = a_borrar->pcb;
+            sem_wait(sem);
+            list_remove_element(lista, a_borrar);
+        }
+        // wait del elementos_bloqued correspondiente
+        return 0;
+    };
+
+    if (pid_state == NEW_S)
+    {
+        // mutex , remove y NO liberar eadmin
+    }
     if (pid_state == EXEC_S)
     {
         // intr a cpu y llevar a exit(creo q no hay mutex)
-        enviar_interrupcion(motivo, pid);
-        pid_sig_term =pid;
-        pthread_mutex_lock(&mutex_pcb_desalojado); // posible solucion:"bool de: ELIMINAR ESTRUCTURAS CUANDO SALGA Y WAITEARLO EN PLANIGFICACION"
+        enviar_interrupcion(motivo, pid_a_terminar);
+        pid_sig_term = pid_a_terminar;
+        pcb_a_terminar = list_get(lista_pcbs_exec, 0); // se obtiene sin removerlo, pq que el remove se hace al desalojarse el pcb
+        pthread_mutex_lock(&mutex_pcb_desalojado);
     }
-    if (pid_state == BLOCK_S)
+    if (pid_state == BLOCK_S) // revisar situacion con IOs pendientes(issue)
     {
-        // revisar situacion con IOs pendientes(issue)
+        dictionary_iterator(dictionary_pcbs_bloqueado, (void *)eliminar_de_bloqueado_si_corresponde); // habría que validar si realmente se borro
     }
     if (pid_state == READY_S)
     {
+        sem_wait(&elementos_ready);
+        pthread_mutex_lock(&mutex_lista_ready);
+        pcb_a_terminar = list_remove_by_condition(lista_pcbs_ready, is_pid);
+        pthread_mutex_unlock(&mutex_lista_ready);
     }
-    if (pid_state == NEW_S)
-    {
-    }
+
     if (pid_state != -1 && pid_state != NEW_S) // si el proceso existe y no esta en new.
     {
         pthread_mutex_lock(&mutex_socket_memoria);
-        solicitar_eliminar_estructuras_administrativas(pid);
-        pthread_mutex_unlock(&mutex_socket_memoria);        
+        solicitar_eliminar_estructuras_administrativas(pid_a_terminar);
+        pthread_mutex_unlock(&mutex_socket_memoria);
+        list_add(lista_pcbs_exit, pcb_a_terminar);
     }
-    log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid, motivo); // hacerlo string
+    log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid_a_terminar, motivo); // hacerlo string
     // mandar pcb a exit
 }
 
@@ -402,15 +450,16 @@ pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!
 void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 {
 
-    bool is_pid(void *pcb)
+    bool is_pid(void *elemento)
     {
-        return ((pcb_t *)pcb)->pid == pid_a_desbloquear; // no hay colores pq vscode no se la banca, no es bug
+        return ((elemento_cola_io *)elemento)->pcb->pid == pid_a_desbloquear; // no hay colores pq vscode no se la banca, no es bug
     };
-    t_list *lista_blocked_del_io = dictionary_get(listas_pcbs_bloqueado, nombre_io);
-    pthread_mutex_lock(&mutex_lista_bloqueado); // este mutex sería de la lista capaz(no se si hace falta)
-    pcb_t *pcb_a_desbloquear = list_remove_by_condition(lista_blocked_del_io, is_pid);
-    pthread_mutex_unlock(&mutex_lista_bloqueado);
-
+    t_cola_io *struct_cola = dictionary_get(dictionary_pcbs_bloqueado, nombre_io);
+    t_list *lista_blocked_del_io = struct_cola->cola_de_io_pedido;
+    sem_t *sem = struct_cola->elementos_cola_io;
+    sem_wait(sem);
+    elemento_cola_io *elemento_borrado = list_remove_by_condition(lista_blocked_del_io, is_pid);
+    pcb_t *pcb_a_desbloquear = elemento_borrado->pcb;
     pthread_mutex_lock(&mutex_lista_ready);
     list_add(lista_pcbs_ready, pcb_a_desbloquear);
     sem_post(&elementos_ready);
@@ -486,35 +535,60 @@ int handshake(int socket_cliente)
     return result;
 }
 
-// Server
+bool pcb_esta_en_exit(int pid_buscado)
+{
+    bool is_pid(void *pcb)
+    {
+        return ((pcb_t *)pcb)->pid == pid_buscado; // no hay colores pq vscode no se la banca, no es bug
+    };
+    bool result = list_any_satisfy(lista_pcbs_exit, is_pid);
+    return result;
+}
 
+// Server
 void *client_handler(void *arg)
 {
     int socket_io = *(int *)arg;
     int modulo = handshake_Server(socket_io);
     log_info(logger, "se conecto alguna io");
-
     bool conexion_terminada = false;
+    t_interfaz *interfaz;
     while (!conexion_terminada)
     {
-        int cod_op = recibir_operacion(socket_io); 
+        int cod_op = recibir_operacion(socket_io);
         switch (cod_op)
         {
         case CREACION_IO:
-            t_interfaz *interfaz = recibir_IO(socket_io);
+            interfaz = recibir_IO(socket_io);
             interfaz->socket = socket_io;
             dictionary_put(dictionary_ios, interfaz->nombre, interfaz); // creoq ya esta medio al pedo esta
-            t_list *list_blocked_io = list_create();
-            dictionary_put(listas_pcbs_bloqueado, interfaz->nombre, list_blocked_io);
+            t_cola_io *struct_io = malloc(sizeof(t_cola_io));
+            struct_io->cola_de_io_pedido = list_create();
+            struct_io->elementos_cola_io = malloc(sizeof(sem_t));
+            sem_init(struct_io->elementos_cola_io, 0, 0);
+            dictionary_put(dictionary_pcbs_bloqueado, interfaz->nombre, struct_io);
             log_info(logger, "la io conectada se llama '%s'", interfaz->nombre);
 
             break;
-        case FIN_IO_TASK: /// falta manejar caso en que finaliza una io a un proceso en exit
+        case FIN_IO_TASK:
 
             t_fin_io_task *estructura = recibir_fin_io_task(socket_io);
-            desbloquear_pcb(estructura->pid, estructura->nombre);
-            log_info(logger, "TERMINO LA IO del pid:%i que uso:%s", estructura->pid, estructura->nombre);
-            //!!!mandar siguiente task
+            if (!pcb_esta_en_exit(estructura->pid))
+            {
+                desbloquear_pcb(estructura->pid, estructura->nombre); // el wait elementos se hace adentro
+                log_info(logger, "TERMINO LA IO del pid:%i que uso:%s", estructura->pid, estructura->nombre);
+            }
+            else
+            { // si el proceso que la pidio esta en exit, no se intenta desbloquearlo
+                log_warning(logger, "TERMINO LA IO del pid:%i que uso:%s, pero el pcb esta en exit", estructura->pid, estructura->nombre);
+            }
+            t_cola_io *struct_cola = dictionary_get(dictionary_pcbs_bloqueado, estructura->nombre);
+            if (list_size(struct_cola->cola_de_io_pedido) != 0) // esto no va en desbloquear pcb ppq despues va a haber recursos
+            {
+                log_error(logger, "ENTRE AL FIN IO TASK-MANDAR OTRO TASK");
+                elemento_cola_io *elemento = list_get(struct_cola->cola_de_io_pedido, 0);
+                pedir_io_task(elemento->pcb->pid, interfaz, elemento->instruccion_de_bloqueo);
+            }
             break;
         case -1:
             log_info(logger, "SE DESCONECTO UNA IO");

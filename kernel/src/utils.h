@@ -36,9 +36,25 @@ extern int operacion;
 extern t_list *lista_pcbs_ready;
 extern pthread_mutex_t mutex_lista_ready;
 extern sem_t elementos_ready;				// contador de ready, si no hay, no podes planificar.
-extern t_dictionary *listas_pcbs_bloqueado; // Int1","int3","recurso1"...(CAPAZ CADA ELEMENTO TIENE QUE TENER UN MUTEX).
+extern t_dictionary *dictionary_pcbs_bloqueado; // "Int1","int3","recurso1"...cada elemento
+											/// es un struct con lista y contador y mutex de acceso
 
-extern pthread_mutex_t mutex_lista_bloqueado;
+typedef struct
+{
+
+	sem_t *elementos_cola_io;
+	t_list *cola_de_io_pedido;//!CADA ELEMENTO ES UN''elemento_cola_io''
+} t_cola_io;
+
+typedef struct
+{
+
+	t_strings_instruccion* instruccion_de_bloqueo;
+	pcb_t*pcb;//cada elemento:(pcb+instruccion)
+} elemento_cola_io;
+
+
+//extern pthread_mutex_t mutex_lista_bloqueado;
 extern int socket_interrupt;
 extern t_list *lista_pcbs_exec;
 extern t_dictionary *dictionary_ios;
@@ -47,6 +63,7 @@ typedef enum
 	INICIAR_PROCESO,
 
 } kernel_opcode;
+bool pcb_esta_en_exit(int pid);
 void solicitar_eliminar_estructuras_administrativas(int pid);
 int es_una_io_valida(int pid, t_strings_instruccion *instruccion);
 t_fin_io_task *recibir_fin_io_task(int socket_cliente);

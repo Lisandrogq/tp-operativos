@@ -155,7 +155,6 @@ void *cliente_cpu_dispatch()
 		case SUCCESS: // agregar resto de casos de fin
 
 			pcb_desalojado->state = EXIT_S;
-			log_debug(logger, "Se desalojo un proceso por success-exit");
 			list_add(lista_pcbs_exit, pcb_desalojado);
 
 			if (pid_sig_term == pcb_desalojado->pid)
@@ -169,13 +168,15 @@ void *cliente_cpu_dispatch()
 			{
 				solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 			}
+			log_info(logger, "Finaliza el proceso %i - Motivo: SUCCESS", pcb_desalojado->pid);
+
 			break;
 		case INTERRUPTED_BY_USER: // agregar resto de casos de fin
 
 			pcb_desalojado->state = EXIT_S;
-			log_debug(logger, "Se desalojo un proceso por forced-exit");
 			pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 			list_add(lista_pcbs_exit, pcb_desalojado);
+			log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", pcb_desalojado->pid);
 
 			break;
 		case CLOCK:
@@ -198,11 +199,10 @@ void *cliente_cpu_dispatch()
 		case IO_TASK: // CAPAZ ES UN SOLO CASE PARA TODAS LAS IO_
 			if (pid_sig_term == pcb_desalojado->pid)
 			{ // si justo se salio por io,se lo mata igual. pq el comando pide matar.
-				log_debug(logger, "ENTRE AL MANEJO DE SIG_TERM");
+				log_warning(logger, "ENTRE AL MANEJO DE SIG_TERM");
 
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
-				list_add(lista_pcbs_exit,pcb_desalojado);
-
+				list_add(lista_pcbs_exit, pcb_desalojado);
 			}
 			else
 			{
@@ -210,20 +210,33 @@ void *cliente_cpu_dispatch()
 				{
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 					list_add(lista_pcbs_exit, pcb_desalojado);
-					log_debug(logger, "Se finalizo el pid %i por IO no valida", pcb_desalojado->pid);
+					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
 				}
 				else
 				{
 					t_interfaz *io = dictionary_get(dictionary_ios, instruccion_de_desalojo->p1);
 					pcb_desalojado->state = BLOCK_S;
 					// pthread_mutex_lock(&mutex_lista_bloqueado);
-					t_list *cola_de_io_pedido = dictionary_get(listas_pcbs_bloqueado, instruccion_de_desalojo->p1); //[1] segunda palabra
-					list_add(cola_de_io_pedido, pcb_desalojado);
-					// pthread_mutex_unlock(&mutex_lista_bloqueado);
-
-					pedir_io_task(pcb_desalojado->pid, io, instruccion_de_desalojo);
-
-					log_debug(logger, "Se desalojo un proceso por IO_TASK");
+					t_cola_io *struct_io = dictionary_get(dictionary_pcbs_bloqueado, instruccion_de_desalojo->p1); //[1] segunda palabra
+					t_list *cola_de_io_pedido = struct_io->cola_de_io_pedido;
+					sem_t *elementos = struct_io->elementos_cola_io;
+					elemento_cola_io *elemento = malloc(sizeof(elemento_cola_io));
+					elemento->pcb = pcb_desalojado;
+					elemento->instruccion_de_bloqueo = instruccion_de_desalojo;
+					if (list_size(cola_de_io_pedido) == 0)
+					{ // si esta vació la pide y agrega a blocked
+						log_debug(logger,"ENTRE AL IF la cola esta vacia");
+						pedir_io_task(pcb_desalojado->pid, io, instruccion_de_desalojo);
+						list_add(cola_de_io_pedido, elemento);
+						sem_post(elementos);
+					}
+					else
+					{ // sino va a la cola blocked
+						log_debug(logger,"ENTRE AL IF la cola tiene cosas");
+						list_add(cola_de_io_pedido, elemento);
+						sem_post(elementos);
+					}
+					log_info(logger, "PID: %i - Bloqueado por: INTERFAZ", pcb_desalojado->pid);
 				}
 			}
 			break;
@@ -333,7 +346,7 @@ int main(int argc, char const *argv[])
 	pthread_mutex_lock(&mutex_socket_memoria); // se libera cuando se habilita el socket
 	lista_pcbs_exit = list_create();
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
-	listas_pcbs_bloqueado = dictionary_create();
+	dictionary_pcbs_bloqueado = dictionary_create();
 	lista_pcbs_exec = list_create();
 	dictionary_ios = dictionary_create();
 	logger = iniciar_logger();
