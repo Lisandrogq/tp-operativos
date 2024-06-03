@@ -28,7 +28,7 @@ void ejecutar_cliclos()
 
 			status = execute(instruccion);
 			if (status == STATUS_OK) // si el proceso justo desalojo en execute, la interrupcion se leera en luego de
-									// que se ejecute la siguiente ejecucion
+									 // que se ejecute la siguiente ejecucion
 			{						 // revisar si esto es teoricamente correcto, creo qsi
 				check_intr(&status); // asi puede marcar el proceso como desalojado
 			}
@@ -182,9 +182,8 @@ int execute(t_strings_instruccion *instruccion)
 		free(instruccion);
 		return STATUS_OK;
 	}
-	
 
-	if ((strstr(instruccion->cod_instruccion,"EXIT") != NULL))//Fix termporal a aparicion random de '%'o'5'
+	if ((strstr(instruccion->cod_instruccion, "EXIT") != NULL)) // Fix termporal a aparicion random de '%'o'5'
 	{
 
 		devolver_pcb(SUCCESS, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
@@ -200,7 +199,7 @@ void check_intr(int *status)
 {
 	t_strings_instruccion *instruccion_vacia = malloc(sizeof(t_strings_instruccion));
 	memset(instruccion_vacia, 0, sizeof(t_strings_instruccion));
-	int cod_op=0;
+	int cod_op = 0;
 	recv(socket_interrupt, &cod_op, sizeof(int), MSG_DONTWAIT);
 	if (cod_op == INTERRUPCION)
 	{
@@ -228,9 +227,11 @@ void check_intr(int *status)
 				break;
 			}
 		}
+		else
+			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i",interrupcion->pid, pcb_exec->pid);
 	}
 	else
-		log_debug(logger, "No se recibio interrupciones");
+	// log_debug(logger, "No se recibio interrupciones");
 }
 void *servidor_interrupt()
 {
