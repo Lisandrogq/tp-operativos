@@ -308,15 +308,14 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
             pthread_cancel(&quantum);
         }
     }
-    else if (strcmp(algoritmo, "VRR") == 0)
+    else if (strcmp(algoritmo, "FIFO") == 0)
     {
-        // Cositas
+        int prueba = recibir_operacion(socket_cliente);
+    }else{  //VRR
+        int prueba = recibir_operacion(socket_cliente); 
     }
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    //REVISAR: SI ESTA LINEA ESTA COMENTADA: ANDA RR, SINO, ANDA FIFO 
-   // int prueba = recibir_operacion(socket_cliente); // sancho volves a comentar esta linea y te voy a buscar
-
     recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
     buffer->stream = malloc(buffer->size);
 
