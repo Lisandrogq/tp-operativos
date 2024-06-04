@@ -228,7 +228,7 @@ void check_intr(int *status)
 			}
 		}
 		else
-			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i",interrupcion->pid, pcb_exec->pid);
+			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i motivo:%i",interrupcion->pid, pcb_exec->pid,interrupcion->motivo);
 	}
 	//else
 	// log_debug(logger, "No se recibio interrupciones");

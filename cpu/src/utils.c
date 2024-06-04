@@ -149,39 +149,6 @@ int handshake(int socket_cliente)
     }
     return result;
 }
-void devolver_pcb_por_exit(int motivo_desalojo, pcb_t pcb, int socket_cliente)
-{
-    pcb.registros->SI = 99;
-    pcb.registros->DI = 99;
-
-    t_paquete *paquete = malloc(sizeof(t_paquete));
-    paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->codigo_operacion = DISPATCH_RESPONSE;
-    paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t);
-    paquete->buffer->stream = malloc(paquete->buffer->size);
-    paquete->buffer->offset = 0;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.pid, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pcb.quantum, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, pcb.registros, sizeof(registros_t));
-    paquete->buffer->offset += sizeof(registros_t);
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-
-    int bytes = paquete->buffer->size + 2 * sizeof(int); //=tam(buffer)+tam(codop)+tam(buffer->size)
-
-    void *a_enviar = serializar_paquete(paquete, bytes);
-
-    send(socket_cliente, a_enviar, bytes, 0);
-
-    free(a_enviar);
-}
-
 void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion)
 {
     pcb.registros->SI = 99;
@@ -194,7 +161,7 @@ void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_
 
     t_paquete *paquete = malloc(sizeof(t_paquete));
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->codigo_operacion = DISPATCH_RESPONSE;
+    paquete->codigo_operacion = motivo_desalojo;
     paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t) + tam_instruccion + 6 * sizeof(int);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
@@ -310,6 +277,7 @@ void *client_handler_dispatch(int socket_cliente)
             // TODO: liberar pcb sino es la primera ejecucion
             log_debug(logger, "Se recibio el proceso a ejecutar por dispatch");
             pcb_t *pcb = recibir_paquete(socket_cliente);
+            log_info(logger,"Quantum: %i",pcb->quantum);
             sem_post(&hay_proceso);
             pcb_exec = pcb;
             inicializar_diccionario(pcb_exec->registros);

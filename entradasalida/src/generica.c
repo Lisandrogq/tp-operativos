@@ -193,12 +193,18 @@ void iniciar_interfaz_generica()
 
 	log_info(logger, "El thread resolvedor_de_peticiones inició su ejecución");
 }
+void *hilo(){
 
+}
 int main(int argc, char *argv[])
 {
 	nombre = "Int1";
 	// nombre=malloc(argc);
 	// strcpy(nombre,argv);
+	/*pthread_t hilo;
+	pthread_create(&hilo, NULL, hilo_quantumVRR, pcb);
+    pthread_detach(&hilo);
+	*/
 	sem_init(&contador_pedidos, 0, 0);
 	pthread_mutex_init(&count_mutex, NULL);
 	pthread_mutex_unlock(&count_mutex);

@@ -196,8 +196,8 @@ void comando_ejecutar_script(char *path)
 			if (archivo == NULL)
 			{
 				log_error(logger, "No se pudo abrir el archivo");
-				free(linea);
-				continue;
+				//free(linea);
+				//continue;
 			}
 			char *linea = NULL;
 			size_t len = 0;
@@ -347,25 +347,27 @@ void *hilo_quantum(void *parametro)
 }
 void *hilo_quantumVRR(void *parametro)
 {
-    log_info(logger,"entre al hilo");
     timer = temporal_create();
     pcb_t *pcb = (pcb_t *)parametro;
+    log_info(logger,"Quantum justo antes: %i", pcb->quantum);
     usleep(pcb->quantum*1000);
     enviar_interrupcion(CLOCK, pcb->pid);
+    log_info(logger,"MANDE INTERRUPCION");
 }
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras, char *algoritmo)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
+    int restante_quantum =0; 
 
     if (strcmp(algoritmo, "RR") == 0)
     {
         pthread_t quantum;
         pthread_create(&quantum, NULL, hilo_quantum, pcb);
-        pthread_detach(&quantum);
+        pthread_detach(quantum);
         if (recibir_operacion(socket_cliente) != -1)
         {
-            pthread_cancel(&quantum);
+            pthread_cancel(quantum);
         }
     }
     else if (strcmp(algoritmo, "FIFO") == 0)
@@ -374,19 +376,16 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     }else{  //VRR
         pthread_t quantumVRR;
         pthread_create(&quantumVRR, NULL, hilo_quantumVRR, pcb);
-        pthread_detach(&quantumVRR);
-        if (recibir_operacion(socket_cliente) != -1)
+        pthread_detach(quantumVRR);
+        if (recibir_operacion(socket_cliente) != CLOCK)//esta validacion va a ser mas larga cuando se usen recursos
         {
             temporal_stop(timer);
-            pthread_cancel(&quantumVRR);
-            int restante_quantum = pcb->quantum - temporal_gettime(timer);
-            temporal_destroy(timer);
-            pcb->quantum = restante_quantum;
-            pcb->state = READY_S;
-            list_add(lista_ready_mas, pcb);
+            pthread_cancel(quantumVRR);
+            restante_quantum = pcb->quantum - temporal_gettime(timer);
+            log_info(logger,"Restante: %i",restante_quantum);
         }
+        temporal_destroy(timer); 
     }
-
     t_buffer *buffer = malloc(sizeof(t_buffer));
     recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
     buffer->stream = malloc(buffer->size);
@@ -398,12 +397,17 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     stream += sizeof(int);
     memcpy(&(pcb->quantum), stream, sizeof(int));
     stream += sizeof(int);
+    if(restante_quantum > 0){   // hay veces que queda en negativo el quantum
+        pcb->quantum = restante_quantum;
+        log_info(logger,"Quantum: %i",pcb->quantum);
+    }else{
+        pcb->quantum = config_get_int_value(config, "QUANTUM");
+    }
     memcpy(pcb->registros, stream, sizeof(registros_t));
     stream += sizeof(registros_t);
     memcpy(&motivo_desalojo, stream, sizeof(int));
     stream += sizeof(int);
     // inicio deserializacion de palabras:
-    log_info(logger,"Quantum: %i", pcb->quantum);
     // palabras = malloc(sizeof(t_strings_instruccion));--este malloc se hace afuera.
     memset(palabras, 0, sizeof(t_strings_instruccion));
 
@@ -548,29 +552,32 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     sem_wait(sem);
     elemento_cola_io *elemento_borrado = list_remove_by_condition(lista_blocked_del_io, is_pid);
     pcb_t *pcb_a_desbloquear = elemento_borrado->pcb;
-    pthread_mutex_lock(&mutex_lista_ready);
     int quantum = config_get_int_value(config, "QUANTUM");
-    if(pcb_a_desbloquear->quantum == quantum)
+    if(pcb_a_desbloquear->quantum == quantum) // hay veces que queda en negativo el quantum TENER EN CUENTA
     {
+        pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_pcbs_ready, pcb_a_desbloquear);
+        sem_post(&elementos_ready);
+        pthread_mutex_unlock(&mutex_lista_ready);
     }else{
-        list_add(lista_ready_mas, pcb_a_desbloquear);
+        list_add(lista_ready_mas, pcb_a_desbloquear);//capaz ready plus no tienq existir y solo se agregan en ready[0
+        sem_post(&elementos_ready);
     }
-    sem_post(&elementos_ready);
-    pthread_mutex_unlock(&mutex_lista_ready);
     pcb_a_desbloquear->state = READY_S;
 }
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
-    pthread_mutex_lock(&mutex_lista_ready);
     pcb_t *pcb_a_ejecutar;
     if(list_is_empty(lista_ready_mas)){
+        log_debug(logger, "Enviando a ejecutar desde normal");
+        pthread_mutex_lock(&mutex_lista_ready);
         pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
+        pthread_mutex_unlock(&mutex_lista_ready);
     }else{
+        log_debug(logger, "Enviando a ejecutar desde ready+");
         pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
     }
 
-    pthread_mutex_unlock(&mutex_lista_ready);
     list_add(lista_pcbs_exec, pcb_a_ejecutar);
     pcb_a_ejecutar->state = EXEC_S;
     log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);

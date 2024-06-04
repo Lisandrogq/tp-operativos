@@ -240,7 +240,7 @@ void *recibir_buffer(int *size, int socket_cliente)
 char *get_linea_buscada(const char *input_string, int linea_buscada)
 {
 	char *lines[100];
-	int line_count = 0;//teta
+	int line_count = 0;
 	char *copy = strdup(input_string);
 	char *token = strtok(copy, "\n");
 
