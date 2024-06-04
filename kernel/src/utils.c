@@ -189,38 +189,35 @@ void comando_listar_procesos_por_estado()
     list_iterate(lista_pcbs_exit, (void *)imprimir_pcb);
 }
 
-void comando_ejecutar_script(char *path)
+void comando_ejecutar_script(char *path, FILE *archivo)
 {
-   //abro el archivo como lectura//
-			FILE *archivo = fopen(path, "r");
-			if (archivo == NULL)
-			{
-				log_error(logger, "No se pudo abrir el archivo");
-				//free(linea);
-				//continue;
-			}
-			char *linea = NULL;
-			size_t len = 0;
+  //abro el archivo como lectura//
+		
+			char *linea = malloc(100);
+			size_t len = 50;
 			ssize_t read;
 
 			//Mientras haya lineas en el archivo//
-			while ((read = getline(&linea, &len, archivo)) != -1)
+			while ((read = fgets(linea, len, archivo)) != NULL)
 			{
 				char *instruccion[2];
 				instruccion[0] = malloc(strlen(linea)); 
 				instruccion[1] = malloc(strlen(linea));
-				instruccion[0] = strtok(linea, " ");
-				instruccion[1] = strtok(NULL, " ");
+				instruccion[0] = strtok(linea, " \n");
+				instruccion[1] = strtok(NULL, " \n");
 				if (strcmp(linea, "\0") == 0)
 				{
 					free(linea);
 					continue;
 				}
+                log_info(logger, "Instruccion: %s", linea);
 				//HAY QUE EJECUTAR CADA COMANDO//
 				//seguro hay que ver como hacerlo sin repetir logica//
 				//¿generar una funcion que se repita?//
 				if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
 				{
+                    char *copia;
+                    strncpy(copia,instruccion[1],strlen(instruccion[1]-1));
 					int tam = 1 + strlen(instruccion[1]);
 					comando_iniciar_proceso(instruccion[1], tam);
 					sem_post(&elementos_ready);

@@ -47,7 +47,14 @@ void *consola()
 		if(!strcmp(instruccion[0], "EJECUTAR_SCRIPT"))
 		{
 			log_info(logger, "Ejecutar Script de Comandos");
-			comando_ejecutar_script(instruccion[1]);
+			FILE *archivo = fopen(instruccion[1], "r");
+			if (archivo == NULL)
+			{
+				log_error(logger, "No se pudo abrir el archivo");
+				free(linea);
+				continue;
+			}
+			comando_ejecutar_script(instruccion[1], archivo);
 		}
 		free(linea);
 	}
