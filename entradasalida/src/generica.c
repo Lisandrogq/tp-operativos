@@ -196,7 +196,7 @@ void iniciar_interfaz_generica()
 
 int main(int argc, char *argv[])
 {
-	nombre = "Int3";
+	nombre = "Int1";
 	// nombre=malloc(argc);
 	// strcpy(nombre,argv);
 	sem_init(&contador_pedidos, 0, 0);

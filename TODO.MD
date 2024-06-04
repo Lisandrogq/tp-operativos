@@ -10,6 +10,7 @@
 - [ ] Una vez paso que un proceso entro a io y volvio a ejecutar al toque(capaz es un tema de q faltan mutex :p)
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta(q las cosas se hagan en la fase correspondiente).
 - [ ] TERMINAR DE AGREGAR MUTEX
+- [ ] Error al ingresar una io invalida, la memoria de segmentation fault
 ____
 #### CHECKPOINT 2 ####
 - [ ] CMD:Ejecutar Script de Operaciones.

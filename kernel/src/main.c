@@ -80,19 +80,7 @@ void *cliente_cpu_dispatch()
 		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
 		int motivo_desalojo = -1;
-		if (strcmp(algoritmo, "FIFO") == 0)
-		{
-
-			motivo_desalojo = planificar_fifo(conexion_fd, instruccion_de_desalojo, algoritmo);
-		}
-		else if (strcmp(algoritmo, "RR") == 0)
-		{
-			motivo_desalojo = planificar_rr(conexion_fd, instruccion_de_desalojo, algoritmo);
-		}
-		else
-		{
-			// planificar_vrr();
-		}
+		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo);
 		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
 
 		switch (motivo_desalojo)
@@ -155,6 +143,7 @@ void *cliente_cpu_dispatch()
 				{
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 					list_add(lista_pcbs_exit, pcb_desalojado);
+					pcb_desalojado->state= EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
 				}
 				else
@@ -293,6 +282,7 @@ int main(int argc, char const *argv[])
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
 	dictionary_pcbs_bloqueado = dictionary_create();
 	lista_pcbs_exec = list_create();
+	lista_ready_mas = list_create();
 	dictionary_ios = dictionary_create();
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_DEBUG);

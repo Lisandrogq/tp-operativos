@@ -13,6 +13,7 @@
 #include <commons/collections/list.h>
 #include <commons/config.h>
 #include <commons/string.h>
+#include <commons/temporal.h>
 
 #include <assert.h>
 #include <readline/readline.h>
@@ -28,10 +29,11 @@ extern pthread_mutex_t mutex_socket_interrupt;
 extern pthread_mutex_t mutex_socket_memoria;
 extern pthread_mutex_t mutex_pcb_desalojado;
 extern pthread_mutex_t mutex_lista_exit;
+extern t_list *lista_ready_mas;
 extern pthread_mutex_t mutex_lista_exec;
 extern int pid_sig_term;
 extern t_list *lista_pcbs_exit;
-
+extern t_temporal *timer;
 extern int operacion;
 extern t_list *lista_pcbs_ready;
 extern pthread_mutex_t mutex_lista_ready;
@@ -81,8 +83,7 @@ void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
 void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io);
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente,t_strings_instruccion*instruccion_de_desalojo, char* algoritmo);
-int planificar_fifo(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo , char* algoritmo);
-int planificar_rr(int socket_cliente,t_strings_instruccion* instruccion_de_desalojo, char* algoritmo);
+int planificar(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo , char* algoritmo);
 void *hilo_quantum(void* parametro);
 //Server
 extern t_log* logger;

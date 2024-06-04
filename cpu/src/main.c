@@ -230,7 +230,7 @@ void check_intr(int *status)
 		else
 			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i",interrupcion->pid, pcb_exec->pid);
 	}
-	else
+	//else
 	// log_debug(logger, "No se recibio interrupciones");
 }
 void *servidor_interrupt()

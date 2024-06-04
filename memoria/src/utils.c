@@ -240,7 +240,7 @@ void *recibir_buffer(int *size, int socket_cliente)
 char *get_linea_buscada(const char *input_string, int linea_buscada)
 {
 	char *lines[100];
-	int line_count = 0;
+	int line_count = 0;//teta
 	char *copy = strdup(input_string);
 	char *token = strtok(copy, "\n");
 
@@ -284,7 +284,7 @@ char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 	int_to_char(p_info->pid, pid_str);
 	char *codigo = dictionary_get(dictionary_codigos, pid_str);
 	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
-	// HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE
+	// HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE ()
 	log_info(logger, "LINEA LEIDA:%s", linea);
 	char **palabras = separar_linea_en_parametros(linea);
 	return palabras;
