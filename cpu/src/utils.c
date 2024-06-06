@@ -114,7 +114,9 @@ void execute_mov_in(void *datos, u_int32_t dir_fisica, int tam_r_datos)
     solicitar_leer_memoria(dir_fisica, tam_r_datos);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     void *datos_obtenidos = recibir_datos_leidos();
-    log_info(logger, "datos_obtenidos:%d", *(u_int32_t *)datos_obtenidos);
+    int a_loggear=0;
+    a_loggear= *(u_int32_t *)datos_obtenidos;
+    log_info(logger, "datos_obtenidos:%d", a_loggear);
     memcpy(datos, datos_obtenidos, tam_r_datos);
 }
 void execute_mov_out(void *datos, u_int32_t dir_fisica, int tam_r_datos)

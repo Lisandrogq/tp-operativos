@@ -29,6 +29,11 @@ typedef struct
 	int tam_escritura;
 	void *datos;
 } write_t;
+typedef struct
+{
+	int pid;
+	int pagina;
+}get_frame_t;
 typedef enum
 {
 	MEM_W_OK,
@@ -141,10 +146,12 @@ typedef enum
 	FIN_IO_TASK,
 	INTERRUPCION,
 	GET_FRAME,
+	GET_FRAME_RESPONSE,
 	READ_MEM,
 	READ_MEM_RESPONSE,
 	WRITE_MEM,
 	WRITE_MEM_RESPONSE,
+	
 } op_code;
 
 typedef enum

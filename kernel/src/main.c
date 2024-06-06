@@ -17,7 +17,7 @@ void *consola()
 	while (1)
 	{
 		linea = readline(">");
-		instruccion[0] = malloc(strlen(linea)); 
+		instruccion[0] = malloc(strlen(linea));
 		instruccion[1] = malloc(strlen(linea));
 		instruccion[0] = strtok(linea, " ");
 		instruccion[1] = strtok(NULL, " ");
@@ -38,13 +38,13 @@ void *consola()
 			int tam = 1 + sizeof(strlen(linea));
 			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
 		}
-		if(!strcmp(instruccion[0], "ESTADO_PROCESO"))
+		if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
 		{
 			comando_listar_procesos_por_estado();
 		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
-		if(!strcmp(instruccion[0], "EJECUTAR_SCRIPT"))
+		if (!strcmp(instruccion[0], "EJECUTAR_SCRIPT"))
 		{
 			log_info(logger, "Ejecutar Script de Comandos");
 			FILE *archivo = fopen(instruccion[1], "r");
@@ -92,6 +92,13 @@ void *cliente_cpu_dispatch()
 
 		switch (motivo_desalojo)
 		{
+/* 		case:
+			WAIT break;
+
+		case:
+			SIGNAL
+			list_add(lista_pcbs_exec, 0, pcb_desalojado);
+			break; */
 		case SUCCESS: // agregar resto de casos de fin
 
 			pcb_desalojado->state = EXIT_S;
@@ -150,7 +157,7 @@ void *cliente_cpu_dispatch()
 				{
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 					list_add(lista_pcbs_exit, pcb_desalojado);
-					pcb_desalojado->state= EXIT_S;
+					pcb_desalojado->state = EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
 				}
 				else
@@ -166,14 +173,14 @@ void *cliente_cpu_dispatch()
 					elemento->instruccion_de_bloqueo = instruccion_de_desalojo;
 					if (list_size(cola_de_io_pedido) == 0)
 					{ // si esta vació la pide y agrega a blocked
-						log_debug(logger,"ENTRE AL IF la cola esta vacia");
+						log_debug(logger, "ENTRE AL IF la cola esta vacia");
 						pedir_io_task(pcb_desalojado->pid, io, instruccion_de_desalojo);
 						list_add(cola_de_io_pedido, elemento);
 						sem_post(elementos);
 					}
 					else
 					{ // sino va a la cola blocked
-						log_debug(logger,"ENTRE AL IF la cola tiene cosas");
+						log_debug(logger, "ENTRE AL IF la cola tiene cosas");
 						list_add(cola_de_io_pedido, elemento);
 						sem_post(elementos);
 					}
@@ -273,16 +280,16 @@ int main(int argc, char const *argv[])
 	sem_init(&elementos_ready, 0, 0);
 
 	pthread_mutex_init(&mutex_lista_exit, NULL);
-	pthread_mutex_unlock(&mutex_lista_exit);// debe empezar desbloqueado, pq todos hacen lock primero 
+	pthread_mutex_unlock(&mutex_lista_exit); // debe empezar desbloqueado, pq todos hacen lock primero
 
-	pthread_mutex_init (&mutex_lista_exec, NULL);
-	pthread_mutex_unlock(&mutex_lista_exec);// debe empezar desbloqueado, pq todos hacen lock primero 
+	pthread_mutex_init(&mutex_lista_exec, NULL);
+	pthread_mutex_unlock(&mutex_lista_exec); // debe empezar desbloqueado, pq todos hacen lock primero
 
 	pthread_mutex_init(&mutex_pcb_desalojado, NULL);
 	pthread_mutex_lock(&mutex_pcb_desalojado); // debe empezar bloqueado, solo es desbloqueado al desalojarse un proceso(por kernel)
 
 	pthread_mutex_init(&mutex_lista_ready, NULL);
-	pthread_mutex_unlock(&mutex_lista_ready); // debe empezar desbloqueado, pq todos hacen lock primero 
+	pthread_mutex_unlock(&mutex_lista_ready); // debe empezar desbloqueado, pq todos hacen lock primero
 	pthread_mutex_init(&mutex_socket_memoria, NULL);
 	pthread_mutex_lock(&mutex_socket_memoria); // se libera cuando se habilita el socket
 	lista_pcbs_exit = list_create();

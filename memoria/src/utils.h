@@ -40,6 +40,7 @@ read_t *recibir_pedido_lectura(socket_cliente);
 write_t *recibir_pedido_escritura(int socket_cliente);
 void enviar_status_escritura(int status, int socket_cliente);
 void crear_estructuras_administrativas(solicitud_creacion_t *e_admin);
+void crear_tabla_paginas(int pid);
 void handle_kerel_client(int socket_memoria);
 void *client_handler(void *arg);
 void handle_crear_pcb(int socket_cliente);

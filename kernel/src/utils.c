@@ -565,6 +565,7 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
     pcb_t *pcb_a_ejecutar;
+    //if(hay alguno en exit)(caso de wait/signal)
     if(list_is_empty(lista_ready_mas)){
         log_debug(logger, "Enviando a ejecutar desde normal");
         pthread_mutex_lock(&mutex_lista_ready);

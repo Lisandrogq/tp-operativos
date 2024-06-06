@@ -51,6 +51,15 @@ void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se
 																		// borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 }
+
+void crear_tabla_paginas(int pid)
+{
+	// crear tabla de paginas del pid
+	elemento_lista_tablas *elemento = malloc(sizeof(elemento_lista_tablas));
+	elemento->pid = e_admin->pid;
+	elemento->tabla = list_create();
+	list_add(lista_tablas_paginas, elemento);
+}
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {
 	char pid_str[5] = "";
@@ -60,6 +69,7 @@ void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 	char *codigo = dictionary_remove(dictionary_codigos, pid_str); // creo que no hace falta mutex para codigos
 	free(codigo);
 	log_debug(logger, "Se elimino el codigo del pid %i", pid_a_eliminar);
+	// todo: eliminar tabla de paginas y marcar marcos como liberados
 }
 void handle_cpu_client(int socket_cliente)
 {
@@ -84,6 +94,13 @@ void handle_cpu_client(int socket_cliente)
 			enviar_instruccion(palabras, socket_cliente);
 			break;
 		case GET_FRAME:
+			get_frame_t *solicitud_f = recibir_pedido_frame(socket_cliente);
+			int frame = calcular_frame(solicitud_f);
+			enviar_frame(frame, socket_cliente);
+
+			// número_página = floor(dirección_lógica / tamaño_página)
+			// desplazamiento = dirección_lógica - número_página * tamaño_página
+
 			// se recibe pid,npagina. se devuelve nframe.
 			//(si se quisiera pedir varias paginas(por dato largo), se pide de auna)
 			break;
@@ -91,7 +108,9 @@ void handle_cpu_client(int socket_cliente)
 			read_t *solicitud_r = recibir_pedido_lectura(socket_cliente);
 			log_info(logger, "r_dir: %i|| tam: %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			void *datos_leidos = leer_memoria(solicitud_r->dir_fisica, solicitud_r->tam_lectura);
-			log_info(logger, "datos_leidos: %d", *(u_int32_t *)datos_leidos); // aunq sea un int8 se muestra bien
+			int a_loggear = 0;
+			a_loggear = *(u_int32_t *)datos_leidos;
+			log_info(logger, "datos_leidos: %d", a_loggear); // aunq sea un int8 se muestra bien
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
 			// se recibe dirfisica,longitud, se devuelve lo leido.
 			//! CREO Q SI SE TIENE Q LEER MAS DE UNA PAGINA, SE HACER POR SEPARADO!
@@ -138,12 +157,7 @@ void handle_kerel_client(int socket)
 			solicitud_creacion_t *e_admin = recibir_solicitud_de_creacion(socket);
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
-			// crear tabla de paginas del pid
-			elemento_lista_tablas *elemento = malloc(sizeof(elemento_lista_tablas));
-			elemento->pid = e_admin->pid;
-			elemento->tabla = list_create();
-			list_add(lista_tablas_paginas, elemento);
-			break;
+			crear_tabla_paginas(e_admin->pid) break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
 			eliminar_estrucuras_administrativas(pid_a_eliminar);
@@ -455,6 +469,58 @@ write_t *recibir_pedido_escritura(int socket_cliente)
 	eliminar_paquete(paquete);
 
 	return solicitud_w;
+}
+get_frame_t *recibir_pedido_frame(socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	get_frame_t *sol_frame = malloc(sizeof(get_frame_t));
+	void *stream = paquete->buffer->stream;
+	memcpy(&(sol_frame->pid), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(sol_frame->pagina), stream, sizeof(int));
+
+	eliminar_paquete(paquete);
+
+	return sol_frame;
+}
+int calcular_frame(get_frame_t *solicitud)
+{
+	bool is_pid(void *elemento)
+	{
+		return ((elemento_lista_tablas *)elemento)->pid == solicitud; // no hay colores pq vscode no se la banca, no es bug
+	};
+	t_list *tabla = ((elemento_lista_tablas *)list_find(lista_tablas_paginas, is_pid))->tabla;
+
+	int frame = list_get(tabla, solicitud->pagina);
+	return frame;
+}
+void enviar_frame(int frame, int socket_cliente)
+{
+	// devuelve el numero de frame asignado a la pagina del pid
+	//(frame== int, la dir fisica del frame es frame*tam_pag)
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = GET_FRAME_RESPONSE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &frame, sizeof(int)); // paso los datos pq si,desde cpu ya se sabe
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
 }
 read_t *recibir_pedido_lectura(int socket_cliente)
 {
