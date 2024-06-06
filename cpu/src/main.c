@@ -12,7 +12,6 @@
 pthread_t tid[2];
 
 bool terminar_modulo = false;
-int socket_memoria;
 
 void ejecutar_cliclos()
 {
@@ -24,7 +23,7 @@ void ejecutar_cliclos()
 		{
 			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC); // hace falta enviar el pid??
 
-			decode(); // por ahora no sabemos q hacer en decode
+			decode(instruccion); // por ahora no sabemos q hacer en decode
 
 			status = execute(instruccion);
 			if (status == STATUS_OK) // si el proceso justo desalojo en execute, la interrupcion se leera en luego de
@@ -142,7 +141,41 @@ t_strings_instruccion *fetch(int PC)
 
 	return palabras;
 }
-void decode() {}
+void decode(t_strings_instruccion *instruccion)
+{
+	if (strcmp(instruccion->cod_instruccion, "MOV_IN") == 0) // MOV_IN (Registro Datos, Registro Dirección)
+	{
+		////EN QUE REGISTRO VOY A ESCRIBIR
+		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
+		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
+		////
+
+		////TRADUCCION LOGICA->FISICA (TODO)
+		void *dir_logica = dictionary_get(dic_p_registros, instruccion->p2);
+		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
+		u_int32_t dir_fisica = 0;
+		memcpy(&dir_fisica, dir_logica, tam_r_dir);
+		////
+
+		//for(por cada dir fisica a acceder)
+		log_info(logger, "dir_fisica a leer: %i", dir_fisica);
+		execute_mov_in(datos, dir_fisica, tam_r_datos);
+	}
+
+	if (strcmp(instruccion->cod_instruccion, "MOV_OUT") == 0) // MOV_OUT (Registro Dirección, Registro Datos)
+	{
+		u_int32_t dir_fisica = 0;
+		void *datos = dictionary_get(dic_p_registros, instruccion->p2);
+		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
+		void *dir_logica = dictionary_get(dic_p_registros, instruccion->p1);
+		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
+
+		memcpy(&dir_fisica, dir_logica, tam_r_dir);
+
+		log_info(logger, "dir_fisica: %i", dir_fisica);
+		execute_mov_out(datos, dir_fisica, tam_r_datos);
+	}
+}
 
 int execute(t_strings_instruccion *instruccion)
 {
@@ -228,10 +261,10 @@ void check_intr(int *status)
 			}
 		}
 		else
-			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i motivo:%i",interrupcion->pid, pcb_exec->pid,interrupcion->motivo);
+			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i motivo:%i", interrupcion->pid, pcb_exec->pid, interrupcion->motivo);
 	}
-	//else
-	// log_debug(logger, "No se recibio interrupciones");
+	// else
+	//  log_debug(logger, "No se recibio interrupciones");
 }
 void *servidor_interrupt()
 {
@@ -312,16 +345,37 @@ int iniciar_conexion_memoria(t_config *config, t_log *logger)
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
 	conexion_fd = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(conexion_fd);
+	tam_pagina = handshake(conexion_fd);
 
 	return conexion_fd;
 }
 
+void inicializar_diccionario_tams()
+{
+	int *tam8 = malloc(sizeof(int));
+	int *tam32 = malloc(sizeof(int));
+	*tam8 = 1;
+	*tam32 = 4;
+
+	dictionary_put(dic_tam_registros, "AX", tam8);
+	dictionary_put(dic_tam_registros, "BX", tam8);
+	dictionary_put(dic_tam_registros, "CX", tam8);
+	dictionary_put(dic_tam_registros, "DX", tam8);
+	dictionary_put(dic_tam_registros, "EAX", tam32);
+	dictionary_put(dic_tam_registros, "EBX", tam32);
+	dictionary_put(dic_tam_registros, "ECX", tam32);
+	dictionary_put(dic_tam_registros, "EDX", tam32);
+	dictionary_put(dic_tam_registros, "SI", tam32);
+	dictionary_put(dic_tam_registros, "DI", tam32);
+}
 int main(int argc, char const *argv[])
 {
 	sem_init(&hay_proceso, 0, 0);
 	sem_init(&desalojar, 0, 0);
-	dictionary = dictionary_create();
+	dic_p_registros = dictionary_create();
+	dic_tam_registros = dictionary_create();
+	inicializar_diccionario_tams();
+
 	// dictionary = inicializar_diccionario(contexto); esto ya no hace falta, se inicializa al recibir pcb
 
 	t_log *logger;

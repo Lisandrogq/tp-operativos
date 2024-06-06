@@ -18,18 +18,35 @@
 #define PUERTO_CPU_DISPATCH "4445"
 #define PUERTO_MEMORIA "4446"
 #define PUERTO_CPU_INTERRUPT "4447"
-
-typedef enum{
-    GENERICA,
-    STDIN,
-    STDOUT,
-    FS,
-}tipo_interfaz;
-typedef enum{
-    DISPONIBLE,
-    BLOQUEADO,
-    EXIT,
-}estado_interfaz;
+typedef struct
+{
+	int32_t dir_fisica;
+	int tam_lectura;
+} read_t;
+typedef struct
+{
+	int32_t dir_fisica;
+	int tam_escritura;
+	void *datos;
+} write_t;
+typedef enum
+{
+	MEM_W_OK,
+	MEM_W_NO_OK,//NI IDEA SI HAY MAS
+} status_write_mem;
+typedef enum
+{
+	GENERICA,
+	STDIN,
+	STDOUT,
+	FS,
+} tipo_interfaz;
+typedef enum
+{
+	DISPONIBLE,
+	BLOQUEADO,
+	EXIT,
+} estado_interfaz;
 typedef struct
 {
 	int tamcod;
@@ -96,9 +113,8 @@ typedef struct
 {
 	char *nombre;
 	int pid;
-	//capaz status o algo asi
+	// capaz status o algo asi
 } t_fin_io_task;
-
 
 typedef struct
 {
@@ -124,6 +140,11 @@ typedef enum
 	IO_GEN_SLEEP,
 	FIN_IO_TASK,
 	INTERRUPCION,
+	GET_FRAME,
+	READ_MEM,
+	READ_MEM_RESPONSE,
+	WRITE_MEM,
+	WRITE_MEM_RESPONSE,
 } op_code;
 
 typedef enum
@@ -144,7 +165,6 @@ typedef enum
 	IO_TASK,
 	// ELIMINAR_ESTRUC_ADMIN,
 } motivos_desalojo;
-
 
 typedef enum
 {

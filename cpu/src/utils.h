@@ -18,26 +18,36 @@
 #include <commons/string.h>
 #include <utils/utils_generales.h>
 
+extern t_dictionary *dic_p_registros;
+extern t_dictionary *dic_tam_registros;
+extern int socket_memoria;
 
-extern t_dictionary *dictionary;
 extern sem_t hay_proceso;
 extern sem_t desalojar;
 extern pcb_t *pcb_exec;
-extern int socket_dispatch; 
+extern int socket_dispatch;
 extern int socket_interrupt;
+extern int tam_pagina;
 // Cliente
-interrupcion_t*recibir_interrupcion(int socket_interrupt);
+interrupcion_t *recibir_interrupcion(int socket_interrupt);
 t_strings_instruccion *fetch(int PC);
 void decode();
 int execute(t_strings_instruccion *instruccion);
 void check_intr();
-t_dictionary *inicializar_diccionario(registros_t *contexto);
+t_dictionary *inicializar_diccionario(registros_t *registros);
 void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion);
-
+void execute_mov_in(void *datos, u_int32_t dir_fisica, int tam_r_datos);
+void execute_mov_out(void *datos, u_int32_t dir_fisica, int tam_r_datos);
 void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen);
-void execute_jnz(char *nombre_r,uint32_t nuevo_pc, registros_t *contexto);
+void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto);
+void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos);
+void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos);
+void *recibir_datos_leidos();
+int recibir_status_escritura();
+
+
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);

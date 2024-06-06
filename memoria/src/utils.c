@@ -5,6 +5,11 @@ t_log *logger;
 t_dictionary *dictionary_codigos;
 t_list *sems_espera_creacion_codigos;
 int RETARDO_RESPUESTA;
+t_list *lista_tablas_paginas;
+int TAM_PAGINA;
+int TAM_MEMORIA;
+void *espacio_usuario;
+
 char *leer_codigo(char *path)
 {
 	// leer el pseudocodigo
@@ -43,15 +48,18 @@ void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	// signal
 	sem_t *sem = malloc(sizeof(sem_t));
 	sem_init(sem, 0, 1);
-	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem);
+	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se
+																		// borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 }
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {
 	char pid_str[5] = "";
 	int_to_char(pid_a_eliminar, pid_str);
-	char *codigo = dictionary_remove(dictionary_codigos, pid_str);//creo que no hace falta mutex para codigos
+	sem_t *sem_a_liberar = list_get(sems_espera_creacion_codigos, pid_a_eliminar);
+	free(sem_a_liberar);
+	char *codigo = dictionary_remove(dictionary_codigos, pid_str); // creo que no hace falta mutex para codigos
 	free(codigo);
-	log_debug(logger,"Se elimino el codigo del pid %i",pid_a_eliminar);
+	log_debug(logger, "Se elimino el codigo del pid %i", pid_a_eliminar);
 }
 void handle_cpu_client(int socket_cliente)
 {
@@ -71,11 +79,31 @@ void handle_cpu_client(int socket_cliente)
 			usleep(RETARDO_RESPUESTA); // MILISEGUNDOS PEDIDOS POR CONFIG(consigna);
 			sem_t *sem = list_get(sems_espera_creacion_codigos, p_info->pid);
 			sem_wait(sem);
-			
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
 			sem_post(sem);
-
 			enviar_instruccion(palabras, socket_cliente);
+			break;
+		case GET_FRAME:
+			// se recibe pid,npagina. se devuelve nframe.
+			//(si se quisiera pedir varias paginas(por dato largo), se pide de auna)
+			break;
+		case READ_MEM:
+			read_t *solicitud_r = recibir_pedido_lectura(socket_cliente);
+			log_info(logger, "r_dir: %i|| tam: %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
+			void *datos_leidos = leer_memoria(solicitud_r->dir_fisica, solicitud_r->tam_lectura);
+			log_info(logger, "datos_leidos: %d", *(u_int32_t *)datos_leidos); // aunq sea un int8 se muestra bien
+			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
+			// se recibe dirfisica,longitud, se devuelve lo leido.
+			//! CREO Q SI SE TIENE Q LEER MAS DE UNA PAGINA, SE HACER POR SEPARADO!
+			break; // no se recibe pid en read/write(creo)
+		case WRITE_MEM:
+			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
+			log_info(logger, "w_dir: %i, tam: %i, datos: %d", solicitud_w->dir_fisica, solicitud_w->tam_escritura, *(u_int32_t *)solicitud_w->datos);
+			int status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
+			enviar_status_escritura(status, socket_cliente);
+
+			// se recibe dirfisica,longitud,dato a escribir. se devuelve OK(NO_OK TAMBIEN?).
+			//! CREO Q SI SE TIENE Q ESCRIBIR MAS DE UNA PAGINA, SE HACER POR SEPARADO!
 			break;
 		case -1:
 			return -1;
@@ -83,6 +111,20 @@ void handle_cpu_client(int socket_cliente)
 			break;
 		}
 	}
+}
+
+int escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_lectura)
+{
+	int status = MEM_W_OK; // creo q hay q validar si escribe dentro del espacio de usario para devolver no_ok
+	memcpy(espacio_usuario + dir_fisica, datos, tam_lectura);
+	return status;
+}
+
+void *leer_memoria(u_int32_t dir_fisica, int tam_lectura)
+{
+	void *datos_leidos = malloc(tam_lectura);
+	memcpy(datos_leidos, espacio_usuario + dir_fisica, tam_lectura);
+	return datos_leidos;
 }
 void handle_kerel_client(int socket)
 {
@@ -96,10 +138,16 @@ void handle_kerel_client(int socket)
 			solicitud_creacion_t *e_admin = recibir_solicitud_de_creacion(socket);
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
+			// crear tabla de paginas del pid
+			elemento_lista_tablas *elemento = malloc(sizeof(elemento_lista_tablas));
+			elemento->pid = e_admin->pid;
+			elemento->tabla = list_create();
+			list_add(lista_tablas_paginas, elemento);
 			break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
 			eliminar_estrucuras_administrativas(pid_a_eliminar);
+			// TODO: eliminar tabla
 			break;
 		default:
 			break;
@@ -192,9 +240,13 @@ int handshake_Server(int socket_cliente)
 
 	bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
 
-	if (handshake == HS_KERNEL || handshake == HS_CPU || handshake == HS_IO)
+	if (handshake == HS_KERNEL || handshake == HS_IO)
 	{
 		bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
+	}
+	else if (handshake == HS_CPU) // si se conecta la cpu, se le informa el tamaño de pagina
+	{
+		bytes = send(socket_cliente, &TAM_PAGINA, sizeof(int32_t), 0);
 	}
 	else
 	{
@@ -271,10 +323,10 @@ char **separar_linea_en_parametros(const char *input_string)
 	}
 	free(copy); // Free the memory allocated by strdup
 
-	for (int i = 0; i < 6; i++)
+	/* for (int i = 0; i < 6; i++)
 	{
 		log_warning(logger, "linea %i: %s", i, palabras[i]);
-	}
+	} */
 	return palabras;
 }
 char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
@@ -380,6 +432,91 @@ fetch_t *recibir_process_info(int socket_cliente)
 	eliminar_paquete(paquete);
 
 	return p_info;
+}
+
+write_t *recibir_pedido_escritura(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	write_t *solicitud_w = malloc(sizeof(write_t));
+	void *stream = paquete->buffer->stream;
+	memcpy(&(solicitud_w->dir_fisica), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(solicitud_w->tam_escritura), stream, sizeof(int));
+	stream += sizeof(int);
+	solicitud_w->datos = malloc(solicitud_w->tam_escritura);
+	memcpy(solicitud_w->datos, stream, solicitud_w->tam_escritura);
+
+	eliminar_paquete(paquete);
+
+	return solicitud_w;
+}
+read_t *recibir_pedido_lectura(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	read_t *sol_lectura = malloc(sizeof(read_t));
+	void *stream = paquete->buffer->stream;
+	memcpy(&(sol_lectura->dir_fisica), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(sol_lectura->tam_lectura), stream, sizeof(int));
+
+	eliminar_paquete(paquete);
+
+	return sol_lectura;
+}
+void enviar_datos_leidos(void *datos_leidos, int tam_datos, int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = READ_MEM_RESPONSE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int) + tam_datos;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_datos, sizeof(u_int32_t)); // paso los datos pq si,desde cpu ya se sabe
+	paquete->buffer->offset += sizeof(u_int32_t);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, datos_leidos, tam_datos);
+	paquete->buffer->offset += tam_datos;
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+void enviar_status_escritura(int status, int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = WRITE_MEM_RESPONSE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &status, sizeof(int)); // paso los datos pq si,desde cpu ya se sabe
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
 }
 
 solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente)

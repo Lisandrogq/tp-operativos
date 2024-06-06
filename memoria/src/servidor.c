@@ -8,9 +8,23 @@ t_config *config;
 
 int main(int argc, char *argv[])
 {
+	/// definicion lista tabla paginas:
+	lista_tablas_paginas = list_create(); // elems de tipo elemento_lista_tablas
+
+	///
 	config = config_create("memoria.config");
 	RETARDO_RESPUESTA = config_get_int_value(config, "RETARDO_RESPUESTA");
+	TAM_MEMORIA = config_get_int_value(config, "TAM_MEMORIA");
+	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");
 	sems_espera_creacion_codigos = list_create();
+	espacio_usuario = malloc(TAM_MEMORIA);
+	memset(espacio_usuario, 0, TAM_MEMORIA);
+	u_int8_t intp8 =30;
+	u_int32_t intp32 =400;
+	int tam8 = sizeof(u_int8_t);
+	int tam32 = sizeof(u_int32_t);
+	memcpy(espacio_usuario+0,&intp8,tam8);
+	memcpy(espacio_usuario+2,&intp32,tam32);
 
 	dictionary_codigos = dictionary_create();
 

@@ -1,42 +1,46 @@
 #include "utils.h"
 #include <errno.h>
 
-t_dictionary *dictionary;
+t_dictionary *dic_p_registros; // tiene punteros a los registros
+t_dictionary *dic_tam_registros;
 sem_t hay_proceso;
 sem_t desalojar;
 pcb_t *pcb_exec;
 int socket_dispatch;
 int socket_interrupt;
+int socket_memoria;
 
-interrupcion_t*recibir_interrupcion(int socket_interrupt){
+int tam_pagina;
+interrupcion_t *recibir_interrupcion(int socket_interrupt)
+{
     t_buffer *buffer = malloc(sizeof(t_buffer));
-	recv(socket_interrupt, &(buffer->size), sizeof(int), 0);
-	buffer->stream = malloc(buffer->size);
-	recv(socket_interrupt, buffer->stream, buffer->size, 0);
+    recv(socket_interrupt, &(buffer->size), sizeof(int), 0);
+    buffer->stream = malloc(buffer->size);
+    recv(socket_interrupt, buffer->stream, buffer->size, 0);
 
-	interrupcion_t *interrupcion = malloc(sizeof(interrupcion_t));
-	memset(interrupcion, 0, sizeof(interrupcion_t));
+    interrupcion_t *interrupcion = malloc(sizeof(interrupcion_t));
+    memset(interrupcion, 0, sizeof(interrupcion_t));
 
-	void *stream = buffer->stream;//esto hace q no se pueda liberar la memoria de stream
-	memcpy(&(interrupcion->pid), stream, sizeof(int));
-	stream += sizeof(int);
-	memcpy(&(interrupcion->motivo), stream, sizeof(int));
-	stream += sizeof(int);
-	
-	free(buffer->stream);
-	free(buffer);
-	return interrupcion;	
+    void *stream = buffer->stream; // esto hace q no se pueda liberar la memoria de stream
+    memcpy(&(interrupcion->pid), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(interrupcion->motivo), stream, sizeof(int));
+    stream += sizeof(int);
+
+    free(buffer->stream);
+    free(buffer);
+    return interrupcion;
 }
 void execute_set(char *nombre_r_destino, int valor)
 {
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
     {
-        u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = valor;
     }
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
-        u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        u_int8_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = valor;
     }
 }
@@ -45,22 +49,22 @@ void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
     int sumando = 0;
     if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
     {
-        u_int32_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        u_int32_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sumando = *r_origen;
     }
     else if (strlen(nombre_r_origen) == 2) // caso registros de 1 byte
     {
-        u_int8_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        u_int8_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sumando = *r_origen;
     }
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
     {
-        u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino + sumando;
     }
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
-        u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        u_int8_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino + sumando;
     }
 }
@@ -69,22 +73,22 @@ void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8
     int sustraendo = 0;
     if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
     {
-        u_int32_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        u_int32_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sustraendo = *r_origen;
     }
     else if (strlen(nombre_r_origen) == 2) // caso registros de 1 byte
     {
-        u_int8_t *r_origen = dictionary_get(dictionary, nombre_r_origen);
+        u_int8_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sustraendo = *r_origen;
     }
     if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
     {
-        u_int32_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino - sustraendo;
     }
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
-        u_int8_t *r_destino = dictionary_get(dictionary, nombre_r_destino);
+        u_int8_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino - sustraendo;
     }
 }
@@ -93,16 +97,124 @@ void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // ha
 
     if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI")) // caso registros de 4 byte
     {
-        u_int32_t *registro = dictionary_get(dictionary, nombre_r);
+        u_int32_t *registro = dictionary_get(dic_p_registros, nombre_r);
         if (*registro != 0)
             contexto->PC = nuevo_pc;
     }
     else if (strlen(nombre_r) == 2) // caso registros de 1 byte
     {
-        u_int8_t *registro = dictionary_get(dictionary, nombre_r);
+        u_int8_t *registro = dictionary_get(dic_p_registros, nombre_r);
         if (*registro != 0)
             contexto->PC = nuevo_pc;
     }
+}
+
+void execute_mov_in(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+{
+    solicitar_leer_memoria(dir_fisica, tam_r_datos);
+    int cod_op = recibir_operacion(socket_memoria); // waitall y codop
+    void *datos_obtenidos = recibir_datos_leidos();
+    log_info(logger, "datos_obtenidos:%d", *(u_int32_t *)datos_obtenidos);
+    memcpy(datos, datos_obtenidos, tam_r_datos);
+}
+void execute_mov_out(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+{
+    solicitar_escribir_memoria(datos, dir_fisica, tam_r_datos);
+    int cod_op = recibir_operacion(socket_memoria); // waitall y codop
+    int status_escritura = recibir_status_escritura();
+    log_info(logger, "status_escritura:%d", status_escritura);
+}
+
+void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+{
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+
+    paquete->codigo_operacion = WRITE_MEM;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = sizeof(int) * 2 + tam_r_datos;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &dir_fisica, sizeof(u_int32_t));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, datos, tam_r_datos);
+    paquete->buffer->offset += tam_r_datos;
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_memoria, a_enviar, bytes, 0);
+    free(a_enviar);
+    eliminar_paquete(paquete);
+}
+
+int recibir_status_escritura()
+{
+    int status;
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+    paquete->buffer = malloc(sizeof(t_buffer));
+
+    recv(socket_memoria, &(paquete->buffer->size), sizeof(int), 0);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    recv(socket_memoria, paquete->buffer->stream, paquete->buffer->size, 0);
+
+    void *stream = paquete->buffer->stream;
+    memcpy(&status, stream, sizeof(int));
+
+    eliminar_paquete(paquete);
+
+    return status;
+}
+
+void *recibir_datos_leidos()
+{
+    void *datos_leidos;
+    int tam_leido = 0;
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+    paquete->buffer = malloc(sizeof(t_buffer));
+
+    recv(socket_memoria, &(paquete->buffer->size), sizeof(int), 0);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    recv(socket_memoria, paquete->buffer->stream, paquete->buffer->size, 0);
+
+    void *stream = paquete->buffer->stream;
+    memcpy(&tam_leido, stream, sizeof(int));
+    stream += sizeof(int);
+    datos_leidos = malloc(tam_leido);
+    memcpy(datos_leidos, stream, tam_leido);
+
+    eliminar_paquete(paquete);
+
+    return datos_leidos;
+}
+void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos)
+{
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+
+    paquete->codigo_operacion = READ_MEM;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = sizeof(int) * 2;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &dir_fisica, sizeof(u_int32_t));
+    paquete->buffer->offset += sizeof(int);
+
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_memoria, a_enviar, bytes, 0);
+    free(a_enviar);
+    eliminar_paquete(paquete);
 }
 int esperar_cliente_cpu(int socket_servidor)
 {
@@ -138,16 +250,16 @@ int handshake(int socket_cliente)
     size_t bytes;
 
     int32_t handshake = HS_CPU; // PASAR ESTO A CONFIG en utils
-    int32_t result;
+    int32_t tam_pagina;
 
     bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
-    bytes = recv(socket_cliente, &result, sizeof(int32_t), MSG_WAITALL);
+    bytes = recv(socket_cliente, &tam_pagina, sizeof(int32_t), MSG_WAITALL);
 
-    if (result != 0)
+    if (tam_pagina == -1)
     {
         exit(-1);
     }
-    return result;
+    return tam_pagina;
 }
 void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion)
 {
@@ -223,18 +335,18 @@ void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_
 // Server
 t_log *logger;
 
-t_dictionary *inicializar_diccionario(registros_t *contexto)
+t_dictionary *inicializar_diccionario(registros_t *registros)
 {
-    dictionary_put(dictionary, "AX", &(contexto->AX));
-    dictionary_put(dictionary, "BX", &(contexto->BX));
-    dictionary_put(dictionary, "CX", &(contexto->CX));
-    dictionary_put(dictionary, "DX", &(contexto->DX));
-    dictionary_put(dictionary, "EAX", &(contexto->EAX));
-    dictionary_put(dictionary, "EBX", &(contexto->EBX));
-    dictionary_put(dictionary, "ECX", &(contexto->ECX));
-    dictionary_put(dictionary, "EDX", &(contexto->EDX));
-    dictionary_put(dictionary, "SI", &(contexto->SI));
-    dictionary_put(dictionary, "DI", &(contexto->DI));
+    dictionary_put(dic_p_registros, "AX", &(registros->AX));
+    dictionary_put(dic_p_registros, "BX", &(registros->BX));
+    dictionary_put(dic_p_registros, "CX", &(registros->CX));
+    dictionary_put(dic_p_registros, "DX", &(registros->DX));
+    dictionary_put(dic_p_registros, "EAX", &(registros->EAX));
+    dictionary_put(dic_p_registros, "EBX", &(registros->EBX));
+    dictionary_put(dic_p_registros, "ECX", &(registros->ECX));
+    dictionary_put(dic_p_registros, "EDX", &(registros->EDX));
+    dictionary_put(dic_p_registros, "SI", &(registros->SI));
+    dictionary_put(dic_p_registros, "DI", &(registros->DI));
 }
 
 void *client_handler_dispatch(int socket_cliente)
@@ -277,7 +389,7 @@ void *client_handler_dispatch(int socket_cliente)
             // TODO: liberar pcb sino es la primera ejecucion
             log_debug(logger, "Se recibio el proceso a ejecutar por dispatch");
             pcb_t *pcb = recibir_paquete(socket_cliente);
-            log_info(logger,"Quantum: %i",pcb->quantum);
+            log_info(logger, "Quantum: %i", pcb->quantum);
             sem_post(&hay_proceso);
             pcb_exec = pcb;
             inicializar_diccionario(pcb_exec->registros);
@@ -308,7 +420,7 @@ void *client_handler_interrupt(int socket_cliente)
     }
 
     bool conexion_terminada = false;
-   
+
     close(socket_cliente);
 }
 
