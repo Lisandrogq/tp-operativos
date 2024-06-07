@@ -21,6 +21,7 @@ void ejecutar_cliclos()
 		sem_wait(&hay_proceso);
 		while (status != STATUS_DESALOJADO)
 		{
+			log_error(logger,"%i",pcb_exec->registros->PC);
 			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC); // hace falta enviar el pid??
 
 			decode(instruccion); // por ahora no sabemos q hacer en decode
@@ -145,38 +146,86 @@ void decode(t_strings_instruccion *instruccion)
 {
 	if (strcmp(instruccion->cod_instruccion, "MOV_IN") == 0) // MOV_IN (Registro Datos, Registro Dirección)
 	{
-		////EN QUE REGISTRO VOY A ESCRIBIR
-		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
-		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
-		////
 
-		////TRADUCCION LOGICA->FISICA (TODO)
 		void *dir_logica = dictionary_get(dic_p_registros, instruccion->p2);
 		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
-		u_int32_t dir_fisica = 0;
-		memcpy(&dir_fisica, dir_logica, tam_r_dir);
-		////
 
-		//for(por cada dir fisica a acceder)
+		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
+		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
+
+		u_int32_t dir_fisica = 0;
+		dir_fisica = obtener_direccion_fisica(dir_logica); // esto sería obtener direcioneSSS fisicas
+
+		// for(por cada dir fisica a acceder)
 		log_info(logger, "dir_fisica a leer: %i", dir_fisica);
 		execute_mov_in(datos, dir_fisica, tam_r_datos);
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "MOV_OUT") == 0) // MOV_OUT (Registro Dirección, Registro Datos)
 	{
-		u_int32_t dir_fisica = 0;
-		void *datos = dictionary_get(dic_p_registros, instruccion->p2);
 		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
+		void *datos = dictionary_get(dic_p_registros, instruccion->p2);
 		void *dir_logica = dictionary_get(dic_p_registros, instruccion->p1);
 		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
 
-		memcpy(&dir_fisica, dir_logica, tam_r_dir);
+		u_int32_t dir_fisica = 0;
+		dir_fisica = obtener_direccion_fisica(dir_logica); // esto sería obtener direcioneSSS fisicas
 
-		log_info(logger, "dir_fisica: %i", dir_fisica);
+		log_info(logger, "dir_fisica_a_escribir: %i", dir_fisica);
 		execute_mov_out(datos, dir_fisica, tam_r_datos);
 	}
 }
 
+int obtener_direccion_fisica(void *dir_logica)
+{
+	int pagina = floor((*(int *)dir_logica) / tam_pagina);
+	int offset = (*(int *)dir_logica) - pagina * tam_pagina;
+	solicitar_frame(pagina);
+	int cod_op = recibir_operacion(socket_memoria);
+	int frame = recibir_frame();
+	return frame * tam_pagina + offset; // inicio frame + offset
+}
+int recibir_frame()
+{
+	int frame = -1;
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_memoria, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_memoria, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	void *stream = paquete->buffer->stream;
+	memcpy(&frame, stream, sizeof(int));
+
+	eliminar_paquete(paquete);
+
+	return frame;
+}
+int solicitar_frame(int pagina)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = GET_FRAME;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int) * 2;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->pid), sizeof(u_int32_t));
+	paquete->buffer->offset += sizeof(int);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pagina, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_memoria, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
 int execute(t_strings_instruccion *instruccion)
 {
 	log_instruccion_ejecutada(instruccion); // en teoría debería ir al final de cada if,xd

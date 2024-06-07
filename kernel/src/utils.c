@@ -27,7 +27,6 @@ pthread_mutex_t mutex_socket_interrupt;
 int socket_interrupt;
 void comando_iniciar_proceso(char *path, int tam)
 {
-
     pcb_t *nuevo_pcb = crear_pcb(next_pid); // se estan creando con el PID SIEMPRE EN 0
 
     pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario

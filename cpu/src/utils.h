@@ -46,8 +46,9 @@ void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos);
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos);
 void *recibir_datos_leidos();
 int recibir_status_escritura();
-
-
+int obtener_direccion_fisica(void *dir_logica);
+int recibir_frame();
+int solicitar_frame(int pagina);
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);

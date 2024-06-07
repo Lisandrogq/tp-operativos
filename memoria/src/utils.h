@@ -27,6 +27,8 @@ typedef struct
     t_list *tabla; // cada elem es de tipo int*
 } elemento_lista_tablas;
 
+get_frame_t *recibir_pedido_frame(socket_cliente);
+int calcular_frame(get_frame_t *solicitud);
 void *leer_memoria(u_int32_t dir_fisica, int tam_lectura);
 int escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_lectura);
 int enviar_instruccion(char **palabras, int socket_cliente);

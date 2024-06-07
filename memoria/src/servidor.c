@@ -23,8 +23,7 @@ int main(int argc, char *argv[])
 	u_int32_t intp32 =400;
 	int tam8 = sizeof(u_int8_t);
 	int tam32 = sizeof(u_int32_t);
-	memcpy(espacio_usuario+0,&intp8,tam8);
-	memcpy(espacio_usuario+2,&intp32,tam32);
+	memcpy(espacio_usuario+1,&intp8,tam8);
 
 	dictionary_codigos = dictionary_create();
 

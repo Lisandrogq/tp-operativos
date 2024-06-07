@@ -115,8 +115,7 @@ void execute_mov_in(void *datos, u_int32_t dir_fisica, int tam_r_datos)
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     void *datos_obtenidos = recibir_datos_leidos();
     int a_loggear=0;
-    a_loggear= *(u_int32_t *)datos_obtenidos;
-    log_info(logger, "datos_obtenidos:%d", a_loggear);
+    log_info(logger, "datos_obtenidos:%d", *(u_int8_t *)datos_obtenidos);
     memcpy(datos, datos_obtenidos, tam_r_datos);
 }
 void execute_mov_out(void *datos, u_int32_t dir_fisica, int tam_r_datos)
@@ -479,5 +478,5 @@ void log_instruccion_ejecutada(t_strings_instruccion *palabras)
 }
 void log_fetch_instruccion()
 {
-    log_info(logger, "PID: %i - FETCH - Program Counter: %i", pcb_exec->pid, pcb_exec->registros->PC);
+    log_error(logger, "PID: %i - FETCH - Program Counter: %i", pcb_exec->pid, pcb_exec->registros->PC);
 }

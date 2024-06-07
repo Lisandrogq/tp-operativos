@@ -56,9 +56,14 @@ void crear_tabla_paginas(int pid)
 {
 	// crear tabla de paginas del pid
 	elemento_lista_tablas *elemento = malloc(sizeof(elemento_lista_tablas));
-	elemento->pid = e_admin->pid;
+	elemento->pid = pid;
 	elemento->tabla = list_create();
 	list_add(lista_tablas_paginas, elemento);
+	//prueba,borrar:
+	list_add(elemento->tabla,0);
+	list_add(elemento->tabla,1);
+	list_add(elemento->tabla,2);
+	list_add(elemento->tabla,3);
 }
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {
@@ -109,8 +114,8 @@ void handle_cpu_client(int socket_cliente)
 			log_info(logger, "r_dir: %i|| tam: %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			void *datos_leidos = leer_memoria(solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			int a_loggear = 0;
-			a_loggear = *(u_int32_t *)datos_leidos;
-			log_info(logger, "datos_leidos: %d", a_loggear); // aunq sea un int8 se muestra bien
+			
+			log_info(logger, "datos_leidos: %d", *(u_int8_t *)datos_leidos); // si es un int8 se muestra mal
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
 			// se recibe dirfisica,longitud, se devuelve lo leido.
 			//! CREO Q SI SE TIENE Q LEER MAS DE UNA PAGINA, SE HACER POR SEPARADO!
@@ -157,7 +162,8 @@ void handle_kerel_client(int socket)
 			solicitud_creacion_t *e_admin = recibir_solicitud_de_creacion(socket);
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
-			crear_tabla_paginas(e_admin->pid) break;
+			crear_tabla_paginas(e_admin->pid);
+			break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
 			eliminar_estrucuras_administrativas(pid_a_eliminar);
@@ -493,7 +499,7 @@ int calcular_frame(get_frame_t *solicitud)
 {
 	bool is_pid(void *elemento)
 	{
-		return ((elemento_lista_tablas *)elemento)->pid == solicitud; // no hay colores pq vscode no se la banca, no es bug
+		return ((elemento_lista_tablas *)elemento)->pid == solicitud->pid; // no hay colores pq vscode no se la banca, no es bug
 	};
 	t_list *tabla = ((elemento_lista_tablas *)list_find(lista_tablas_paginas, is_pid))->tabla;
 
