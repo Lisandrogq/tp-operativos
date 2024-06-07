@@ -17,9 +17,6 @@ void *hilo_largo_plazo()
 		sem_wait(&hay_new);
 		sem_wait(&contador_multi);
 		elemento_cola_new *elemento = list_remove(lista_pcbs_new, 0);
-		log_info(logger, "tam: %i", elemento->tam);
-		log_info(logger, "Path: %s", elemento->path);
-		log_info(logger, "Pid: %i", elemento->pcb->pid);
 		pthread_mutex_lock(&mutex_socket_memoria);
 		solicitar_crear_estructuras_administrativas(elemento->tam, elemento->path, elemento->pcb->pid, socket_memoria);
 		pthread_mutex_unlock(&mutex_socket_memoria);

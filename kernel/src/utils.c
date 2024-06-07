@@ -32,11 +32,11 @@ void comando_iniciar_proceso(char *path, int tam)
 {
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
     elemento_cola_new *elemento = malloc(sizeof(elemento_cola_new));
+    char *nuevo_path = malloc(sizeof(tam));
+    strcpy(nuevo_path, path);
     elemento->pcb = nuevo_pcb;
     elemento->tam = tam;
-    elemento->path = path;
-    log_info(logger, "Path: %s", path);
-    log_info(logger, "Path: %s", elemento->path);
+    elemento->path = nuevo_path;
     int error = list_add(lista_pcbs_new, elemento);
     sem_post(&hay_new);
     next_pid++;
