@@ -17,9 +17,12 @@ sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 t_dictionary *dictionary_pcbs_bloqueado;
 t_list *lista_pcbs_exec;
 t_list *lista_pcbs_exit;
+t_list *lista_pcbs_new;
 t_dictionary *dictionary_ios;
 pthread_mutex_t mutex_socket_memoria;
 t_temporal *timer;
+sem_t contador_multi;
+sem_t hay_new;
 int operacion;
 int contador;
 int socket_memoria;
@@ -27,15 +30,13 @@ pthread_mutex_t mutex_socket_interrupt;
 int socket_interrupt;
 void comando_iniciar_proceso(char *path, int tam)
 {
-    pcb_t *nuevo_pcb = crear_pcb(next_pid); // se estan creando con el PID SIEMPRE EN 0
-
-    pthread_mutex_lock(&mutex_socket_memoria); // capaz no es necesario
-    solicitar_crear_estructuras_administrativas(tam, path, nuevo_pcb->pid, socket_memoria);
-    pthread_mutex_unlock(&mutex_socket_memoria);
-
-    pthread_mutex_lock(&mutex_lista_ready);
-    int error = list_add(lista_pcbs_ready, nuevo_pcb); // Esto debería estar en new. Y pasa a ready por el planificador de largo plazo
-    pthread_mutex_unlock(&mutex_lista_ready);
+    pcb_t *nuevo_pcb = crear_pcb(next_pid);
+    elemento_cola_new *elemento = malloc(sizeof(elemento_cola_new));
+    elemento->pcb = nuevo_pcb;
+    elemento->tam = tam;
+    elemento->path = path;
+    int error = list_add(lista_pcbs_new, elemento);
+    sem_post(&hay_new);
     next_pid++;
 }
 pcb_t *crear_pcb(int pid)
@@ -45,8 +46,8 @@ pcb_t *crear_pcb(int pid)
     nuevo_pcb->quantum = config_get_int_value(config, "QUANTUM");
     nuevo_pcb->pid = pid;
     printf("\nEl pid del nuevopcb es: %i\n", nuevo_pcb->pid);
-    nuevo_pcb->state = READY_S;                           // ESTO DEBERÍA SER NEW, PERO TODAVIA NO HAY PLANIFICADOR DE LARGO PLAZO
-    registros_t *registros = malloc(sizeof(registros_t)); // CHEQUEAR esto, creo q esta bien
+    nuevo_pcb->state = NEW_S; // previamente estaba en ready
+    registros_t *registros = malloc(sizeof(registros_t));
     memset(registros, 0, sizeof(registros_t));
     nuevo_pcb->registros = registros;
     return nuevo_pcb;
@@ -72,11 +73,11 @@ int get_pid_state(int pid_buscado)
     };
     int esta_ready = (int)list_any_satisfy(lista_pcbs_ready, is_pid);
     dictionary_iterator(dictionary_pcbs_bloqueado, is_pid_in_list);
-    // int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
+    int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
     int esta_exec = (int)list_any_satisfy(lista_pcbs_exec, is_pid);
 
     // solo uno de los esta_ debería estar en 1
-    int estado_encontrado = esta_ready * READY_S + esta_exec * EXEC_S + esta_bloqueado * BLOCK_S; // new
+    int estado_encontrado = esta_ready * READY_S + esta_exec * EXEC_S + esta_bloqueado * BLOCK_S + esta_new * NEW_S;
     // log_debug("se encontro el %i en el estado %i", pid_buscado, estado_encontrado);
     return estado_encontrado;
 }
@@ -114,6 +115,7 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     if (pid_state == NEW_S)
     {
         // mutex , remove y NO liberar eadmin
+        // ACA SE DEBERIA agregar a la lista de exit SI EL PROCESO ESTA EN NEW
     }
     if (pid_state == EXEC_S)
     {
@@ -140,13 +142,20 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         pthread_mutex_lock(&mutex_socket_memoria);
         solicitar_eliminar_estructuras_administrativas(pid_a_terminar);
         pthread_mutex_unlock(&mutex_socket_memoria);
-        list_add(lista_pcbs_exit, pcb_a_terminar);
+        pcb_a_terminar->state = EXIT_S;
+        if (pid_state != EXEC_S)
+        {
+            list_add(lista_pcbs_exit, pcb_a_terminar); // Post(contador multiprogramacion)
+            sem_post(&contador_multi);
+        }
     }
+
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid_a_terminar, motivo); // hacerlo string
     // mandar pcb a exit
 }
 
-void* imprimir_pcb(pcb_t *pcb){
+void *imprimir_pcb(pcb_t *pcb)
+{
     log_info(logger, "PID: %i", pcb->pid);
     log_info(logger, "Quantum: %i", pcb->quantum);
     printf("\n");
@@ -190,54 +199,52 @@ void comando_listar_procesos_por_estado()
 
 void comando_ejecutar_script(char *path, FILE *archivo)
 {
-  //abro el archivo como lectura//
-		
-			char *linea = malloc(100);
-			size_t len = 50;
-			ssize_t read;
+    // abro el archivo como lectura//
 
-			//Mientras haya lineas en el archivo//
-			while ((read = fgets(linea, len, archivo)) != NULL)
-			{
-				char *instruccion[2];
-				instruccion[0] = malloc(strlen(linea)); 
-				instruccion[1] = malloc(strlen(linea));
-				instruccion[0] = strtok(linea, " \n");
-				instruccion[1] = strtok(NULL, " \n");
-				if (strcmp(linea, "\0") == 0)
-				{
-					free(linea);
-					continue;
-				}
-                log_info(logger, "Instruccion: %s", linea);
-				//HAY QUE EJECUTAR CADA COMANDO//
-				//seguro hay que ver como hacerlo sin repetir logica//
-				//¿generar una funcion que se repita?//
-				if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
-				{
-                    char *copia;
-                    strncpy(copia,instruccion[1],strlen(instruccion[1]-1));
-					int tam = 1 + strlen(instruccion[1]);
-					comando_iniciar_proceso(instruccion[1], tam);
-					sem_post(&elementos_ready);
-				}
-				if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
-				{
-					int tam = 1 + sizeof(strlen(linea));
-					comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
-				}
-				if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
-				{
-					comando_listar_procesos_por_estado();
-				}
-				if (!strcmp(instruccion[0], "ddd"))
-					return;
-				free(linea);
-			}
-			//cierra el archivo//
-			fclose(archivo); 
+    char *linea = malloc(100);
+    size_t len = 50;
+    ssize_t read;
+
+    // Mientras haya lineas en el archivo//
+    while ((read = fgets(linea, len, archivo)) != NULL)
+    {
+        char *instruccion[2];
+        instruccion[0] = malloc(strlen(linea));
+        instruccion[1] = malloc(strlen(linea));
+        instruccion[0] = strtok(linea, " \n");
+        instruccion[1] = strtok(NULL, " \n");
+        if (strcmp(linea, "\0") == 0)
+        {
+            free(linea);
+            continue;
+        }
+        log_info(logger, "Instruccion: %s", linea);
+        // HAY QUE EJECUTAR CADA COMANDO//
+        // seguro hay que ver como hacerlo sin repetir logica//
+        // ¿generar una funcion que se repita?//
+        if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
+        {
+            char *copia;
+            strncpy(copia, instruccion[1], strlen(instruccion[1] - 1));
+            int tam = 1 + strlen(instruccion[1]);
+            comando_iniciar_proceso(instruccion[1], tam); 
+        }
+        if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
+        {
+            int tam = 1 + sizeof(strlen(linea));
+            comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
+        }
+        if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
+        {
+            comando_listar_procesos_por_estado();
+        }
+        if (!strcmp(instruccion[0], "ddd"))
+            return;
+        free(linea);
+    }
+    // cierra el archivo//
+    fclose(archivo);
 }
-
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
 {
 
@@ -345,16 +352,16 @@ void *hilo_quantumVRR(void *parametro)
 {
     timer = temporal_create();
     pcb_t *pcb = (pcb_t *)parametro;
-    log_info(logger,"Quantum justo antes: %i", pcb->quantum);
-    usleep(pcb->quantum*1000);
+    log_info(logger, "Quantum justo antes: %i", pcb->quantum);
+    usleep(pcb->quantum * 1000);
     enviar_interrupcion(CLOCK, pcb->pid);
-    log_info(logger,"MANDE INTERRUPCION");
+    log_info(logger, "MANDE INTERRUPCION");
 }
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras, char *algoritmo)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
-    int restante_quantum =0; 
+    int restante_quantum = 0;
 
     if (strcmp(algoritmo, "RR") == 0)
     {
@@ -369,18 +376,20 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     else if (strcmp(algoritmo, "FIFO") == 0)
     {
         int prueba = recibir_operacion(socket_cliente);
-    }else{  //VRR
+    }
+    else
+    { // VRR
         pthread_t quantumVRR;
         pthread_create(&quantumVRR, NULL, hilo_quantumVRR, pcb);
         pthread_detach(quantumVRR);
-        if (recibir_operacion(socket_cliente) != CLOCK)//esta validacion va a ser mas larga cuando se usen recursos
+        if (recibir_operacion(socket_cliente) != CLOCK) // esta validacion va a ser mas larga cuando se usen recursos
         {
             temporal_stop(timer);
             pthread_cancel(quantumVRR);
             restante_quantum = pcb->quantum - temporal_gettime(timer);
-            log_info(logger,"Restante: %i",restante_quantum);
+            log_info(logger, "Restante: %i", restante_quantum);
         }
-        temporal_destroy(timer); 
+        temporal_destroy(timer);
     }
     t_buffer *buffer = malloc(sizeof(t_buffer));
     recv(socket_cliente, &(buffer->size), sizeof(int), MSG_WAITALL);
@@ -393,10 +402,13 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     stream += sizeof(int);
     memcpy(&(pcb->quantum), stream, sizeof(int));
     stream += sizeof(int);
-    if(restante_quantum > 0){   // hay veces que queda en negativo el quantum
+    if (restante_quantum > 0)
+    { // hay veces que queda en negativo el quantum
         pcb->quantum = restante_quantum;
-        log_info(logger,"Quantum: %i",pcb->quantum);
-    }else{
+        log_info(logger, "Quantum: %i", pcb->quantum);
+    }
+    else
+    {
         pcb->quantum = config_get_int_value(config, "QUANTUM");
     }
     memcpy(pcb->registros, stream, sizeof(registros_t));
@@ -549,14 +561,16 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     elemento_cola_io *elemento_borrado = list_remove_by_condition(lista_blocked_del_io, is_pid);
     pcb_t *pcb_a_desbloquear = elemento_borrado->pcb;
     int quantum = config_get_int_value(config, "QUANTUM");
-    if(pcb_a_desbloquear->quantum == quantum) // hay veces que queda en negativo el quantum TENER EN CUENTA
+    if (pcb_a_desbloquear->quantum == quantum) // hay veces que queda en negativo el quantum TENER EN CUENTA
     {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_pcbs_ready, pcb_a_desbloquear);
         sem_post(&elementos_ready);
         pthread_mutex_unlock(&mutex_lista_ready);
-    }else{
-        list_add(lista_ready_mas, pcb_a_desbloquear);//capaz ready plus no tienq existir y solo se agregan en ready[0
+    }
+    else
+    {
+        list_add(lista_ready_mas, pcb_a_desbloquear); // capaz ready plus no tienq existir y solo se agregan en ready[0
         sem_post(&elementos_ready);
     }
     pcb_a_desbloquear->state = READY_S;
@@ -564,13 +578,16 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
     pcb_t *pcb_a_ejecutar;
-    //if(hay alguno en exit)(caso de wait/signal)
-    if(list_is_empty(lista_ready_mas)){
+    // if(hay alguno en exit)(caso de wait/signal)
+    if (list_is_empty(lista_ready_mas))
+    {
         log_debug(logger, "Enviando a ejecutar desde normal");
         pthread_mutex_lock(&mutex_lista_ready);
         pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
         pthread_mutex_unlock(&mutex_lista_ready);
-    }else{
+    }
+    else
+    {
         log_debug(logger, "Enviando a ejecutar desde ready+");
         pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
     }

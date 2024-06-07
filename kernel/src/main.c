@@ -9,7 +9,28 @@
 #include "utils.h"
 #include <errno.h>
 
-pthread_t tid[3];
+pthread_t tid[4];
+void *hilo_largo_plazo() 
+{
+    while (1)
+    {
+		log_info(logger, "Antes de los waits");
+        sem_wait(&hay_new);
+		log_info(logger, "Antes del wait contador");
+        sem_wait(&contador_multi);
+		log_info(logger, "Despues del wait contador");
+        elemento_cola_new *elemento = list_remove(lista_pcbs_new, 0);
+        int tam = elemento->tam;
+        char *path = elemento->path;
+        pthread_mutex_lock(&mutex_socket_memoria);
+        solicitar_crear_estructuras_administrativas(tam, path, elemento->pcb->pid, socket_memoria);
+        pthread_mutex_unlock(&mutex_socket_memoria);
+        pthread_mutex_lock(&mutex_lista_ready);
+        int error = list_add(lista_pcbs_ready, elemento->pcb);
+        pthread_mutex_unlock(&mutex_lista_ready);
+		sem_post(&elementos_ready);
+    }
+}
 void *consola()
 { //------creo q la consola debería ir en otra carpeta / archivo, seguro tiene bastantes cositas
 	char *linea;
@@ -29,9 +50,8 @@ void *consola()
 
 		if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
 		{
-			int tam = 1 + strlen(instruccion[1]);
-			comando_iniciar_proceso(instruccion[1], tam);
-			sem_post(&elementos_ready);
+			 int tam = 1 + strlen(instruccion[1]);
+			comando_iniciar_proceso(instruccion[1], tam); // NUEVA FUNCION DEL TIPO HILO
 		}
 		if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
 		{
@@ -103,13 +123,12 @@ void *cliente_cpu_dispatch()
 
 			pcb_desalojado->state = EXIT_S;
 			list_add(lista_pcbs_exit, pcb_desalojado);
-
+			sem_post(&contador_multi);
+			
 			if (pid_sig_term == pcb_desalojado->pid)
 			{ // si justo se ejecuto exit, no tiene pedir eliminar, lo hace la consola
 				log_debug(logger, "ENTRE AL MANEJO DE SIG_TERM");
-
 				pthread_mutex_unlock(&mutex_pcb_desalojado);
-				list_add(lista_pcbs_exit, pcb_desalojado);
 			}
 			else
 			{
@@ -122,7 +141,8 @@ void *cliente_cpu_dispatch()
 
 			pcb_desalojado->state = EXIT_S;
 			pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
-			list_add(lista_pcbs_exit, pcb_desalojado);
+			list_add(lista_pcbs_exit, pcb_desalojado); //Post(contador multiprogramacion)
+			sem_post(&contador_multi);
 			log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", pcb_desalojado->pid);
 
 			break;
@@ -130,8 +150,10 @@ void *cliente_cpu_dispatch()
 			if (pid_sig_term == pcb_desalojado->pid)
 			{ // si justo se salio por clock,,se lo mata igual. pq el comando pide matar.
 				log_debug(logger, "ENTRE AL MANEJO DE SIG_TERM");
+				pcb_desalojado->state = EXIT_S;
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
-				list_add(lista_pcbs_exit, pcb_desalojado);
+				list_add(lista_pcbs_exit, pcb_desalojado);//Post(contador multiprogramacion)
+				sem_post(&contador_multi);
 			}
 			else
 			{
@@ -147,16 +169,18 @@ void *cliente_cpu_dispatch()
 			if (pid_sig_term == pcb_desalojado->pid)
 			{ // si justo se salio por io,se lo mata igual. pq el comando pide matar.
 				log_warning(logger, "ENTRE AL MANEJO DE SIG_TERM");
-
+				pcb_desalojado->state = EXIT_S;
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
-				list_add(lista_pcbs_exit, pcb_desalojado);
+				list_add(lista_pcbs_exit, pcb_desalojado); //Post(contador multiprogramacion)
+				sem_post(&contador_multi);
 			}
 			else
 			{
 				if (es_una_io_valida(pcb_desalojado->pid, instruccion_de_desalojo) == -1)
 				{
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
-					list_add(lista_pcbs_exit, pcb_desalojado);
+					list_add(lista_pcbs_exit, pcb_desalojado); //Post(contador multiprogramacion)
+					sem_post(&contador_multi);
 					pcb_desalojado->state = EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
 				}
@@ -278,7 +302,7 @@ int main(int argc, char const *argv[])
 { // creo que no hace falta mutex para exec
 	pid_sig_term = -1;
 	sem_init(&elementos_ready, 0, 0);
-
+	sem_init(&hay_new, 0 ,0);
 	pthread_mutex_init(&mutex_lista_exit, NULL);
 	pthread_mutex_unlock(&mutex_lista_exit); // debe empezar desbloqueado, pq todos hacen lock primero
 
@@ -296,12 +320,15 @@ int main(int argc, char const *argv[])
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
 	dictionary_pcbs_bloqueado = dictionary_create();
 	lista_pcbs_exec = list_create();
+	lista_pcbs_new = list_create();
 	lista_ready_mas = list_create();
 	dictionary_ios = dictionary_create();
 	logger = iniciar_logger();
 	logger = log_create("kernel.log", "Kernel_MateLavado", 1, LOG_LEVEL_DEBUG);
 	config = iniciar_config();
 	config = config_create("kernel.config");
+	int grado = config_get_int_value(config,"GRADO_MULTIPROGRAMACION");
+	sem_init(&contador_multi, 0, grado);
 
 	int err;
 	err = pthread_create(&(tid[0]), NULL, servidor, NULL);
@@ -327,6 +354,12 @@ int main(int argc, char const *argv[])
 		return err;
 	}
 	log_info(logger, "El thread cliente_cpu_dispatch inició su ejecución");
+	err = pthread_create(&(tid[3]), NULL, hilo_largo_plazo, NULL);
+	if (err != 0)
+	{
+		log_error(logger, "Hubo un problema al crear el thread planificador largo plazo:[%s]", strerror(err));
+		return err;
+	}
 
 	socket_memoria = inicializar_cliente_memoria();
 
@@ -335,5 +368,6 @@ int main(int argc, char const *argv[])
 	pthread_join(tid[0], NULL);
 	pthread_detach(tid[1]);
 	pthread_detach(tid[2]);
+	pthread_detach(tid[3]);
 	return 0;
 }

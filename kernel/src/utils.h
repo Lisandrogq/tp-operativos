@@ -36,8 +36,11 @@ extern t_list *lista_pcbs_exit;
 extern t_temporal *timer;
 extern int operacion;
 extern t_list *lista_pcbs_ready;
+extern t_list *lista_pcbs_new;
 extern pthread_mutex_t mutex_lista_ready;
-extern sem_t elementos_ready;				// contador de ready, si no hay, no podes planificar.
+extern sem_t hay_new;
+extern sem_t elementos_ready;
+extern sem_t contador_multi;				// contador de ready, si no hay, no podes planificar.
 extern t_dictionary *dictionary_pcbs_bloqueado; // "Int1","int3","recurso1"...cada elemento
 											/// es un struct con lista y contador y mutex de acceso
 typedef struct
@@ -53,6 +56,13 @@ typedef struct
 	t_strings_instruccion* instruccion_de_bloqueo;
 	pcb_t*pcb;//cada elemento:(pcb+instruccion)
 } elemento_cola_io;
+
+typedef struct
+{
+	int tam;
+	char *path;
+	pcb_t*pcb;
+} elemento_cola_new;
 
 
 //extern pthread_mutex_t mutex_lista_bloqueado;
