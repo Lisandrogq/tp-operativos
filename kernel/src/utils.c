@@ -35,6 +35,8 @@ void comando_iniciar_proceso(char *path, int tam)
     elemento->pcb = nuevo_pcb;
     elemento->tam = tam;
     elemento->path = path;
+    log_info(logger, "Path: %s", path);
+    log_info(logger, "Path: %s", elemento->path);
     int error = list_add(lista_pcbs_new, elemento);
     sem_post(&hay_new);
     next_pid++;

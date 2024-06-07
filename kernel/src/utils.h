@@ -61,7 +61,7 @@ typedef struct
 {
 	int tam;
 	char *path;
-	pcb_t*pcb;
+	pcb_t *pcb;
 } elemento_cola_new;
 
 
