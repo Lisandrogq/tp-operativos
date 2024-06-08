@@ -14,10 +14,10 @@ ____
 #### CHECKPOINT 3 #######
 - [ ] CMD:Iniciar planificación,Detener planificación,
 - [ ] Manejo de recursos
-- [ ] Planificador largo plazo
+- [x] Planificador largo plazo
 - [x] Memoría e instrucciones minimas
-- [ ] Integrar con paginacion
-- [ ] MMU
+- [x] Integrar con paginacion
+- [x] MMU
 - [ ] TLB
 - [ ] Instrucciones adicionales
 - [ ] IOs
