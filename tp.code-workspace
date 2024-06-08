@@ -13,7 +13,10 @@
 			"utility": "c",
 			"atomic": "c",
 			"numbers": "c",
-			"random": "c"
+			"random": "c",
+			"deque": "c",
+			"unordered_map": "c",
+			"vector": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

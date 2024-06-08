@@ -19,11 +19,13 @@ int main(int argc, char *argv[])
 	sems_espera_creacion_codigos = list_create();
 	espacio_usuario = malloc(TAM_MEMORIA);
 	memset(espacio_usuario, 0, TAM_MEMORIA);
-	u_int8_t intp8 =30;
-	u_int32_t intp32 =400;
+/* 	u_int8_t intp8 =38;
+	u_int32_t intp32 =432;
 	int tam8 = sizeof(u_int8_t);
 	int tam32 = sizeof(u_int32_t);
 	memcpy(espacio_usuario+1,&intp8,tam8);
+	memcpy(espacio_usuario+(2*4)+2,&intp32,tam32/2);
+	memcpy(espacio_usuario+(3*4)+0,((void*)(&intp32))+2,tam32/2); */
 
 	dictionary_codigos = dictionary_create();
 

@@ -21,10 +21,9 @@ void ejecutar_cliclos()
 		sem_wait(&hay_proceso);
 		while (status != STATUS_DESALOJADO)
 		{
-			log_error(logger,"%i",pcb_exec->registros->PC);
-			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC); // hace falta enviar el pid??
+			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC);
 
-			decode(instruccion); // por ahora no sabemos q hacer en decode
+			decode(instruccion);
 
 			status = execute(instruccion);
 			if (status == STATUS_OK) // si el proceso justo desalojo en execute, la interrupcion se leera en luego de
@@ -146,40 +145,147 @@ void decode(t_strings_instruccion *instruccion)
 {
 	if (strcmp(instruccion->cod_instruccion, "MOV_IN") == 0) // MOV_IN (Registro Datos, Registro Dirección)
 	{
-
-		void *dir_logica = dictionary_get(dic_p_registros, instruccion->p2);
+		int dir_logica = 0;
+		void *p_dir_logica = 0;
 		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
+		p_dir_logica = dictionary_get(dic_p_registros, instruccion->p2);
+
+		memcpy(&dir_logica, p_dir_logica, tam_r_dir);
 
 		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
 		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
 
-		u_int32_t dir_fisica = 0;
-		dir_fisica = obtener_direccion_fisica(dir_logica); // esto sería obtener direcioneSSS fisicas
+		t_list *solicitudes = obtener_direcciones_fisicas(dir_logica, tam_r_datos);
 
-		// for(por cada dir fisica a acceder)
-		log_info(logger, "dir_fisica a leer: %i", dir_fisica);
-		execute_mov_in(datos, dir_fisica, tam_r_datos);
+		list_map(solicitudes, execute_mov_in);
+		t_list_iterator *iterator = list_iterator_create(solicitudes);
+		int write_offset = 0;
+		while (list_iterator_has_next(iterator))
+		{
+			solicitud_unitaria_t *sol = list_iterator_next(iterator);
+			memcpy(datos + write_offset, sol->datos, sol->tam);
+			write_offset += sol->tam;
+		}
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "MOV_OUT") == 0) // MOV_OUT (Registro Dirección, Registro Datos)
 	{
+		int dir_logica = 0;
+		void *p_dir_logica = 0;
+		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
+		p_dir_logica = dictionary_get(dic_p_registros, instruccion->p1);
+
+		memcpy(&dir_logica, p_dir_logica, tam_r_dir);
+
 		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
 		void *datos = dictionary_get(dic_p_registros, instruccion->p2);
-		void *dir_logica = dictionary_get(dic_p_registros, instruccion->p1);
-		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
 
-		u_int32_t dir_fisica = 0;
-		dir_fisica = obtener_direccion_fisica(dir_logica); // esto sería obtener direcioneSSS fisicas
+		t_list *solicitudes = obtener_direcciones_fisicas_write(datos, dir_logica, tam_r_datos);
 
-		log_info(logger, "dir_fisica_a_escribir: %i", dir_fisica);
-		execute_mov_out(datos, dir_fisica, tam_r_datos);
+		t_list_iterator *iterator = list_iterator_create(solicitudes);
+		int total_status = MEM_W_OK;
+		while (list_iterator_has_next(iterator))
+		{
+			solicitud_unitaria_t *sol = list_iterator_next(iterator);
+			int status = execute_mov_out(sol);
+			log_info(logger, "status_escritura[%i]:%d", list_iterator_index(solicitudes), status);
+
+			if (status != MEM_W_OK)
+				total_status = MEM_W_NO_OK; // NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
+		}
+
+		// log_info(logger, "dir_fisica_a_escribir: %i", dir_fisica);
 	}
 }
 
-int obtener_direccion_fisica(void *dir_logica)
+t_list *obtener_direcciones_fisicas(int dir_logica, int tam_r_datos) // return list sol_unitaria_t*
 {
-	int pagina = floor((*(int *)dir_logica) / tam_pagina);
-	int offset = (*(int *)dir_logica) - pagina * tam_pagina;
+	t_list *solicitudes = list_create();
+	int pagina = floor((dir_logica) / tam_pagina);
+	int offset = dir_logica - pagina * tam_pagina;
+	if (tam_r_datos > tam_pagina - offset)
+	{
+		int tam_siguiente = tam_pagina; // pag 4, offset 2, t_data = 3
+		while (tam_siguiente > 0)
+		{
+			solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t)); // free de esto luego de pedir
+			tam_siguiente = tam_siguiente - offset;
+			sol->tam = tam_siguiente;
+			sol->pagina = pagina;
+			sol->offset = offset;
+			sol->datos = malloc(sol->tam);
+
+			pagina += 1;
+			offset = 0;
+			tam_r_datos = tam_r_datos - tam_siguiente;
+			tam_siguiente = tam_r_datos;
+			if (tam_siguiente > tam_pagina)
+				tam_siguiente = tam_pagina;
+			list_add(solicitudes, sol);
+		}
+		list_map(solicitudes, solicitar_frame_iterable);
+	}
+	else
+	{
+		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
+		sol->pagina = pagina;
+		sol->offset = offset;
+		sol->tam = tam_r_datos;
+		sol->datos = malloc(sol->tam);
+		list_add(solicitudes, sol);
+		list_map(solicitudes, solicitar_frame_iterable); // xd
+	}
+	return solicitudes;
+}
+
+t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r_datos) // return list sol_unitaria_t*
+{
+	t_list *solicitudes = list_create();
+	int pagina = floor((dir_logica) / tam_pagina);
+	int offset = dir_logica - pagina * tam_pagina;
+	int write_offset = 0;
+	if (tam_r_datos > tam_pagina - offset)
+	{
+		int tam_siguiente = tam_pagina;
+		while (tam_siguiente > 0)
+		{
+			solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t)); // free de esto luego de pedir
+			tam_siguiente = tam_siguiente - offset;
+			sol->tam = tam_siguiente;
+			sol->pagina = pagina;
+			sol->offset = offset;
+
+			sol->datos = malloc(sol->tam);
+			memcpy(sol->datos, datos + write_offset, sol->tam); // el pedido unitario tendra solo una parte de los datos
+			write_offset += sol->tam;
+			pagina += 1;
+			offset = 0; // las siguientes paginas se escriben desde cero siempre
+
+			tam_r_datos = tam_r_datos - tam_siguiente;
+			tam_siguiente = tam_r_datos;
+			if (tam_siguiente > tam_pagina) // limitar tamaño de la siguiente escritura
+				tam_siguiente = tam_pagina;
+			list_add(solicitudes, sol);
+		}
+		list_map(solicitudes, solicitar_frame_iterable);
+	}
+	else
+	{
+		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
+		sol->pagina = pagina;
+		sol->offset = offset;
+		sol->tam = tam_r_datos;
+		sol->datos = datos;
+		list_add(solicitudes, sol);
+		list_map(solicitudes, solicitar_frame_iterable); // xd
+	}
+	return solicitudes;
+}
+
+int obtener_direccion_fisica(int dir_logica)
+{
+	int pagina = floor((dir_logica) / tam_pagina);
+	int offset = dir_logica - pagina * tam_pagina;
 	solicitar_frame(pagina);
 	int cod_op = recibir_operacion(socket_memoria);
 	int frame = recibir_frame();
@@ -187,6 +293,8 @@ int obtener_direccion_fisica(void *dir_logica)
 }
 int recibir_frame()
 {
+	int cod_op = recibir_operacion(socket_memoria);
+
 	int frame = -1;
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
@@ -201,6 +309,33 @@ int recibir_frame()
 	eliminar_paquete(paquete);
 
 	return frame;
+}
+solicitud_unitaria_t *solicitar_frame_iterable(solicitud_unitaria_t *sol)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = GET_FRAME;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int) * 2;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->pid), sizeof(u_int32_t));
+	paquete->buffer->offset += sizeof(int);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &sol->pagina, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_memoria, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
+
+	sol->dir_fisica_base = recibir_frame() * tam_pagina;
+	return sol;
 }
 int solicitar_frame(int pagina)
 {
@@ -276,6 +411,7 @@ int execute(t_strings_instruccion *instruccion)
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
 		return STATUS_DESALOJADO;
 	}
+	return STATUS_OK;
 }
 void check_intr(int *status)
 {

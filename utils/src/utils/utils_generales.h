@@ -20,6 +20,14 @@
 #define PUERTO_CPU_INTERRUPT "4447"
 typedef struct
 {
+	int32_t pagina;
+	int32_t dir_fisica_base;
+	int tam;
+	int offset;
+	void *datos;
+} solicitud_unitaria_t;//tanto read como write
+typedef struct
+{
 	int32_t dir_fisica;
 	int tam_lectura;
 } read_t;
@@ -33,11 +41,11 @@ typedef struct
 {
 	int pid;
 	int pagina;
-}get_frame_t;
+} get_frame_t;
 typedef enum
 {
 	MEM_W_OK,
-	MEM_W_NO_OK,//NI IDEA SI HAY MAS
+	MEM_W_NO_OK, // NI IDEA SI HAY MAS
 } status_write_mem;
 typedef enum
 {
@@ -151,7 +159,7 @@ typedef enum
 	READ_MEM_RESPONSE,
 	WRITE_MEM,
 	WRITE_MEM_RESPONSE,
-	
+
 } op_code;
 
 typedef enum

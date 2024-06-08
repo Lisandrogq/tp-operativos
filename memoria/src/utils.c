@@ -60,10 +60,10 @@ void crear_tabla_paginas(int pid)
 	elemento->tabla = list_create();
 	list_add(lista_tablas_paginas, elemento);
 	//prueba,borrar:
-	list_add(elemento->tabla,0);
-	list_add(elemento->tabla,1);
+	list_add(elemento->tabla,0);//indice = pagina||elem = frame
 	list_add(elemento->tabla,2);
-	list_add(elemento->tabla,3);
+	list_add(elemento->tabla,1);
+	//pags:[yyyx,xxx0,0000]->marcos:[yyyx,0000,xxx0]
 }
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {

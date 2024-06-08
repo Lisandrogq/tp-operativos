@@ -109,21 +109,23 @@ void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // ha
     }
 }
 
-void execute_mov_in(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+solicitud_unitaria_t *execute_mov_in(solicitud_unitaria_t *sol)
 {
+    u_int32_t dir_fisica = sol->dir_fisica_base + sol->offset;
+    int tam_r_datos = sol->tam;
     solicitar_leer_memoria(dir_fisica, tam_r_datos);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     void *datos_obtenidos = recibir_datos_leidos();
-    int a_loggear=0;
     log_info(logger, "datos_obtenidos:%d", *(u_int8_t *)datos_obtenidos);
-    memcpy(datos, datos_obtenidos, tam_r_datos);
+    memcpy(sol->datos, datos_obtenidos, sol->tam);
+    return sol;
 }
-void execute_mov_out(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+int execute_mov_out(solicitud_unitaria_t *sol)
 {
-    solicitar_escribir_memoria(datos, dir_fisica, tam_r_datos);
+    solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     int status_escritura = recibir_status_escritura();
-    log_info(logger, "status_escritura:%d", status_escritura);
+    return status_escritura;
 }
 
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos)
@@ -362,12 +364,13 @@ void *client_handler_dispatch(int socket_cliente)
         log_warning(logger, "Cliente desconocido por cpu server.");
         return -1;
     }
-
+    printf("SOCKET_KERNEL:%i\n", socket_cliente);
     bool conexion_terminada = false;
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_cliente);
         // log_warning(logger, "recibí la operacion: codop:%i", cod_op);
+        printf("CODIGO DE OPERACION:%i\n", cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
@@ -388,11 +391,11 @@ void *client_handler_dispatch(int socket_cliente)
             break;
         case DISPATCH:
             // TODO: liberar pcb sino es la primera ejecucion
-            log_debug(logger, "Se recibio el proceso a ejecutar por dispatch");
-            pcb_t *pcb = recibir_paquete(socket_cliente);
-            log_info(logger, "Quantum: %i", pcb->quantum);
+            log_info(logger, "Se recibio el proceso a ejecutar por dispatch");
+            pcb_exec = recibir_paquete(socket_cliente);
+            log_info(logger, "PCB VINO CON Q = %i", pcb_exec->quantum);
             sem_post(&hay_proceso);
-            pcb_exec = pcb;
+
             inicializar_diccionario(pcb_exec->registros);
             break;
         case -1:
@@ -472,7 +475,7 @@ void recibir_operacion1(int socket_cliente)
     log_info(logger, "Me llego la operacion uno, la informacion enviada fue: %s", buffer);
     free(buffer);
 }
-void log_instruccion_ejecutada(t_strings_instruccion *palabras)
+void log_instruccion_ejecutada(t_strings_instruccion *palabras) // REVISAR SI ESTO REALMENTE ES UN INVALID READ O ES ERROR DE VALGRIND
 {
     log_info(logger, "PID: %i - Ejecutando: %s - %s %s %s %s %s", pcb_exec->pid, palabras->cod_instruccion, palabras->p1, palabras->p2, palabras->p3, palabras->p4, palabras->p5);
 }
