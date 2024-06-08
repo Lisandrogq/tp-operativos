@@ -70,9 +70,15 @@ void *consola()
 			comando_ejecutar_script(instruccion[1], archivo);
 		}
 		if(!strcmp(instruccion[0], "MULTIPROGRAMACION"))
-		{
+		{ 
+			
 			int grado = atoi(instruccion[1]);
-			modificar_multiprogramacion(grado);
+			FILE *archivo = fopen("kernel.config", "r+");
+    		if(archivo == NULL){
+        		log_error(logger, "No se pudo abrir el archivo de configuracion");
+        		return;
+    		}
+			modificar_multiprogramacion(grado, archivo);
 		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;

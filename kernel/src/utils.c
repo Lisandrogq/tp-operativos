@@ -247,40 +247,25 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     // cierra el archivo//
     fclose(archivo);
 }
-void modificar_multiprogramacion(int grado){
-    log_info(logger, "entre a multiprogramacion");
-    char linea[100];
-    //size_t len = 100;
+void modificar_multiprogramacion(int grado, FILE *archivo){
     int encontrado = 0;
-	int *multi;
-    char read;
-
-    FILE *archivo = fopen("kernel.config", "r+");
-    if(archivo == NULL){
-        log_error(logger, "No se pudo abrir el archivo de configuracion");
-        return;
+    char *linea = malloc(100);
+    size_t len = 100;
+    while(fgets(linea, len, archivo) != NULL){
+          if (ferror(archivo)) {
+        perror("Error de lectura");
+        break;
     }
-    else{
-        log_info(logger, "Se abrio el archivo de configuracion");
-		multi = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
-		log_info(logger, "Grado de multiprogramacion: %i", multi);
-    }
-
-/*   while (!feof(archivo)) {
-        // Lee una línea del archivo
-        if (fgets(linea, sizeof(linea), archivo) != NULL) {
-            // Procesa o imprime la línea
-            printf("%s", linea);
-        } else {
-            // Si fgets devuelve NULL, es probable que se haya alcanzado el final del archivo o ocurrió un error
-            if (!feof(archivo)) {
-                perror("Error al leer el archivo");
-            }
-            break; // Sale del bucle si se alcanza el final del archivo o se produce un error
-        } */
-     /* if(encontrado == 0){
+         if (!strncmp(linea, "GRADO_MULTIPROGRAMACION=", strlen("GRADO_MULTIPROGRAMACION="))) {
+            fseek(archivo, -strlen(linea), SEEK_CUR);
+            fprintf(archivo, "GRADO_MULTIPROGRAMACION=%i", grado);
+            encontrado = 1;
+            break;
+        } 
+    } 
+      if(encontrado == 0){
         log_info(logger, "no encontre el parametro");
-    }  */
+    }  
     fclose(archivo);
 }
 
