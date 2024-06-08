@@ -248,8 +248,7 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     // cierra el archivo//
     fclose(archivo);
 }
-void modificar_multiprogramacion(int grado, FILE *archivo)
-{
+void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual){
     int encontrado = 0;
     char *linea = malloc(100);
     size_t len = 100;
@@ -265,13 +264,23 @@ void modificar_multiprogramacion(int grado, FILE *archivo)
             fseek(archivo, -strlen(linea), SEEK_CUR);
             fprintf(archivo, "GRADO_MULTIPROGRAMACION=%i", grado);
             encontrado = 1;
+            while(grado > grado_actual){
+                sem_post(&contador_multi);
+                grado_actual++;
+            }
+            while (grado < grado_actual){
+                sem_wait(&contador_multi);
+                grado_actual--;
+            } 
+            free(linea);
             break;
         }
     }
     if (encontrado == 0)
     {
         log_info(logger, "no encontre el parametro");
-    }
+        free(linea);
+    }  
     fclose(archivo);
 }
 

@@ -69,17 +69,17 @@ void *consola()
 			}
 			comando_ejecutar_script(instruccion[1], archivo);
 		}
-		if (!strcmp(instruccion[0], "MULTIPROGRAMACION"))
-		{
-
+		if(!strcmp(instruccion[0], "MULTIPROGRAMACION"))
+		{ 
 			int grado = atoi(instruccion[1]);
 			FILE *archivo = fopen("kernel.config", "r+");
-			if (archivo == NULL)
-			{
-				log_error(logger, "No se pudo abrir el archivo de configuracion");
-				return;
-			}
-			modificar_multiprogramacion(grado, archivo);
+    		if(archivo == NULL){
+        		log_error(logger, "No se pudo abrir el archivo de configuracion");
+        		return;
+    		}
+			int grado_actual = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+			printf("Grado de multiprogramacion actual: %d\n", grado_actual);
+			modificar_multiprogramacion(grado, archivo, grado_actual);
 		}
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
