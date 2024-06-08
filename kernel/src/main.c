@@ -57,8 +57,6 @@ void *consola()
 		{
 			comando_listar_procesos_por_estado();
 		}
-		if (!strcmp(instruccion[0], "ddd"))
-			return;
 		if (!strcmp(instruccion[0], "EJECUTAR_SCRIPT"))
 		{
 			log_info(logger, "Ejecutar Script de Comandos");
@@ -71,6 +69,13 @@ void *consola()
 			}
 			comando_ejecutar_script(instruccion[1], archivo);
 		}
+		if(!strcmp(instruccion[0], "MULTIPROGRAMACION"))
+		{
+			int grado = atoi(instruccion[1]);
+			modificar_multiprogramacion(grado);
+		}
+		if (!strcmp(instruccion[0], "ddd"))
+			return;
 		free(linea);
 	}
 }

@@ -247,6 +247,43 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     // cierra el archivo//
     fclose(archivo);
 }
+void modificar_multiprogramacion(int grado){
+    log_info(logger, "entre a multiprogramacion");
+    char linea[100];
+    //size_t len = 100;
+    int encontrado = 0;
+	int *multi;
+    char read;
+
+    FILE *archivo = fopen("kernel.config", "r+");
+    if(archivo == NULL){
+        log_error(logger, "No se pudo abrir el archivo de configuracion");
+        return;
+    }
+    else{
+        log_info(logger, "Se abrio el archivo de configuracion");
+		multi = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+		log_info(logger, "Grado de multiprogramacion: %i", multi);
+    }
+
+/*   while (!feof(archivo)) {
+        // Lee una línea del archivo
+        if (fgets(linea, sizeof(linea), archivo) != NULL) {
+            // Procesa o imprime la línea
+            printf("%s", linea);
+        } else {
+            // Si fgets devuelve NULL, es probable que se haya alcanzado el final del archivo o ocurrió un error
+            if (!feof(archivo)) {
+                perror("Error al leer el archivo");
+            }
+            break; // Sale del bucle si se alcanza el final del archivo o se produce un error
+        } */
+     /* if(encontrado == 0){
+        log_info(logger, "no encontre el parametro");
+    }  */
+    fclose(archivo);
+}
+
 void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
 {
 
@@ -294,7 +331,7 @@ void solicitar_eliminar_estructuras_administrativas(int pid)
     free(a_enviar);
 }
 
-void ejecutar_script(const char *path)
+/* void ejecutar_script(const char *path)
 {
 
     FILE *archivo = fopen(path, "r");
@@ -319,7 +356,7 @@ void ejecutar_script(const char *path)
     }
 
     fclose(archivo);
-}
+} */
 
 void enviar_interrupcion(int motivo, int pid)
 {
