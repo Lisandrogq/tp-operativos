@@ -69,15 +69,16 @@ void *consola()
 			}
 			comando_ejecutar_script(instruccion[1], archivo);
 		}
-		if(!strcmp(instruccion[0], "MULTIPROGRAMACION"))
-		{ 
-			
+		if (!strcmp(instruccion[0], "MULTIPROGRAMACION"))
+		{
+
 			int grado = atoi(instruccion[1]);
 			FILE *archivo = fopen("kernel.config", "r+");
-    		if(archivo == NULL){
-        		log_error(logger, "No se pudo abrir el archivo de configuracion");
-        		return;
-    		}
+			if (archivo == NULL)
+			{
+				log_error(logger, "No se pudo abrir el archivo de configuracion");
+				return;
+			}
 			modificar_multiprogramacion(grado, archivo);
 		}
 		if (!strcmp(instruccion[0], "ddd"))
@@ -118,13 +119,57 @@ void *cliente_cpu_dispatch()
 
 		switch (motivo_desalojo)
 		{
-			/* 		case:
-						WAIT break;
+		case WAIT:
+			if (dictionary_has_key(dictionary_recursos, instruccion_de_desalojo->p1))
+			{
+				t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
+				struct_recurso->instancias --;
+				if (struct_recurso->instancias < 0)
+				{
+					pcb_desalojado->state = BLOCK_S;
+					list_add(struct_recurso->cola_de_recurso_pedido, pcb_desalojado);
+				}
+			}
+			else
+			{
+				solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
+				list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
+				sem_post(&contador_multi);
+				pcb_desalojado->state = EXIT_S;
+				log_info(logger, "Finaliza el proceso %i - Motivo: RECURSO_INVALIDO_WAIT", pcb_desalojado->pid);
+			}
 
-					case:
-						SIGNAL
-						list_add(lista_pcbs_exec, 0, pcb_desalojado);
-						break; */
+			break;
+
+		case SIGNAL:
+			if (dictionary_has_key(dictionary_recursos, instruccion_de_desalojo->p1))
+			{
+				t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
+				struct_recurso->instancias ++;
+				if (struct_recurso->instancias >= 0)
+				{
+					pcb_t *pcb_bloqueado = list_remove(struct_recurso->elementos_cola_recurso, 0);
+					int quantum = config_get_int_value(config, "QUANTUM");
+					if (pcb_bloqueado->quantum != quantum)
+					{
+						list_add(lista_ready_mas, pcb_bloqueado);
+					}else{
+						list_add(lista_pcbs_ready, pcb_bloqueado);
+					}
+					list_add(lista_pcbs_exec, pcb_desalojado);
+					pcb_desalojado->state = EXEC_S;
+				}
+			}
+			else
+			{
+				solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
+				list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
+				sem_post(&contador_multi);
+				pcb_desalojado->state = EXIT_S;
+				log_info(logger, "Finaliza el proceso %i - Motivo: RECURSO_INVALIDO_SIGNAL", pcb_desalojado->pid);
+			}
+			// list_add(lista_pcbs_exec, 0, pcb_desalojado);
+			break;
 		case SUCCESS: // agregar resto de casos de fin
 
 			pcb_desalojado->state = EXIT_S;
@@ -325,6 +370,7 @@ int main(int argc, char const *argv[])
 	lista_pcbs_exit = list_create();
 	lista_pcbs_ready = list_create(); // la crea aca pero cuando entra el hilo se borran los datos
 	dictionary_pcbs_bloqueado = dictionary_create();
+	dictionary_recursos = dictionary_create();
 	lista_pcbs_exec = list_create();
 	lista_pcbs_new = list_create();
 	lista_ready_mas = list_create();
@@ -334,6 +380,19 @@ int main(int argc, char const *argv[])
 	config = iniciar_config();
 	config = config_create("kernel.config");
 	int grado = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+	// Manejo de recursos
+	char **instancias = config_get_array_value(config, "INSTANCIAS_RECURSOS");
+	char **recursos = config_get_array_value(config, "RECURSOS");
+	int size = string_array_size(recursos);
+	for (size_t i = 0; i < size; i++)
+	{
+		t_cola_recurso *struct_recurso = malloc(sizeof(t_cola_recurso));
+		struct_recurso->instancias = atoi(instancias[i]);
+		//sem_init(struct_recurso->elementos_cola_recurso, 0, struct_recurso->instancias); creo no se necesita
+		struct_recurso->cola_de_recurso_pedido = list_create();
+		dictionary_put(dictionary_recursos, recursos[i], struct_recurso);
+	}
+
 	sem_init(&contador_multi, 0, grado);
 
 	int err;

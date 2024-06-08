@@ -15,6 +15,7 @@ pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_lista_exec;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 t_dictionary *dictionary_pcbs_bloqueado;
+t_dictionary *dictionary_recursos;
 t_list *lista_pcbs_exec;
 t_list *lista_pcbs_exit;
 t_list *lista_pcbs_new;
@@ -229,7 +230,7 @@ void comando_ejecutar_script(char *path, FILE *archivo)
             char *copia;
             strncpy(copia, instruccion[1], strlen(instruccion[1] - 1));
             int tam = 1 + strlen(instruccion[1]);
-            comando_iniciar_proceso(instruccion[1], tam); 
+            comando_iniciar_proceso(instruccion[1], tam);
         }
         if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
         {
@@ -247,25 +248,30 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     // cierra el archivo//
     fclose(archivo);
 }
-void modificar_multiprogramacion(int grado, FILE *archivo){
+void modificar_multiprogramacion(int grado, FILE *archivo)
+{
     int encontrado = 0;
     char *linea = malloc(100);
     size_t len = 100;
-    while(fgets(linea, len, archivo) != NULL){
-          if (ferror(archivo)) {
-        perror("Error de lectura");
-        break;
-    }
-         if (!strncmp(linea, "GRADO_MULTIPROGRAMACION=", strlen("GRADO_MULTIPROGRAMACION="))) {
+    while (fgets(linea, len, archivo) != NULL)
+    {
+        if (ferror(archivo))
+        {
+            perror("Error de lectura");
+            break;
+        }
+        if (!strncmp(linea, "GRADO_MULTIPROGRAMACION=", strlen("GRADO_MULTIPROGRAMACION=")))
+        {
             fseek(archivo, -strlen(linea), SEEK_CUR);
             fprintf(archivo, "GRADO_MULTIPROGRAMACION=%i", grado);
             encontrado = 1;
             break;
-        } 
-    } 
-      if(encontrado == 0){
+        }
+    }
+    if (encontrado == 0)
+    {
         log_info(logger, "no encontre el parametro");
-    }  
+    }
     fclose(archivo);
 }
 
@@ -602,22 +608,28 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
     pcb_t *pcb_a_ejecutar;
-    // if(hay alguno en exit)(caso de wait/signal)
+    if (list_is_empty(lista_pcbs_exec))
+    {
+        pcb_a_ejecutar = list_get(lista_pcbs_exec, 0);
+        log_debug(logger, "Enviando a ejecutar desde exec");
+    }
     if (list_is_empty(lista_ready_mas))
     {
         log_debug(logger, "Enviando a ejecutar desde normal");
         pthread_mutex_lock(&mutex_lista_ready);
         pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
         pthread_mutex_unlock(&mutex_lista_ready);
+        list_add(lista_pcbs_exec, pcb_a_ejecutar);
+        pcb_a_ejecutar->state = EXEC_S;
     }
     else
     {
         log_debug(logger, "Enviando a ejecutar desde ready+");
         pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
+        list_add(lista_pcbs_exec, pcb_a_ejecutar);
+        pcb_a_ejecutar->state = EXEC_S;
     }
 
-    list_add(lista_pcbs_exec, pcb_a_ejecutar);
-    pcb_a_ejecutar->state = EXEC_S;
     log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);
 
     return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo, algoritmo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo

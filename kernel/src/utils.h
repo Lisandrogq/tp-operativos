@@ -40,7 +40,8 @@ extern t_list *lista_pcbs_new;
 extern pthread_mutex_t mutex_lista_ready;
 extern sem_t hay_new;
 extern sem_t elementos_ready;
-extern sem_t contador_multi;				// contador de ready, si no hay, no podes planificar.
+extern sem_t contador_multi;
+extern t_dictionary *dictionary_recursos;				// contador de ready, si no hay, no podes planificar.
 extern t_dictionary *dictionary_pcbs_bloqueado; // "Int1","int3","recurso1"...cada elemento
 											/// es un struct con lista y contador y mutex de acceso
 typedef struct
@@ -49,6 +50,13 @@ typedef struct
 	sem_t *elementos_cola_io;
 	t_list *cola_de_io_pedido;//!CADA ELEMENTO ES UN''elemento_cola_io''
 } t_cola_io;
+
+typedef struct
+{	
+	int instancias;
+	sem_t *elementos_cola_recurso;
+	t_list *cola_de_recurso_pedido;
+} t_cola_recurso;
 
 typedef struct
 {

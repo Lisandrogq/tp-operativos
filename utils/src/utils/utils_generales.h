@@ -178,6 +178,8 @@ typedef enum
 	OUT_OF_MEMORY,
 	INTERRUPTED_BY_USER,
 	IO_TASK,
+	WAIT,
+	SIGNAL,
 	// ELIMINAR_ESTRUC_ADMIN,
 } motivos_desalojo;
 
