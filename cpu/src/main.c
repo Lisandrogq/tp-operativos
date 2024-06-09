@@ -411,6 +411,18 @@ int execute(t_strings_instruccion *instruccion)
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
 		return STATUS_DESALOJADO;
 	}
+	if (strcmp(instruccion->cod_instruccion, "WAIT") == 0)
+	{
+		devolver_pcb(WAIT, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+		sem_wait(&hay_proceso);
+		return STATUS_OK;
+	}
+	if (strcmp(instruccion->cod_instruccion, "SIGNAL") == 0)
+	{
+		devolver_pcb(SIGNAL, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+		sem_wait(&hay_proceso);
+		return STATUS_OK; // Wait semaforo hay pcb o proceso
+	}
 	return STATUS_OK;
 }
 void check_intr(int *status)

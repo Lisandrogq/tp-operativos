@@ -56,6 +56,7 @@ typedef struct
 	int instancias;
 	sem_t *elementos_cola_recurso;
 	t_list *cola_de_recurso_pedido;
+	t_list *cola_de_pcbs_con_recurso;
 } t_cola_recurso;
 
 typedef struct

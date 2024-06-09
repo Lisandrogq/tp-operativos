@@ -116,18 +116,23 @@ void *cliente_cpu_dispatch()
 		int motivo_desalojo = -1;
 		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo);
 		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
-
+		t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
 		switch (motivo_desalojo)
 		{
 		case WAIT:
 			if (dictionary_has_key(dictionary_recursos, instruccion_de_desalojo->p1))
 			{
-				t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
-				struct_recurso->instancias --;
+				struct_recurso->instancias--;
 				if (struct_recurso->instancias < 0)
 				{
 					pcb_desalojado->state = BLOCK_S;
 					list_add(struct_recurso->cola_de_recurso_pedido, pcb_desalojado);
+				}
+				else
+				{
+					list_add(lista_pcbs_exec, pcb_desalojado);
+					list_add(struct_recurso->cola_de_recurso_pedido, pcb_desalojado);
+					pcb_desalojado->state = EXEC_S;
 				}
 			}
 			else
@@ -144,8 +149,20 @@ void *cliente_cpu_dispatch()
 		case SIGNAL:
 			if (dictionary_has_key(dictionary_recursos, instruccion_de_desalojo->p1))
 			{
-				t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
-				struct_recurso->instancias ++;
+				struct_recurso->instancias++; // simpre que un proceso llegue a exit tengo que hacer esto
+				bool is_pid(void *pcb)
+				{
+					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
+				};
+				if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+				{
+					struct_recurso->instancias++;
+				}
+				else
+				{
+					struct_recurso->instancias++;
+				}
+
 				if (struct_recurso->instancias >= 0)
 				{
 					pcb_t *pcb_bloqueado = list_remove(struct_recurso->elementos_cola_recurso, 0);
@@ -153,7 +170,9 @@ void *cliente_cpu_dispatch()
 					if (pcb_bloqueado->quantum != quantum)
 					{
 						list_add(lista_ready_mas, pcb_bloqueado);
-					}else{
+					}
+					else
+					{
 						list_add(lista_pcbs_ready, pcb_bloqueado);
 					}
 					list_add(lista_pcbs_exec, pcb_desalojado);
@@ -168,14 +187,12 @@ void *cliente_cpu_dispatch()
 				pcb_desalojado->state = EXIT_S;
 				log_info(logger, "Finaliza el proceso %i - Motivo: RECURSO_INVALIDO_SIGNAL", pcb_desalojado->pid);
 			}
-			// list_add(lista_pcbs_exec, 0, pcb_desalojado);
 			break;
 		case SUCCESS: // agregar resto de casos de fin
 
 			pcb_desalojado->state = EXIT_S;
 			list_add(lista_pcbs_exit, pcb_desalojado);
 			sem_post(&contador_multi);
-
 			if (pid_sig_term == pcb_desalojado->pid)
 			{ // si justo se ejecuto exit, no tiene pedir eliminar, lo hace la consola
 				log_debug(logger, "ENTRE AL MANEJO DE SIG_TERM");
@@ -194,6 +211,14 @@ void *cliente_cpu_dispatch()
 			pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 			list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 			sem_post(&contador_multi);
+			bool is_pid(void *pcb)
+			{
+				return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
+			};
+			if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+			{
+				struct_recurso->instancias++;
+			}
 			log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", pcb_desalojado->pid);
 
 			break;
@@ -205,6 +230,14 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
+				bool is_pid(void *pcb)
+				{
+					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
+				};
+				if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+				{
+					struct_recurso->instancias++;
+				}
 			}
 			else
 			{
@@ -213,6 +246,14 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_ready, pcb_desalojado);
 				pthread_mutex_unlock(&mutex_lista_ready);
 				sem_post(&elementos_ready);
+				bool is_pid(void *pcb)
+				{
+					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
+				};
+				if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+				{
+					struct_recurso->instancias++;
+				}
 				log_debug(logger, "Se desalojo un proceso por clock");
 			}
 			break;
@@ -224,6 +265,14 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
+				bool is_pid(void *pcb)
+				{
+					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
+				};
+				if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+				{
+					struct_recurso->instancias++;
+				}
 			}
 			else
 			{
@@ -232,6 +281,14 @@ void *cliente_cpu_dispatch()
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 					list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
 					sem_post(&contador_multi);
+					bool is_pid(void *pcb)
+					{
+						return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
+					};
+					if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+					{
+						struct_recurso->instancias++;
+					}
 					pcb_desalojado->state = EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
 				}
@@ -388,8 +445,9 @@ int main(int argc, char const *argv[])
 	{
 		t_cola_recurso *struct_recurso = malloc(sizeof(t_cola_recurso));
 		struct_recurso->instancias = atoi(instancias[i]);
-		//sem_init(struct_recurso->elementos_cola_recurso, 0, struct_recurso->instancias); creo no se necesita
+		// sem_init(struct_recurso->elementos_cola_recurso, 0, struct_recurso->instancias); creo no se necesita
 		struct_recurso->cola_de_recurso_pedido = list_create();
+		struct_recurso->cola_de_pcbs_con_recurso = list_create();
 		dictionary_put(dictionary_recursos, recursos[i], struct_recurso);
 	}
 

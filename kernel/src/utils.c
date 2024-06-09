@@ -150,6 +150,19 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         {
             list_add(lista_pcbs_exit, pcb_a_terminar); // Post(contador multiprogramacion)
             sem_post(&contador_multi);
+            bool is_pid(void *pcb)
+            {
+                return ((pcb_t *)pcb)->pid == pcb_a_terminar->pid;
+            };
+            void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
+            {
+                t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+                if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+                {
+                    struct_recurso->instancias++;
+                }
+            };
+            dictionary_iterator(dictionary_recursos, is_pid_in_list);
         }
     }
 
