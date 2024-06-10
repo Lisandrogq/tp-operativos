@@ -157,7 +157,7 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
             void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
             {
                 t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
-                if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
+                if (list_remove_by_condition(lista, is_pid))
                 {
                     struct_recurso->instancias++;
                 }
@@ -261,7 +261,8 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     // cierra el archivo//
     fclose(archivo);
 }
-void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual){
+void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual)
+{
     int encontrado = 0;
     char *linea = malloc(100);
     size_t len = 100;
@@ -277,14 +278,16 @@ void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual){
             fseek(archivo, -strlen(linea), SEEK_CUR);
             fprintf(archivo, "GRADO_MULTIPROGRAMACION=%i", grado);
             encontrado = 1;
-            while(grado > grado_actual){
+            while (grado > grado_actual)
+            {
                 sem_post(&contador_multi);
                 grado_actual++;
             }
-            while (grado < grado_actual){
+            while (grado < grado_actual)
+            {
                 sem_wait(&contador_multi);
                 grado_actual--;
-            } 
+            }
             free(linea);
             break;
         }
@@ -293,7 +296,7 @@ void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual){
     {
         log_info(logger, "no encontre el parametro");
         free(linea);
-    }  
+    }
     fclose(archivo);
 }
 
@@ -630,12 +633,12 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
 {
     pcb_t *pcb_a_ejecutar;
-    if (list_is_empty(lista_pcbs_exec))
+    if (!list_is_empty(lista_pcbs_exec))
     {
         pcb_a_ejecutar = list_get(lista_pcbs_exec, 0);
         log_debug(logger, "Enviando a ejecutar desde exec");
     }
-    if (list_is_empty(lista_ready_mas))
+    else if (list_is_empty(lista_ready_mas))
     {
         log_debug(logger, "Enviando a ejecutar desde normal");
         pthread_mutex_lock(&mutex_lista_ready);
