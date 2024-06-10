@@ -156,26 +156,23 @@ void *cliente_cpu_dispatch()
 				{
 					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 				};
-				if (list_remove_by_condition(struct_recurso->cola_de_pcbs_con_recurso, is_pid))
-				{
-					struct_recurso->instancias++;
-				}
-				else
-				{
-					struct_recurso->instancias++;
-				}
+				pcb_t *pcb_bloqueado = list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid);
 
-				if (struct_recurso->instancias >= 0)
+				struct_recurso->instancias++;
+				if (pcb_bloqueado)
 				{
-					pcb_t *pcb_bloqueado = list_remove(struct_recurso->cola_de_pcbs_con_recurso, 0); // Esto esta mal, no tiene sentido ya que se puede hacer signal sin wait
-					int quantum = config_get_int_value(config, "QUANTUM");
-					if (pcb_bloqueado->quantum != quantum)
+					sem_wait(&elementos_ready);
+					if (struct_recurso->instancias >= 0)
 					{
-						list_add(lista_ready_mas, pcb_bloqueado);
-					}
-					else
-					{
-						list_add(lista_pcbs_ready, pcb_bloqueado);
+						int quantum = config_get_int_value(config, "QUANTUM");
+						if (pcb_bloqueado->quantum != quantum)
+						{
+							list_add(lista_ready_mas, pcb_bloqueado);
+						}
+						else
+						{
+							list_add(lista_pcbs_ready, pcb_bloqueado);
+						}
 					}
 				}
 				list_add(lista_pcbs_exec, pcb_desalojado);
@@ -196,14 +193,21 @@ void *cliente_cpu_dispatch()
 			pcb_desalojado->state = EXIT_S;
 			list_add(lista_pcbs_exit, pcb_desalojado);
 			sem_post(&contador_multi);
+			log_error(logger, "JUSTO ANTES DE ITERAR");
 			bool is_pid(void *pcb)
 			{
 				return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 			};
-			if (list_remove_by_condition(struct_recurso->cola_de_pcbs_con_recurso, is_pid))
+			void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
 			{
-				struct_recurso->instancias++;
-			}
+				t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+				if (list_remove_by_condition(lista, is_pid))
+				{
+					log_error(logger, "SUME A INSTANCIAS");
+					struct_recurso->instancias++;
+				}
+			};
+			dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 			if (pid_sig_term == pcb_desalojado->pid)
 			{ // si justo se ejecuto exit, no tiene pedir eliminar, lo hace la consola
 				log_debug(logger, "ENTRE AL MANEJO DE SIG_TERM");
@@ -222,14 +226,22 @@ void *cliente_cpu_dispatch()
 			pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 			list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 			sem_post(&contador_multi);
-			/*bool is_pid(void *pcb)
+			log_error(logger, "JUSTO ANTES DE ITERAR");
+			bool is_pid(void *pcb)
 			{
 				return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 			};
-			if (list_remove_by_condition(struct_recurso->cola_de_pcbs_con_recurso, is_pid))
+			void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
 			{
-				struct_recurso->instancias++;
-			}*/
+				t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+				if (list_remove_by_condition(lista, is_pid))
+				{
+					log_error(logger, "SUME A INSTANCIAS");
+					struct_recurso->instancias++;
+				}
+			};
+			dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
+
 			log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", pcb_desalojado->pid);
 
 			break;
@@ -241,14 +253,21 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
+				log_error(logger, "JUSTO ANTES DE ITERAR");
 				bool is_pid(void *pcb)
 				{
 					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 				};
-				if (list_remove_by_condition(struct_recurso->cola_de_pcbs_con_recurso, is_pid))
+				void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
 				{
-					struct_recurso->instancias++;
-				}
+					t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+					if (list_remove_by_condition(lista, is_pid))
+					{
+						log_error(logger, "SUME A INSTANCIAS");
+						struct_recurso->instancias++;
+					}
+				};
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 			}
 			else
 			{
@@ -276,14 +295,21 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_unlock(&mutex_pcb_desalojado); // este mutex se usa para los proceso matados por kernel(si sale solo noahce falta)
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
+				log_error(logger, "JUSTO ANTES DE ITERAR");
 				bool is_pid(void *pcb)
 				{
 					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 				};
-				if (list_remove_by_condition(struct_recurso->cola_de_pcbs_con_recurso, is_pid))
+				void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
 				{
-					struct_recurso->instancias++;
-				}
+					t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+					if (list_remove_by_condition(lista, is_pid))
+					{
+						log_error(logger, "SUME A INSTANCIAS");
+						struct_recurso->instancias++;
+					}
+				};
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 			}
 			else
 			{
@@ -292,14 +318,21 @@ void *cliente_cpu_dispatch()
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 					list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
 					sem_post(&contador_multi);
+					log_error(logger, "JUSTO ANTES DE ITERAR");
 					bool is_pid(void *pcb)
 					{
 						return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 					};
-					if (list_remove_by_condition(struct_recurso->cola_de_pcbs_con_recurso, is_pid))
+					void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
 					{
-						struct_recurso->instancias++;
-					}
+						t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+						if (list_remove_by_condition(lista, is_pid))
+						{
+							log_error(logger, "SUME A INSTANCIAS");
+							struct_recurso->instancias++;
+						}
+					};
+					dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 					pcb_desalojado->state = EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
 				}

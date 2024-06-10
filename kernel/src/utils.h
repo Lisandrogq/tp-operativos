@@ -58,7 +58,6 @@ typedef struct
 	t_list *cola_de_recurso_pedido;
 	t_list *cola_de_pcbs_con_recurso;
 } t_cola_recurso;
-
 typedef struct
 {
 
