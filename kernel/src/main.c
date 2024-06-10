@@ -227,19 +227,6 @@ void *cliente_cpu_dispatch()
 			list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 			sem_post(&contador_multi);
 			log_error(logger, "JUSTO ANTES DE ITERAR");
-			bool is_pid(void *pcb)
-			{
-				return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
-			};
-			void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
-			{
-				t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
-				if (list_remove_by_condition(lista, is_pid))
-				{
-					log_error(logger, "SUME A INSTANCIAS");
-					struct_recurso->instancias++;
-				}
-			};
 			dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 
 			log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", pcb_desalojado->pid);
@@ -254,19 +241,6 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
-				bool is_pid(void *pcb)
-				{
-					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
-				};
-				void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
-				{
-					t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
-					if (list_remove_by_condition(lista, is_pid))
-					{
-						log_error(logger, "SUME A INSTANCIAS");
-						struct_recurso->instancias++;
-					}
-				};
 				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 			}
 			else
@@ -276,14 +250,8 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_ready, pcb_desalojado);
 				pthread_mutex_unlock(&mutex_lista_ready);
 				sem_post(&elementos_ready);
-				bool is_pid(void *pcb)
-				{
-					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
-				};
-				if (list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid))
-				{
-					struct_recurso->instancias++;
-				}
+				log_error(logger, "JUSTO ANTES DE ITERAR");
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 				log_debug(logger, "Se desalojo un proceso por clock");
 			}
 			break;
@@ -296,19 +264,6 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
-				bool is_pid(void *pcb)
-				{
-					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
-				};
-				void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
-				{
-					t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
-					if (list_remove_by_condition(lista, is_pid))
-					{
-						log_error(logger, "SUME A INSTANCIAS");
-						struct_recurso->instancias++;
-					}
-				};
 				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 			}
 			else
@@ -319,19 +274,6 @@ void *cliente_cpu_dispatch()
 					list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
 					sem_post(&contador_multi);
 					log_error(logger, "JUSTO ANTES DE ITERAR");
-					bool is_pid(void *pcb)
-					{
-						return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
-					};
-					void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
-					{
-						t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
-						if (list_remove_by_condition(lista, is_pid))
-						{
-							log_error(logger, "SUME A INSTANCIAS");
-							struct_recurso->instancias++;
-						}
-					};
 					dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 					pcb_desalojado->state = EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
