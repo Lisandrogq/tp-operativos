@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <utils/utils_generales.h>
 #include <pthread.h>
+#include <commons/bitarray.h>
 #include <semaphore.h>
 extern RETARDO_RESPUESTA;
 extern t_log *logger;
@@ -21,14 +22,19 @@ extern t_list *lista_tablas_paginas;
 extern TAM_PAGINA;
 extern int TAM_MEMORIA;
 extern void *espacio_usuario;
+extern int marcos;
+extern t_bitarray *bitarray;
 typedef struct
 {
     int pid;
     t_list *tabla; // cada elem es de tipo int*
 } elemento_lista_tablas;
-
+resize_t * recibir_pedido_resize(int socket_cliente);
+void devolver_status_resize(int status,int socket_cliente);
 get_frame_t *recibir_pedido_frame(socket_cliente);
-int calcular_frame(get_frame_t *solicitud);
+int reducir_proceso(t_list *tabla, int bytes);
+int ampliar_proceso(t_list *tabla, int bytes_a_agregar);
+int *calcular_frame(get_frame_t *solicitud);
 void *leer_memoria(u_int32_t dir_fisica, int tam_lectura);
 int escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_lectura);
 int enviar_instruccion(char **palabras, int socket_cliente);

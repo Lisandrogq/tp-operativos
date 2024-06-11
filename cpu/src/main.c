@@ -23,12 +23,15 @@ void ejecutar_cliclos()
 		{
 			t_strings_instruccion *instruccion = fetch(pcb_exec->registros->PC);
 
-			decode(instruccion);
-
-			status = execute(instruccion);
+			status = decode(instruccion);
+			// if temporal(las exec_van a estar adentro de decode) //!!to do despues del merge con recursos
+			if (status != STATUS_DESALOJADO)
+			{
+				status = execute(instruccion);
+			}
 			if (status == STATUS_OK) // si el proceso justo desalojo en execute, la interrupcion se leera en luego de
-									 // que se ejecute la siguiente ejecucion
-			{						 // revisar si esto es teoricamente correcto, creo qsi
+			{						 // que se ejecute la siguiente ejecucion
+									 // revisar si esto es teoricamente correcto, creo qsi
 				check_intr(&status); // asi puede marcar el proceso como desalojado
 			}
 		}
@@ -141,7 +144,7 @@ t_strings_instruccion *fetch(int PC)
 
 	return palabras;
 }
-void decode(t_strings_instruccion *instruccion)
+int decode(t_strings_instruccion *instruccion)
 {
 	if (strcmp(instruccion->cod_instruccion, "MOV_IN") == 0) // MOV_IN (Registro Datos, Registro Dirección)
 	{
@@ -196,8 +199,62 @@ void decode(t_strings_instruccion *instruccion)
 
 		// log_info(logger, "dir_fisica_a_escribir: %i", dir_fisica);
 	}
-}
+	if (strcmp(instruccion->cod_instruccion, "RESIZE") == 0) // RESIZE (bytes)
+	{
+		int bytes = atoi((instruccion->p1));
 
+		enviar_solicitud_resize(pcb_exec->pid, bytes);
+		int status = recibir_status_resize();
+		if (status == -1)
+		{
+			devolver_pcb(OUT_OF_MEMORY, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+			return STATUS_DESALOJADO;
+		}
+	}
+	return STATUS_OK;
+}
+int recibir_status_resize()
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	int cod_op = recibir_operacion(socket_memoria); // me saco el cdo
+	recv(socket_memoria, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_memoria, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	int status = 0;
+	void *stream = paquete->buffer->stream;
+	memcpy(&status, stream, sizeof(int));
+
+	eliminar_paquete(paquete);
+
+	return status;
+}
+void enviar_solicitud_resize(int pid, int bytes_solicitados)
+{
+
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = RESIZE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int) * 2;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int)); // paso los datos pq si,desde cpu ya se sabe
+	paquete->buffer->offset += sizeof(int);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &bytes_solicitados, sizeof(int)); // paso los datos pq si,desde cpu ya se sabe
+	paquete->buffer->offset += sizeof(int);
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_memoria, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
 t_list *obtener_direcciones_fisicas(int dir_logica, int tam_r_datos) // return list sol_unitaria_t*
 {
 	t_list *solicitudes = list_create();

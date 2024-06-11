@@ -9,7 +9,8 @@ t_list *lista_tablas_paginas;
 int TAM_PAGINA;
 int TAM_MEMORIA;
 void *espacio_usuario;
-
+int marcos;
+t_bitarray *bitarray;
 char *leer_codigo(char *path)
 {
 	// leer el pseudocodigo
@@ -51,7 +52,23 @@ void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se
 																		// borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 }
-
+void eliminar_tabla_paginas(int pid_a_eliminar)
+{
+	bool is_pid(void *elemento)
+	{
+		return ((elemento_lista_tablas *)elemento)->pid == pid_a_eliminar; // no hay colores pq vscode no se la banca, no es bug
+	};
+	elemento_lista_tablas *elemento = list_remove_by_condition(lista_tablas_paginas, is_pid);
+	t_list_iterator *iterator = list_iterator_create(elemento->tabla);
+	while (list_iterator_has_next(iterator))
+	{
+		int *frame = list_iterator_next(iterator);
+		bitarray_clean_bit(bitarray, *frame);
+		free(frame);
+	}
+	list_destroy(elemento->tabla); // no hace falta eliminar los elementos de la lista pq son ints
+	free(elemento);
+}
 void crear_tabla_paginas(int pid)
 {
 	// crear tabla de paginas del pid
@@ -59,11 +76,11 @@ void crear_tabla_paginas(int pid)
 	elemento->pid = pid;
 	elemento->tabla = list_create();
 	list_add(lista_tablas_paginas, elemento);
-	//prueba,borrar:
-	list_add(elemento->tabla,0);//indice = pagina||elem = frame
-	list_add(elemento->tabla,2);
-	list_add(elemento->tabla,1);
-	//pags:[yyyx,xxx0,0000]->marcos:[yyyx,0000,xxx0]
+	/* 	// prueba:
+		list_add(elemento->tabla, 0); // indice = pagina||elem = frame
+		list_add(elemento->tabla, 2);
+		list_add(elemento->tabla, 1);
+		// pags:[yyyx,xxx0,0000]->marcos:[yyyx,0000,xxx0] */
 }
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {
@@ -76,6 +93,66 @@ void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 	log_debug(logger, "Se elimino el codigo del pid %i", pid_a_eliminar);
 	// todo: eliminar tabla de paginas y marcar marcos como liberados
 }
+bool hay_paginas_disponibles(int paginas_a_agregar)
+{
+	int accum = 0;
+	for (int i = 0; i < marcos; i++)
+	{
+		if (!bitarray_test_bit(bitarray, i))
+			accum++;
+	}
+	return accum >= paginas_a_agregar;
+}
+int get_next_free_frame()
+{
+
+	for (int i = 0; i < marcos; i++)
+	{
+		if (!bitarray_test_bit(bitarray, i))
+		{
+			bitarray_set_bit(bitarray, i);
+			return i;
+		}
+	}
+	return -1;
+}
+int ampliar_proceso(t_list *tabla, int bytes_a_agregar)
+{
+	int paginas_a_agregar = bytes_a_agregar / TAM_PAGINA;
+	if (bytes_a_agregar % TAM_PAGINA != 0)
+	{
+		paginas_a_agregar++;
+	}
+	log_debug(logger, "Se pidio aumentar %i bytes, se asignan %i paginas mas", bytes_a_agregar, paginas_a_agregar);
+	if (!hay_paginas_disponibles(paginas_a_agregar))
+		return -1; // solo un proceso puede estar pidiendo frames a la vez, asi que con la validacion inicial, ya esta
+	for (int i = 0; paginas_a_agregar > i; i++)
+	{
+		int *frame = malloc(sizeof(int));
+		*frame = get_next_free_frame(); // marca el frame como en uso.
+		list_add(tabla, frame);
+	}
+	return 0;
+}
+
+int reducir_proceso(t_list *tabla, int bytes)
+{
+	int nuevas_paginas = bytes / TAM_PAGINA;
+	if (bytes % TAM_PAGINA != 0)
+	{
+		nuevas_paginas++;
+	}
+	log_debug(logger, "Se pidio reducir %i bytes. Nueva cantidad de paginas = %i", bytes, nuevas_paginas);
+
+	for (int i = list_size(tabla) - 1; i > nuevas_paginas; i--)
+	{
+		int *frame_a_liberar = list_remove(tabla, i);
+		bitarray_clean_bit(bitarray, *frame_a_liberar);
+		free(frame_a_liberar);
+	}
+	return 0;
+}
+
 void handle_cpu_client(int socket_cliente)
 {
 	log_info(logger, "ESTOY EN EL HANDLER DEL CPU");
@@ -98,10 +175,30 @@ void handle_cpu_client(int socket_cliente)
 			sem_post(sem);
 			enviar_instruccion(palabras, socket_cliente);
 			break;
+		case RESIZE:
+			resize_t *solicitud_resize = recibir_pedido_resize(socket_cliente);
+			bool is_pid(void *elem)
+			{
+				return ((elemento_lista_tablas *)elem)->pid == solicitud_resize->pid; // no hay colores pq vscode no se la banca, no es bug
+			};
+			elemento_lista_tablas *elemento = list_find(lista_tablas_paginas, is_pid);
+			int bytes_actuales = list_size(elemento->tabla) * TAM_PAGINA;
+			int resize_status = 0;
+			if (bytes_actuales > solicitud_resize->bytes)
+			{
+				reducir_proceso(elemento->tabla, solicitud_resize->bytes);
+			}
+			if (bytes_actuales < solicitud_resize->bytes)
+			{
+				// eliminar ultimas paginas
+				resize_status = ampliar_proceso(elemento->tabla, solicitud_resize->bytes - bytes_actuales);
+			}
+			devolver_status_resize(resize_status, socket_cliente);
+			break;
 		case GET_FRAME:
 			get_frame_t *solicitud_f = recibir_pedido_frame(socket_cliente);
-			int frame = calcular_frame(solicitud_f);
-			enviar_frame(frame, socket_cliente);
+			int *frame = calcular_frame(solicitud_f);
+			enviar_frame(*frame, socket_cliente);
 
 			// número_página = floor(dirección_lógica / tamaño_página)
 			// desplazamiento = dirección_lógica - número_página * tamaño_página
@@ -114,7 +211,7 @@ void handle_cpu_client(int socket_cliente)
 			log_info(logger, "r_dir: %i|| tam: %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			void *datos_leidos = leer_memoria(solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			int a_loggear = 0;
-			
+
 			log_info(logger, "datos_leidos: %d", *(u_int8_t *)datos_leidos); // si es un int8 se muestra mal
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
 			// se recibe dirfisica,longitud, se devuelve lo leido.
@@ -123,8 +220,8 @@ void handle_cpu_client(int socket_cliente)
 		case WRITE_MEM:
 			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
 			log_info(logger, "w_dir: %i, tam: %i, datos: %d", solicitud_w->dir_fisica, solicitud_w->tam_escritura, *(u_int32_t *)solicitud_w->datos);
-			int status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
-			enviar_status_escritura(status, socket_cliente);
+			int write_status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
+			enviar_status_escritura(write_status, socket_cliente);
 
 			// se recibe dirfisica,longitud,dato a escribir. se devuelve OK(NO_OK TAMBIEN?).
 			//! CREO Q SI SE TIENE Q ESCRIBIR MAS DE UNA PAGINA, SE HACER POR SEPARADO!
@@ -137,10 +234,49 @@ void handle_cpu_client(int socket_cliente)
 	}
 }
 
-int escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_lectura)
+resize_t *recibir_pedido_resize(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	resize_t *sol = malloc(sizeof(resize_t));
+	void *stream = paquete->buffer->stream;
+	memcpy(&(sol->pid), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(sol->bytes), stream, sizeof(int));
+
+	eliminar_paquete(paquete);
+
+	return sol;
+}
+void devolver_status_resize(int status, int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = RESIZE_RESPONSE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &status, sizeof(int)); // paso los datos pq si,desde cpu ya se sabe
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+int escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_escritura)
 {
 	int status = MEM_W_OK; // creo q hay q validar si escribe dentro del espacio de usario para devolver no_ok
-	memcpy(espacio_usuario + dir_fisica, datos, tam_lectura);
+	memcpy(espacio_usuario + dir_fisica, datos, tam_escritura);
 	return status;
 }
 
@@ -167,7 +303,7 @@ void handle_kerel_client(int socket)
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
 			eliminar_estrucuras_administrativas(pid_a_eliminar);
-			// TODO: eliminar tabla
+			eliminar_tabla_paginas(pid_a_eliminar);
 			break;
 		default:
 			break;
@@ -495,7 +631,7 @@ get_frame_t *recibir_pedido_frame(socket_cliente)
 
 	return sol_frame;
 }
-int calcular_frame(get_frame_t *solicitud)
+int *calcular_frame(get_frame_t *solicitud)
 {
 	bool is_pid(void *elemento)
 	{
@@ -503,7 +639,7 @@ int calcular_frame(get_frame_t *solicitud)
 	};
 	t_list *tabla = ((elemento_lista_tablas *)list_find(lista_tablas_paginas, is_pid))->tabla;
 
-	int frame = list_get(tabla, solicitud->pagina);
+	int *frame = list_get(tabla, solicitud->pagina);
 	return frame;
 }
 void enviar_frame(int frame, int socket_cliente)

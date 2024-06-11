@@ -78,6 +78,11 @@ typedef struct
 typedef struct
 {
 	int pid;
+	int bytes;
+}resize_t;
+typedef struct
+{
+	int pid;
 	int pc;
 } fetch_t;
 typedef struct
@@ -153,6 +158,8 @@ typedef enum
 	IO_GEN_SLEEP,
 	FIN_IO_TASK,
 	INTERRUPCION,
+	RESIZE,
+	RESIZE_RESPONSE,
 	GET_FRAME,
 	GET_FRAME_RESPONSE,
 	READ_MEM,

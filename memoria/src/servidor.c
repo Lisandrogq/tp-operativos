@@ -19,14 +19,22 @@ int main(int argc, char *argv[])
 	sems_espera_creacion_codigos = list_create();
 	espacio_usuario = malloc(TAM_MEMORIA);
 	memset(espacio_usuario, 0, TAM_MEMORIA);
-/* 	u_int8_t intp8 =38;
-	u_int32_t intp32 =432;
-	int tam8 = sizeof(u_int8_t);
-	int tam32 = sizeof(u_int32_t);
-	memcpy(espacio_usuario+1,&intp8,tam8);
-	memcpy(espacio_usuario+(2*4)+2,&intp32,tam32/2);
-	memcpy(espacio_usuario+(3*4)+0,((void*)(&intp32))+2,tam32/2); */
-
+	/* 	u_int8_t intp8 =38;
+		u_int32_t intp32 =432;
+		int tam8 = sizeof(u_int8_t);
+		int tam32 = sizeof(u_int32_t);
+		memcpy(espacio_usuario+1,&intp8,tam8);
+		memcpy(espacio_usuario+(2*4)+2,&intp32,tam32/2);
+		memcpy(espacio_usuario+(3*4)+0,((void*)(&intp32))+2,tam32/2); */
+	marcos = TAM_MEMORIA / TAM_PAGINA; // son multiplos
+	int bytes = marcos / 8;
+	if (marcos % 8 != 0)
+	{
+		bytes++; // se crea el bitarray con mas bytes de la cantidad de marcos pero se debe validar siempre usar hasta el bit marcos-1;
+	}
+	void *map_space = malloc(bytes);
+	memset(map_space, 0, bytes);
+	bitarray = bitarray_create_with_mode(map_space, bytes, LSB_FIRST);
 	dictionary_codigos = dictionary_create();
 
 	logger = log_create("Memoria.log", "Servidor", 1, LOG_LEVEL_DEBUG);

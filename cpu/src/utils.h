@@ -31,7 +31,7 @@ extern int tam_pagina;
 // Cliente
 interrupcion_t *recibir_interrupcion(int socket_interrupt);
 t_strings_instruccion *fetch(int PC);
-void decode();
+int decode(t_strings_instruccion *instruccion);
 int execute(t_strings_instruccion *instruccion);
 void check_intr();
 t_dictionary *inicializar_diccionario(registros_t *registros);

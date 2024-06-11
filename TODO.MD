@@ -12,6 +12,7 @@
 - [ ] TERMINAR DE AGREGAR MUTEX
 ____
 #### CHECKPOINT 3 #######
+- [ ] !CREO Q el if sigterm puede ser un if general||| UNIFICAR DONDE SE LIBERAN COSAS Y AGREGA A EXIT AL FINALIZAR_PROCESO
 - [ ] CMD:Iniciar planificación,Detener planificación,
 - [ ] Manejo de recursos
 - [x] Planificador largo plazo
@@ -26,11 +27,13 @@ ____
 
 #### ENTREGA FINAL #######
 - [ ] Agregar logs requeridos en consigna
-- [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)
+- [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
 
 #### CHECKPOINT 2 ####
+- [] -unificar sigterm (un solo if antes del switch?)
+- [] desconexion de ios
 - [x] CMD:Ejecutar Script de Operaciones.
 - [x] falta manejar caso en que finaliza una io a un proceso en exit(creo q con un if está)
 - [x] Terminar de hacer q los io task los maneje el kernel: el hilo con io manda al recibir un fintask y al pedir, si esta vacía la cola, se manda desde ahi.

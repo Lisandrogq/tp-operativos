@@ -120,6 +120,14 @@ void *cliente_cpu_dispatch()
 		t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
 		switch (motivo_desalojo)
 		{
+		case OUT_OF_MEMORY: // AGREGAR MANEJO SIGTERM
+			pcb_desalojado->state = EXIT_S;
+			list_add(lista_pcbs_exit, pcb_desalojado);
+			sem_post(&contador_multi);
+			solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
+			// TO DO LIBERAR RECURSOS
+			log_info(logger, "Finaliza el proceso %i - Motivo: OUT_OF_MEMORY", pcb_desalojado->pid);
+			break;
 		case WAIT:
 			if (dictionary_has_key(dictionary_recursos, instruccion_de_desalojo->p1))
 			{
@@ -242,6 +250,7 @@ void *cliente_cpu_dispatch()
 				sem_post(&contador_multi);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
 				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
+				log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", pcb_desalojado->pid);
 			}
 			else
 			{
