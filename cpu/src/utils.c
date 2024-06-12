@@ -132,11 +132,11 @@ int execute_mov_out(t_list *solicitudes)
         solicitud_unitaria_t *sol = list_iterator_next(iterator);
         int status = execute_unitary_mov_out(sol);
 
-        if (status != MEM_W_OK)// NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
+        if (status != MEM_W_OK) // NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
         {
-            log_error(logger,"ERROR EN LA ESCRITURA NUMERO %i",list_iterator_index(iterator));
+            log_error(logger, "ERROR EN LA ESCRITURA NUMERO %i", list_iterator_index(iterator));
             return MEM_W_NO_OK;
-        } 
+        }
     }
     return status;
 }
@@ -171,7 +171,8 @@ int execute_unitary_mov_out(solicitud_unitaria_t *sol)
     return status_escritura;
 }
 
-void liberar_solicitudes(t_list*solicitudes){
+void liberar_solicitudes(t_list *solicitudes)
+{
     t_list_iterator *iterator = list_iterator_create(solicitudes);
     while (list_iterator_has_next(iterator))
     {
@@ -318,20 +319,21 @@ int handshake(int socket_cliente)
     }
     return tam_pagina;
 }
-void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion)
+void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion, buffer_instr_io_t *buffer_instruccion_io)
 {
-/*     pcb.registros->SI = 99;
-    pcb.registros->DI = 99; */
-    int tam_instruccion = instruccion->tamcod + instruccion->tamp1 + instruccion->tamp2 + instruccion->tamp3 + instruccion->tamp4 + instruccion->tamp5;
-    char *p1 = "Int1";
-
-    int tam_p1 = strlen(p1) + 1;
-    int tiempo = 12;
+    /*     pcb.registros->SI = 99;
+        pcb.registros->DI = 99; */
+    int tam_b = 0;
+    if (buffer_instruccion_io != 0)
+    {
+        tam_b = buffer_instruccion_io->size;
+    }
+    int tam_adicional = sizeof(int) * 3 + instruccion->tamcod + instruccion->tamp1 + tam_b;
 
     t_paquete *paquete = malloc(sizeof(t_paquete));
     paquete->buffer = malloc(sizeof(t_buffer));
     paquete->codigo_operacion = motivo_desalojo;
-    paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t) + tam_instruccion + 6 * sizeof(int);
+    paquete->buffer->size = sizeof(int) * 3 + sizeof(registros_t) + tam_adicional;
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
 
@@ -346,9 +348,8 @@ void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &motivo_desalojo, sizeof(int));
     paquete->buffer->offset += sizeof(int);
-    // comienzo serialiacion de instruccion:
+    // comienzo serialiacion de buffer instruccion: es bastante una villa esto :D
 
-    // si alguno de los tams es 0, no se escribe nada en ese parametro osea queda todo 0
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamcod, sizeof(int));
     paquete->buffer->offset += sizeof(int);
     memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->cod_instruccion, instruccion->tamcod);
@@ -359,26 +360,13 @@ void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_
     memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p1, instruccion->tamp1);
     paquete->buffer->offset += instruccion->tamp1;
 
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp2, sizeof(int));
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_b, sizeof(int));
     paquete->buffer->offset += sizeof(int);
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p2, instruccion->tamp2);
-    paquete->buffer->offset += instruccion->tamp2;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp3, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p3, instruccion->tamp3);
-    paquete->buffer->offset += instruccion->tamp3;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp4, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p4, instruccion->tamp4);
-    paquete->buffer->offset += instruccion->tamp4;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &instruccion->tamp5, sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p5, instruccion->tamp5);
-    paquete->buffer->offset += instruccion->tamp5;
-    //
+    
+    if (buffer_instruccion_io != 0)
+    {
+        memcpy(paquete->buffer->stream + paquete->buffer->offset, buffer_instruccion_io->buffer, tam_b);
+    }
 
     int bytes = paquete->buffer->size + 2 * sizeof(int); //=tam(buffer)+tam(codop)+tam(buffer->size)
 
@@ -386,6 +374,12 @@ void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_
 
     send(socket_cliente, a_enviar, bytes, 0);
 
+    if (tam_b != 0)
+    {
+        free(buffer_instruccion_io->buffer);
+    }
+    free(buffer_instruccion_io);
+    eliminar_paquete(paquete);
     free(a_enviar);
 }
 

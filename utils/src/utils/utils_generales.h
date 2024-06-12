@@ -25,7 +25,7 @@ typedef struct
 	int tam;
 	int offset;
 	void *datos;
-} solicitud_unitaria_t;//tanto read como write
+} solicitud_unitaria_t; // tanto read como write
 typedef struct
 {
 	int32_t dir_fisica;
@@ -75,11 +75,17 @@ typedef struct
 	int tamp5;
 	char *p5;
 } t_strings_instruccion;
+
+typedef struct
+{
+	int size;
+	void *buffer;
+} buffer_instr_io_t;
 typedef struct
 {
 	int pid;
 	int bytes;
-}resize_t;
+} resize_t;
 typedef struct
 {
 	int pid;
@@ -136,7 +142,7 @@ typedef struct
 
 typedef struct
 {
-	t_strings_instruccion *instruccion;
+	buffer_instr_io_t *buffer_instruccion;
 	int pid_solicitante;
 } io_task;
 typedef enum

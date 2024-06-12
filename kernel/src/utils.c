@@ -117,7 +117,7 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
 
     if (pid_state == NEW_S)
     {
-        // mutex , remove y NO liberar eadmin 
+        // mutex , remove y NO liberar eadmin
         // ACA SE DEBERIA agregar a la lista de exit SI EL PROCESO ESTA EN NEW
     }
     if (pid_state == EXEC_S)
@@ -274,7 +274,7 @@ void comando_ejecutar_script(char *path, FILE *archivo)
         }
         if (!strcmp(instruccion[0], "ddd"))
             return;
-        free(linea);
+        free(linea);//ESTE FREE TIRA double free o corruption cuando se ejecuta un script por tercera vez
     }
     // cierra el archivo//
     fclose(archivo);
@@ -430,12 +430,13 @@ void *hilo_quantumVRR(void *parametro)
     enviar_interrupcion(CLOCK, pcb->pid);
     log_info(logger, "MANDE INTERRUPCION");
 }
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras, char *algoritmo)
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *palabras, char *algoritmo, buffer_instr_io_t *buffer_instruccion)
 {
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
     int restante_quantum = 0;
 
+    // FLACO EL ALGORITMO PUEDE SER GLOBAL
     if (strcmp(algoritmo, "RR") == 0)
     {
         pthread_t quantum;
@@ -507,45 +508,20 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     memcpy((palabras->p1), stream, palabras->tamp1);
     stream += palabras->tamp1;
 
-    memcpy(&(palabras->tamp2), stream, sizeof(int));
+    memcpy(&(buffer_instruccion->size), stream, sizeof(int));
     stream += sizeof(int);
 
-    palabras->p2 = malloc(palabras->tamp2);
-    memset(palabras->p2, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
-
-    memcpy((palabras->p2), stream, palabras->tamp2);
-    stream += palabras->tamp2;
-
-    memcpy(&(palabras->tamp3), stream, sizeof(int));
-    stream += sizeof(int);
-
-    palabras->p3 = malloc(palabras->tamp3);
-    memset(palabras->p3, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
-
-    memcpy((palabras->p3), stream, palabras->tamp3);
-    stream += palabras->tamp3;
-
-    memcpy(&(palabras->tamp4), stream, sizeof(int));
-    stream += sizeof(int);
-
-    palabras->p4 = malloc(palabras->tamp4);
-    memset(palabras->p4, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
-
-    memcpy((palabras->p4), stream, palabras->tamp4);
-    stream += palabras->tamp4;
-
-    memcpy(&(palabras->tamp5), stream, sizeof(int));
-    stream += sizeof(int);
-
-    palabras->p5 = malloc(palabras->tamp5);
-    memset(palabras->p5, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
-
-    memcpy((palabras->p5), stream, palabras->tamp5);
-    stream += palabras->tamp5;
-
-    // en algun lugar(afuera de esto) hay q hacerle malloc a las palabras.
+    if (buffer_instruccion->size != 0)
+    {
+        buffer_instruccion->buffer = malloc(buffer_instruccion->size);
+        memcpy(buffer_instruccion->buffer, stream, buffer_instruccion->size);
+    }
+    else
+    {
+    }
+    // SE RECIBE:NOMBRE,COD_INSTRUCCION
+    // SE RECIBE:{SIZE:INT, BUFFER:VOID} ESTO SERA MANDADO "DIRECTAMENTE" A LA IO
     return motivo_desalojo;
-    // memcpy(&(pcb->state), stream, sizeof(state_t)); // no debería
 }
 bool is_io_connected(int socket)
 {
@@ -580,36 +556,24 @@ int es_una_io_valida(int pid, t_strings_instruccion *instruccion)
 
     return 1;
 }
-pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion) //!!!TODO: HACERLA GENERICA PARA TODAS LAS INSTRUCCIONES
-{                                                                          // ahora funciona solo con sleep
+pedir_io_task(int pid, t_interfaz *io, buffer_instr_io_t *buffer_instruccion)
+{
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = IO_GEN_SLEEP;
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->buffer->size = sizeof(int) + instruccion->tamcod + instruccion->tamp1 + instruccion->tamp2 + 3 * sizeof(int);
+    paquete->buffer->size = sizeof(int) * 2 + buffer_instruccion->size;
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
     paquete->buffer->offset += sizeof(int);
 
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &(instruccion->tamcod), sizeof(int));
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &buffer_instruccion->size, sizeof(int));
     paquete->buffer->offset += sizeof(int);
 
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->cod_instruccion, instruccion->tamcod);
-    paquete->buffer->offset += instruccion->tamcod;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &(instruccion->tamp1), sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p1, instruccion->tamp1);
-    paquete->buffer->offset += instruccion->tamp1;
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, &(instruccion->tamp2), sizeof(int));
-    paquete->buffer->offset += sizeof(int);
-
-    memcpy(paquete->buffer->stream + paquete->buffer->offset, instruccion->p2, instruccion->tamp2);
-    paquete->buffer->offset += instruccion->tamp2;
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, buffer_instruccion->buffer, buffer_instruccion->size);
+    paquete->buffer->offset += buffer_instruccion->size;
 
     int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
 
@@ -633,6 +597,8 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     sem_wait(sem);
     elemento_cola_io *elemento_borrado = list_remove_by_condition(lista_blocked_del_io, is_pid);
     pcb_t *pcb_a_desbloquear = elemento_borrado->pcb;
+    free(elemento_borrado->buffer_instruccion);
+    free(elemento_borrado);
     int quantum = config_get_int_value(config, "QUANTUM");
     if (pcb_a_desbloquear->quantum == quantum) // hay veces que queda en negativo el quantum TENER EN CUENTA
     {
@@ -648,7 +614,7 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     }
     pcb_a_desbloquear->state = READY_S;
 }
-int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo)
+int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo, buffer_instr_io_t *buffer_instruccion)
 {
     pcb_t *pcb_a_ejecutar;
     if (!list_is_empty(lista_pcbs_exec))
@@ -675,8 +641,10 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
 
     log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);
 
-    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo, algoritmo); // se encarga de enviar y recibir el nuevo contexto actualizando lo que haga falta y el motivo de desalojo
-    // esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb NO.
+    return enviar_proceso_a_ejecutar(DISPATCH, pcb_a_ejecutar, socket_cliente, instruccion_de_desalojo, algoritmo, buffer_instruccion);
+    // pcb se "retorna" por referencia, buffer_instruccion_io lo mismo
+    //  SE RETORNA motivp_desalojo
+    //  esto hay q separarlo en dos funciones:enviar proceso Y recibir proceso/pcb NO.
 }
 void enviar_PCB(int cod_op, pcb_t pcb, int socket_cliente)
 {
@@ -778,7 +746,7 @@ void *client_handler(void *arg)
             {
                 log_error(logger, "ENTRE AL FIN IO TASK-MANDAR OTRO TASK");
                 elemento_cola_io *elemento = list_get(struct_cola->cola_de_io_pedido, 0);
-                pedir_io_task(elemento->pcb->pid, interfaz, elemento->instruccion_de_bloqueo);
+                pedir_io_task(elemento->pcb->pid, interfaz, elemento->buffer_instruccion);
             }
             break;
         case -1:

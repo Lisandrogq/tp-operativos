@@ -2,7 +2,6 @@
 #include <readline/readline.h>
 #include <semaphore.h>
 
-
 int inicializar_cliente_kernel()
 {
 	char *ip;
@@ -40,38 +39,19 @@ void inicializar_cliente_memoria() // todavia no se usa
 io_task *recibir_pedido_io(int socket_kernel)
 {
 	io_task *pedido = malloc(sizeof(io_task));
+	pedido->buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
 	t_buffer *buffer = malloc(sizeof(t_buffer));
 	recv(socket_kernel, &(buffer->size), sizeof(int), 0);
 	buffer->stream = malloc(buffer->size);
 	recv(socket_kernel, buffer->stream, buffer->size, 0);
 
-	t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion));
-	pedido->instruccion = palabras;
-	memset(palabras, 0, sizeof(t_strings_instruccion));
 	void *stream = buffer->stream;
 	memcpy(&(pedido->pid_solicitante), stream, sizeof(int));
 	stream += sizeof(int);
-	memcpy(&(palabras->tamcod), stream, sizeof(int));
+	memcpy(&(pedido->buffer_instruccion->size), stream, sizeof(int));
 	stream += sizeof(int);
-	palabras->cod_instruccion = malloc(palabras->tamcod);
-	memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
-	stream += palabras->tamcod;
-
-	memcpy(&(palabras->tamp1), stream, sizeof(int));
-	stream += sizeof(int);
-
-	palabras->p1 = malloc(palabras->tamp1);
-	memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
-	memcpy((palabras->p1), stream, palabras->tamp1);
-	stream += palabras->tamp1;
-
-	memcpy(&(palabras->tamp2), stream, sizeof(int));
-	stream += sizeof(int);
-
-	palabras->p2 = malloc(palabras->tamp2);
-	memset(palabras->p2, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
-	memcpy((palabras->p2), stream, palabras->tamp2);
-	stream += palabras->tamp2;
+	pedido->buffer_instruccion->buffer = malloc(pedido->buffer_instruccion->size);
+	memcpy(pedido->buffer_instruccion->buffer, stream, pedido->buffer_instruccion->size);
 
 	free(buffer->stream);
 	free(buffer);

@@ -146,6 +146,18 @@ t_strings_instruccion *fetch(int PC)
 }
 int decode(t_strings_instruccion *instruccion)
 {
+
+	if (strcmp(instruccion->cod_instruccion, "IO_GEN_SLEEP") == 0)
+	{
+		// traduccion de direcciones
+		buffer_instr_io_t *buffer_intruccion = malloc(sizeof(buffer_instr_io_t));
+		buffer_intruccion->buffer = malloc(sizeof(int));
+		int cant_sleep = atoi(instruccion->p2);
+		memcpy(buffer_intruccion->buffer, &cant_sleep, sizeof(int));
+		buffer_intruccion->size = sizeof(int);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_intruccion); // habria que ponerle mutex a dispatch
+		return STATUS_DESALOJADO;
+	}
 	if (strcmp(instruccion->cod_instruccion, "MOV_IN") == 0) // MOV_IN (Registro Datos, Registro Dirección)
 	{
 		int dir_logica = 0;
@@ -199,7 +211,7 @@ int decode(t_strings_instruccion *instruccion)
 		liberar_solicitudes(solicitudes_r);
 
 		// traduccion write
-		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI"); 
+		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI");
 		t_list *solicitudes_w = obtener_direcciones_fisicas_write(buffer_intermedio, *dir_logica_write, tam_string);
 		execute_mov_out(solicitudes_w);
 		liberar_solicitudes(solicitudes_w);
@@ -209,7 +221,6 @@ int decode(t_strings_instruccion *instruccion)
 		execute_mov_in(solicitudes_T, buffer_intermedio);
 		log_info(logger, "EL STRING ESCRITO, AL VOLVER A LEERSE ES:%s", buffer_intermedio);
 		liberar_solicitudes(solicitudes_T); */
-
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "RESIZE") == 0) // RESIZE (bytes)
@@ -220,7 +231,7 @@ int decode(t_strings_instruccion *instruccion)
 		int status = recibir_status_resize();
 		if (status == -1)
 		{
-			devolver_pcb(OUT_OF_MEMORY, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+			devolver_pcb(OUT_OF_MEMORY, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
 			return STATUS_DESALOJADO;
 		}
 	}
@@ -349,7 +360,7 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 		sol->tam = tam_r_datos;
 		sol->datos = malloc(sol->tam);
 		memcpy(sol->datos, datos, sol->tam);
-		
+
 		list_add(solicitudes, sol);
 		list_map(solicitudes, traducir_a_dir_fisica); // xd
 	}
@@ -505,23 +516,18 @@ int execute(t_strings_instruccion *instruccion)
 	if ((strstr(instruccion->cod_instruccion, "EXIT") != NULL)) // Fix termporal a aparicion random de '%'o'5'
 	{
 
-		devolver_pcb(SUCCESS, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
-		return STATUS_DESALOJADO;
-	}
-	if (strcmp(instruccion->cod_instruccion, "IO_GEN_SLEEP") == 0)
-	{
-		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+		devolver_pcb(SUCCESS, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
 		return STATUS_DESALOJADO;
 	}
 	if (strcmp(instruccion->cod_instruccion, "WAIT") == 0)
 	{
-		devolver_pcb(WAIT, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+		devolver_pcb(WAIT, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
 		sem_wait(&hay_proceso);
 		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "SIGNAL") == 0)
 	{
-		devolver_pcb(SIGNAL, *pcb_exec, socket_dispatch, instruccion); // habria que ponerle mutex a dispatch
+		devolver_pcb(SIGNAL, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
 		sem_wait(&hay_proceso);
 		return STATUS_OK; // Wait semaforo hay pcb o proceso
 	}
@@ -544,7 +550,7 @@ void check_intr(int *status)
 			case INTERRUPTED_BY_USER:
 				//	retornar por dispatch(mutex por las dudas)
 				// marcar como desalojado
-				devolver_pcb(INTERRUPTED_BY_USER, *pcb_exec, socket_dispatch, instruccion_vacia);
+				devolver_pcb(INTERRUPTED_BY_USER, *pcb_exec, socket_dispatch, instruccion_vacia,0);
 				// liberar_pcb(pcb_exec);
 				*status = STATUS_DESALOJADO;
 				log_debug(logger, "SE DESALOJO UN PROCESO POR TERMINAR_PROCESO_INTR");
@@ -552,7 +558,7 @@ void check_intr(int *status)
 			case CLOCK:
 				// retornar por dispatch(mutex por las dudas)
 				//	marcar como desalojado
-				devolver_pcb(CLOCK, *pcb_exec, socket_dispatch, instruccion_vacia);
+				devolver_pcb(CLOCK, *pcb_exec, socket_dispatch, instruccion_vacia,0);
 				// liberar_pcb(pcb_exec);
 				*status = STATUS_DESALOJADO;
 				log_debug(logger, "SE DESALOJO UN PROCESO POR CLOCK_INTR");

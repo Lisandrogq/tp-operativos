@@ -21,7 +21,7 @@
 extern t_dictionary *dic_p_registros;
 extern t_dictionary *dic_tam_registros;
 extern int socket_memoria;
-extern t_list * tlb_list;//cada elemento es un tlb_element
+extern t_list *tlb_list; // cada elemento es un tlb_element
 extern sem_t hay_proceso;
 extern sem_t desalojar;
 extern pcb_t *pcb_exec;
@@ -34,9 +34,9 @@ extern int CANTIDAD_ENTRADAS_TLB;
 typedef struct
 {
     int pid;
-    int pagina; 
+    int pagina;
     int frame;
-    //int timestamp//para lru
+    // int timestamp//para lru
 } tlb_element;
 interrupcion_t *recibir_interrupcion(int socket_interrupt);
 t_strings_instruccion *fetch(int PC);
@@ -44,11 +44,11 @@ int decode(t_strings_instruccion *instruccion);
 int execute(t_strings_instruccion *instruccion);
 void check_intr();
 t_dictionary *inicializar_diccionario(registros_t *registros);
-void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion);
+void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion, buffer_instr_io_t *buffer_instruccion_io);
 void execute_mov_in(t_list *solicitudes, void *datos);
 int execute_mov_out(t_list *solicitudes);
-solicitud_unitaria_t* execute_unitary_mov_in(solicitud_unitaria_t*sol);
-int execute_unitary_mov_out(solicitud_unitaria_t*sol);
+solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol);
+int execute_unitary_mov_out(solicitud_unitaria_t *sol);
 void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen);

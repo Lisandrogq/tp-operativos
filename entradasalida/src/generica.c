@@ -1,7 +1,13 @@
 #include "client.h"
 #include <readline/readline.h>
 #include <semaphore.h>
+int decode_buffer_sleep(buffer_instr_io_t *buffer_instruccion)
+{
 
+	int cant_sleep = 0;
+	memcpy(&cant_sleep, buffer_instruccion->buffer, sizeof(int));
+	return cant_sleep;
+}
 void iniciar_interfaz_generica()
 {
 	inicializar_cliente_kernel();
@@ -12,14 +18,15 @@ void iniciar_interfaz_generica()
 	while (1) // xd
 	{
 		io_task *pedido = gen_recibir_peticion();
-		gen_resolver_peticion(pedido);
+		int cant_sleep = decode_buffer_sleep(pedido->buffer_instruccion);
+		gen_resolver_peticion(cant_sleep);
+		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_GEN_SLEEP");
 	}
 }
 
-void gen_resolver_peticion(io_task *pedido) // gran nombre
+void gen_resolver_peticion(int cant_sleep) // gran nombre
 {
-	gen_sleep(pedido->instruccion->p2);
-	informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, pedido->instruccion->cod_instruccion);
+	sleep(cant_sleep);
 }
 io_task *gen_recibir_peticion()
 {
@@ -29,10 +36,4 @@ io_task *gen_recibir_peticion()
 		return -1;
 	io_task *pedido = recibir_pedido_io(socket_kernel);
 	return pedido;
-}
-void gen_sleep(char *p2)
-{
-	int tiempo = atoi(p2);
-	sleep(tiempo * 1);
-	return;
 }

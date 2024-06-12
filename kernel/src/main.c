@@ -110,12 +110,14 @@ void *cliente_cpu_dispatch()
 
 	while (1)
 	{
+		// reemplazar por void*buffer_instruccion sin malloc
 		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));
+		buffer_instr_io_t *buffer_instruccion =  malloc(sizeof(buffer_instr_io_t));
 		// creo q no  debería generar conflicto con los desalojos sin instruccion
 		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
 		int motivo_desalojo = -1;
-		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo);
+		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo,buffer_instruccion);
 		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
 		t_cola_recurso *struct_recurso = dictionary_get(dictionary_recursos, instruccion_de_desalojo->p1);
 		switch (motivo_desalojo)
@@ -273,7 +275,8 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
-				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list); // pq aca dice dic_recursos??
+																				  // samcho gil aflojale al ctrlc
 			}
 			else
 			{
@@ -297,11 +300,11 @@ void *cliente_cpu_dispatch()
 					sem_t *elementos = struct_io->elementos_cola_io;
 					elemento_cola_io *elemento = malloc(sizeof(elemento_cola_io));
 					elemento->pcb = pcb_desalojado;
-					elemento->instruccion_de_bloqueo = instruccion_de_desalojo;
+					elemento->buffer_instruccion = buffer_instruccion;
 					if (list_size(cola_de_io_pedido) == 0)
 					{ // si esta vació la pide y agrega a blocked
 						log_debug(logger, "ENTRE AL IF la cola esta vacia");
-						pedir_io_task(pcb_desalojado->pid, io, instruccion_de_desalojo);
+						pedir_io_task(pcb_desalojado->pid, io, buffer_instruccion);
 						list_add(cola_de_io_pedido, elemento);
 						sem_post(elementos);
 					}

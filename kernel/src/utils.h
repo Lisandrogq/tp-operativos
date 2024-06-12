@@ -41,18 +41,18 @@ extern pthread_mutex_t mutex_lista_ready;
 extern sem_t hay_new;
 extern sem_t elementos_ready;
 extern sem_t contador_multi;
-extern t_dictionary *dictionary_recursos;				// contador de ready, si no hay, no podes planificar.
+extern t_dictionary *dictionary_recursos;		// contador de ready, si no hay, no podes planificar.
 extern t_dictionary *dictionary_pcbs_bloqueado; // "Int1","int3","recurso1"...cada elemento
-											/// es un struct con lista y contador y mutex de acceso
+												/// es un struct con lista y contador y mutex de acceso
 typedef struct
 {
 
 	sem_t *elementos_cola_io;
-	t_list *cola_de_io_pedido;//!CADA ELEMENTO ES UN''elemento_cola_io''
+	t_list *cola_de_io_pedido; //! CADA ELEMENTO ES UN''elemento_cola_io''
 } t_cola_io;
 
 typedef struct
-{	
+{
 	int instancias;
 	sem_t *elementos_cola_recurso;
 	t_list *cola_de_recurso_pedido;
@@ -60,10 +60,9 @@ typedef struct
 } t_cola_recurso;
 typedef struct
 {
-
-	t_strings_instruccion* instruccion_de_bloqueo;
-	pcb_t*pcb;//cada elemento:(pcb+instruccion)
-} elemento_cola_io;
+	buffer_instr_io_t *buffer_instruccion; 
+	pcb_t *pcb;				   
+} elemento_cola_io;// t_strings_instruccion* instruccion_de_bloqueo
 
 typedef struct
 {
@@ -72,8 +71,7 @@ typedef struct
 	pcb_t *pcb;
 } elemento_cola_new;
 
-
-//extern pthread_mutex_t mutex_lista_bloqueado;
+// extern pthread_mutex_t mutex_lista_bloqueado;
 extern int socket_interrupt;
 extern t_list *lista_pcbs_exec;
 extern t_dictionary *dictionary_ios;
@@ -100,13 +98,13 @@ t_log *iniciar_logger(void);
 t_config *iniciar_config(void);
 void leer_consola(t_log *);
 void paquete(int);
-void terminar_programa(int, t_log*, t_config*);
+void terminar_programa(int, t_log *, t_config *);
 void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io);
-int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente,t_strings_instruccion*instruccion_de_desalojo, char* algoritmo);
-int planificar(int socket_cliente,t_strings_instruccion*instruccion_de_desalojo , char* algoritmo);
-void *hilo_quantum(void* parametro);
-//Server
-extern t_log* logger;
+int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo, buffer_instr_io_t *buffer_instruccion);
+int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo, buffer_instr_io_t *buffer_instruccion);
+void *hilo_quantum(void *parametro);
+// Server
+extern t_log *logger;
 void enviar_interrupcion(int motivo, int pid);
 
 void *recibir_buffer(int *, int);
@@ -118,6 +116,6 @@ int terminarServidor(int, int);
 void recibir_operacion1(int socket_cliente);
 pcb_t *crear_pcb(int pid);
 t_interfaz *recibir_IO(int socket_cliente);
-pedir_io_task(int pid, t_interfaz *io, t_strings_instruccion *instruccion);
+pedir_io_task(int pid, t_interfaz *io, buffer_instr_io_t *buffer_instruccion);
 
 #endif /* UTILS_H_ */
