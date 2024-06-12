@@ -158,7 +158,7 @@ int decode(t_strings_instruccion *instruccion)
 		int tam_r_datos = *((int *)dictionary_get(dic_tam_registros, instruccion->p1));
 		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
 
-		t_list *solicitudes = obtener_direcciones_fisicas(dir_logica, tam_r_datos);
+		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, tam_r_datos);
 
 		list_map(solicitudes, execute_mov_in);
 		t_list_iterator *iterator = list_iterator_create(solicitudes);
@@ -191,7 +191,7 @@ int decode(t_strings_instruccion *instruccion)
 		{
 			solicitud_unitaria_t *sol = list_iterator_next(iterator);
 			int status = execute_mov_out(sol);
-			log_info(logger, "status_escritura[%i]:%d", list_iterator_index(solicitudes), status);
+			log_info(logger, "status_escritura[%i]:%d", list_iterator_index(iterator), status);
 
 			if (status != MEM_W_OK)
 				total_status = MEM_W_NO_OK; // NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
@@ -255,7 +255,7 @@ void enviar_solicitud_resize(int pid, int bytes_solicitados)
 	free(a_enviar);
 	eliminar_paquete(paquete);
 }
-t_list *obtener_direcciones_fisicas(int dir_logica, int tam_r_datos) // return list sol_unitaria_t*
+t_list *obtener_direcciones_fisicas_read(int dir_logica, int tam_r_datos) // return list sol_unitaria_t*
 {
 	t_list *solicitudes = list_create();
 	int pagina = floor((dir_logica) / tam_pagina);
@@ -280,7 +280,7 @@ t_list *obtener_direcciones_fisicas(int dir_logica, int tam_r_datos) // return l
 				tam_siguiente = tam_pagina;
 			list_add(solicitudes, sol);
 		}
-		list_map(solicitudes, solicitar_frame_iterable);
+		list_map(solicitudes, traducir_a_dir_fisica);
 	}
 	else
 	{
@@ -290,7 +290,7 @@ t_list *obtener_direcciones_fisicas(int dir_logica, int tam_r_datos) // return l
 		sol->tam = tam_r_datos;
 		sol->datos = malloc(sol->tam);
 		list_add(solicitudes, sol);
-		list_map(solicitudes, solicitar_frame_iterable); // xd
+		list_map(solicitudes, traducir_a_dir_fisica); // xd
 	}
 	return solicitudes;
 }
@@ -324,7 +324,7 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 				tam_siguiente = tam_pagina;
 			list_add(solicitudes, sol);
 		}
-		list_map(solicitudes, solicitar_frame_iterable);
+		list_map(solicitudes, traducir_a_dir_fisica);
 	}
 	else
 	{
@@ -334,20 +334,11 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 		sol->tam = tam_r_datos;
 		sol->datos = datos;
 		list_add(solicitudes, sol);
-		list_map(solicitudes, solicitar_frame_iterable); // xd
+		list_map(solicitudes, traducir_a_dir_fisica); // xd
 	}
 	return solicitudes;
 }
 
-int obtener_direccion_fisica(int dir_logica)
-{
-	int pagina = floor((dir_logica) / tam_pagina);
-	int offset = dir_logica - pagina * tam_pagina;
-	solicitar_frame(pagina);
-	int cod_op = recibir_operacion(socket_memoria);
-	int frame = recibir_frame();
-	return frame * tam_pagina + offset; // inicio frame + offset
-}
 int recibir_frame()
 {
 	int cod_op = recibir_operacion(socket_memoria);
@@ -367,7 +358,40 @@ int recibir_frame()
 
 	return frame;
 }
-solicitud_unitaria_t *solicitar_frame_iterable(solicitud_unitaria_t *sol)
+solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
+{
+	int n_frame = -1;
+
+	n_frame = get_frame_tlb(sol);
+
+	if (n_frame == -1)
+	{
+		log_info(logger, "PID: %i - TLB MISS - Pagina: %i", pcb_exec->pid, sol->pagina);
+
+		n_frame = solicitar_frame_a_memoria(sol);
+
+		tlb_element *elemento = malloc(sizeof(elemento));
+		elemento->pid = pcb_exec->pid;
+		elemento->pagina = sol->pagina;
+		elemento->frame = n_frame;
+		actualizar_tlb(elemento);
+	}
+	else
+	{
+		log_info(logger, "PID: %i - TLB HIT - Pagina: %i", pcb_exec->pid, sol->pagina);
+	}
+	// esto se hace independientemente de la forma de obtencion
+	sol->dir_fisica_base = n_frame * tam_pagina;
+	void printear(tlb_element *elemento){
+		printf("(PID%i)=[%i-%i] |||| ",elemento->pid,elemento->pagina,elemento->frame);
+	}
+	printf("ESTADO TLB: ");
+	list_iterate(tlb_list,printear);
+	printf("\n");
+	return sol;
+}
+
+int solicitar_frame_a_memoria(solicitud_unitaria_t *sol)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 
@@ -390,34 +414,37 @@ solicitud_unitaria_t *solicitar_frame_iterable(solicitud_unitaria_t *sol)
 	send(socket_memoria, a_enviar, bytes, 0);
 	free(a_enviar);
 	eliminar_paquete(paquete);
-
-	sol->dir_fisica_base = recibir_frame() * tam_pagina;
-	return sol;
+	int frame = recibir_frame();
+	log_info(logger,"PID: %i - OBTENER MARCO - Página: %i - Marco: %i",pcb_exec->pid,sol->pagina,frame);
+	return frame;
 }
-int solicitar_frame(int pagina)
+
+int get_frame_tlb(solicitud_unitaria_t *sol)
 {
-	t_paquete *paquete = malloc(sizeof(t_paquete));
-
-	paquete->codigo_operacion = GET_FRAME;
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = sizeof(int) * 2;
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	paquete->buffer->offset = 0;
-
-	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->pid), sizeof(u_int32_t));
-	paquete->buffer->offset += sizeof(int);
-
-	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pagina, sizeof(int));
-	paquete->buffer->offset += sizeof(int);
-
-	int bytes = paquete->buffer->size + 2 * sizeof(int);
-
-	void *a_enviar = serializar_paquete(paquete, bytes);
-
-	send(socket_memoria, a_enviar, bytes, 0);
-	free(a_enviar);
-	eliminar_paquete(paquete);
+	bool find_page(void *arg)
+	{
+		tlb_element *elemento = (tlb_element *)arg;
+		return elemento->pid == pcb_exec->pid && elemento->pagina == sol->pagina;
+	};
+	tlb_element *elemento = list_find(tlb_list, find_page);
+	if (elemento == NULL)
+		return -1;
+	return elemento->frame;
 }
+void actualizar_tlb(tlb_element *elemento) // al irse un proceso, se borra la tlb?
+{
+	if (list_size(tlb_list) < CANTIDAD_ENTRADAS_TLB)
+	{
+		list_add_in_index(tlb_list, 0, elemento);
+	}
+	else
+	{
+		// reemplazo por fifo//[5,4,3,2,1,0]: add[0],remove[size-1]
+		list_add_in_index(tlb_list, 0, elemento);
+		list_remove(tlb_list, list_size(tlb_list) - 1);
+	}
+}
+
 int execute(t_strings_instruccion *instruccion)
 {
 	log_instruccion_ejecutada(instruccion); // en teoría debería ir al final de cada if,xd
@@ -629,6 +656,7 @@ int main(int argc, char const *argv[])
 	dic_p_registros = dictionary_create();
 	dic_tam_registros = dictionary_create();
 	inicializar_diccionario_tams();
+	tlb_list = list_create();
 
 	// dictionary = inicializar_diccionario(contexto); esto ya no hace falta, se inicializa al recibir pcb
 
@@ -638,7 +666,7 @@ int main(int argc, char const *argv[])
 	logger = log_create("cpu.log", "Cpu_MateLavado", 1, LOG_LEVEL_DEBUG);
 	config = iniciar_config();
 	config = config_create("cpu.config");
-
+	CANTIDAD_ENTRADAS_TLB = config_get_int_value(config, "CANTIDAD_ENTRADAS_TLB");
 	iniciar_thread_dispatch();
 	iniciar_thread_interrupt();
 	socket_memoria = iniciar_conexion_memoria(config, logger);

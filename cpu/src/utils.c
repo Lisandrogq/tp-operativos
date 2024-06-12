@@ -3,12 +3,14 @@
 
 t_dictionary *dic_p_registros; // tiene punteros a los registros
 t_dictionary *dic_tam_registros;
+t_list *tlb_list;
 sem_t hay_proceso;
 sem_t desalojar;
 pcb_t *pcb_exec;
 int socket_dispatch;
 int socket_interrupt;
 int socket_memoria;
+int CANTIDAD_ENTRADAS_TLB;
 
 int tam_pagina;
 interrupcion_t *recibir_interrupcion(int socket_interrupt)
@@ -118,6 +120,11 @@ solicitud_unitaria_t *execute_mov_in(solicitud_unitaria_t *sol)
     void *datos_obtenidos = recibir_datos_leidos();
     log_info(logger, "datos_obtenidos:%d", *(u_int8_t *)datos_obtenidos);
     memcpy(sol->datos, datos_obtenidos, sol->tam);
+    int *logeable = malloc(sizeof(int));
+    memset(logeable, 0, sizeof(int));
+    memcpy(logeable, datos_obtenidos, sol->tam);
+    log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %i - Valor: %i", pcb_exec->pid, sol->dir_fisica_base + sol->offset, *logeable);
+    free(logeable);
     return sol;
 }
 int execute_mov_out(solicitud_unitaria_t *sol)
@@ -125,6 +132,12 @@ int execute_mov_out(solicitud_unitaria_t *sol)
     solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     int status_escritura = recibir_status_escritura();
+    int *logeable = malloc(sizeof(int));
+    memset(logeable, 0, sizeof(int));
+    memcpy(logeable, sol->datos, sol->tam);
+    log_info(logger, "PID: %i - Acción: ESCRIBIR - Dirección Física: %i - Valor: %i", pcb_exec->pid, sol->dir_fisica_base + sol->offset, *logeable);
+    free(logeable);
+
     return status_escritura;
 }
 
@@ -481,5 +494,5 @@ void log_instruccion_ejecutada(t_strings_instruccion *palabras) // REVISAR SI ES
 }
 void log_fetch_instruccion()
 {
-    log_error(logger, "PID: %i - FETCH - Program Counter: %i", pcb_exec->pid, pcb_exec->registros->PC);
+    log_info(logger, "PID: %i - FETCH - Program Counter: %i", pcb_exec->pid, pcb_exec->registros->PC);
 }

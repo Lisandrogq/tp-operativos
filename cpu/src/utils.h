@@ -21,14 +21,23 @@
 extern t_dictionary *dic_p_registros;
 extern t_dictionary *dic_tam_registros;
 extern int socket_memoria;
-
+extern t_list * tlb_list;//cada elemento es un tlb_element
 extern sem_t hay_proceso;
 extern sem_t desalojar;
 extern pcb_t *pcb_exec;
 extern int socket_dispatch;
 extern int socket_interrupt;
 extern int tam_pagina;
+extern int CANTIDAD_ENTRADAS_TLB;
 // Cliente
+
+typedef struct
+{
+    int pid;
+    int pagina; 
+    int frame;
+    //int timestamp//para lru
+} tlb_element;
 interrupcion_t *recibir_interrupcion(int socket_interrupt);
 t_strings_instruccion *fetch(int PC);
 int decode(t_strings_instruccion *instruccion);
@@ -46,12 +55,10 @@ void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos);
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos);
 void *recibir_datos_leidos();
 int recibir_status_escritura();
-int obtener_direccion_fisica(int dir_logica);
-t_list *obtener_direcciones_fisicas(int dir_logica, int tam_r_datos);
+t_list *obtener_direcciones_fisicas_read(int dir_logica, int tam_r_datos);
 t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r_datos);
 int recibir_frame();
-solicitud_unitaria_t *solicitar_frame_iterable(solicitud_unitaria_t *sol);
-int solicitar_frame(int pagina);
+solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol);
 // Cliente
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);
