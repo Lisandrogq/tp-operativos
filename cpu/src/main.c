@@ -199,11 +199,17 @@ int decode(t_strings_instruccion *instruccion)
 		liberar_solicitudes(solicitudes_r);
 
 		// traduccion write
-		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI"); // siempre se usa SI
+		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI"); 
 		t_list *solicitudes_w = obtener_direcciones_fisicas_write(buffer_intermedio, *dir_logica_write, tam_string);
 		execute_mov_out(solicitudes_w);
 		liberar_solicitudes(solicitudes_w);
-		// simil movout de datos,dir,tanaño.
+
+		/* //TEST: lo escrito por 2 proceso simultaneamente esta bien:
+		t_list *solicitudes_T = obtener_direcciones_fisicas_read(*dir_logica_write, tam_string);
+		execute_mov_in(solicitudes_T, buffer_intermedio);
+		log_info(logger, "EL STRING ESCRITO, AL VOLVER A LEERSE ES:%s", buffer_intermedio);
+		liberar_solicitudes(solicitudes_T); */
+
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "RESIZE") == 0) // RESIZE (bytes)

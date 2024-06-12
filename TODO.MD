@@ -7,8 +7,6 @@
 - [ ] ARREGLAR LEAKS
 - [ ] ARREGLAR cuando se mueve el offset haciendo stream+=... , Cuando se quiera liberar stream, no se va a liberar nada, pq stream esta al final.
 - [ ] unificar los tipos de  de int a U_int_X ***en vm int 32 == int, capaz en el labo la pasamos mal***
-
-- [ ] Una vez paso que un proceso entro a io y volvio a ejecutar al toque(capaz es un tema de q faltan mutex :p)
 - [ ] TERMINAR DE AGREGAR MUTEX
 ____
 #### CHECKPOINT 3 #######
@@ -20,14 +18,15 @@ ____
 - [x] Integrar con paginacion
 - [x] MMU
 - [x] TLB (FIFO)
-- [ ] Instrucciones adicionales
+- [x] Instrucciones adicionales
 - [ ] IOs
 - [ ] El issue #3807 dice que hay retardo ante cualquier peticion, creo q hay q ponerla justo despues del codop o ago así
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
 - [ ] Revisar uso de 'exit(-1);' para cerrar sockets
 
 #### ENTREGA FINAL #######
-- [ ]TLB (LRU)
+- [ ] IMPLEMENTAR DESCONEXION DE ios
+- [ ] TLB (LRU)
 - [ ] FS(GIGANTE)
 - [ ] Agregar logs requeridos en consigna
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]

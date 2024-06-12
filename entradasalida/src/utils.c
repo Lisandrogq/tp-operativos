@@ -2,7 +2,11 @@
 extern t_log *logger;
 int contador; // 0 es el contador para generica
 char*nombre;
-
+t_log *logger;
+t_config *config;
+int socket_kernel;
+int socket_memoria;
+int *tiempo_Unidad_Trabajo;
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
