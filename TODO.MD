@@ -19,7 +19,7 @@ ____
 - [x] Memoría e instrucciones minimas
 - [x] Integrar con paginacion
 - [x] MMU
-- [ ] TLB
+- [x] TLB (FIFO)
 - [ ] Instrucciones adicionales
 - [ ] IOs
 - [ ] El issue #3807 dice que hay retardo ante cualquier peticion, creo q hay q ponerla justo despues del codop o ago así
@@ -27,6 +27,8 @@ ____
 - [ ] Revisar uso de 'exit(-1);' para cerrar sockets
 
 #### ENTREGA FINAL #######
+- [ ]TLB (LRU)
+- [ ] FS(GIGANTE)
 - [ ] Agregar logs requeridos en consigna
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).

@@ -159,16 +159,8 @@ int decode(t_strings_instruccion *instruccion)
 		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
 
 		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, tam_r_datos);
-
-		list_map(solicitudes, execute_mov_in);
-		t_list_iterator *iterator = list_iterator_create(solicitudes);
-		int write_offset = 0;
-		while (list_iterator_has_next(iterator))
-		{
-			solicitud_unitaria_t *sol = list_iterator_next(iterator);
-			memcpy(datos + write_offset, sol->datos, sol->tam);
-			write_offset += sol->tam;
-		}
+		execute_mov_in(solicitudes, datos);
+		liberar_solicitudes(solicitudes);
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "MOV_OUT") == 0) // MOV_OUT (Registro Dirección, Registro Datos)
@@ -185,20 +177,35 @@ int decode(t_strings_instruccion *instruccion)
 
 		t_list *solicitudes = obtener_direcciones_fisicas_write(datos, dir_logica, tam_r_datos);
 
-		t_list_iterator *iterator = list_iterator_create(solicitudes);
-		int total_status = MEM_W_OK;
-		while (list_iterator_has_next(iterator))
+		int status = execute_mov_out(solicitudes); // los datosa escribir no se pasan pq estan en solicitud
+		liberar_solicitudes(solicitudes);
+		if (status == MEM_W_NO_OK)
 		{
-			solicitud_unitaria_t *sol = list_iterator_next(iterator);
-			int status = execute_mov_out(sol);
-			log_info(logger, "status_escritura[%i]:%d", list_iterator_index(iterator), status);
-
-			if (status != MEM_W_OK)
-				total_status = MEM_W_NO_OK; // NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
+			// NOSE QUE DICE LA CONSIGNAXD
 		}
-
-		// log_info(logger, "dir_fisica_a_escribir: %i", dir_fisica);
 	}
+
+	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
+	{
+		int tam_string = atoi(instruccion->p1);
+		void *buffer_intermedio = malloc(tam_string);
+		memset(buffer_intermedio, 0, tam_string + 1); // p agregar /0
+
+		u_int32_t *dir_logica_read = dictionary_get(dic_p_registros, "SI"); // siempre se usa SI
+
+		t_list *solicitudes_r = obtener_direcciones_fisicas_read(*dir_logica_read, tam_string);
+		execute_mov_in(solicitudes_r, buffer_intermedio);
+		log_info(logger, "EL STRING COPIADO ES:%s", buffer_intermedio);
+		liberar_solicitudes(solicitudes_r);
+
+		// traduccion write
+		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI"); // siempre se usa SI
+		t_list *solicitudes_w = obtener_direcciones_fisicas_write(buffer_intermedio, *dir_logica_write, tam_string);
+		execute_mov_out(solicitudes_w);
+		liberar_solicitudes(solicitudes_w);
+		// simil movout de datos,dir,tanaño.
+	}
+
 	if (strcmp(instruccion->cod_instruccion, "RESIZE") == 0) // RESIZE (bytes)
 	{
 		int bytes = atoi((instruccion->p1));
@@ -211,8 +218,10 @@ int decode(t_strings_instruccion *instruccion)
 			return STATUS_DESALOJADO;
 		}
 	}
+
 	return STATUS_OK;
 }
+
 int recibir_status_resize()
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -332,7 +341,9 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 		sol->pagina = pagina;
 		sol->offset = offset;
 		sol->tam = tam_r_datos;
-		sol->datos = datos;
+		sol->datos = malloc(sol->tam);
+		memcpy(sol->datos, datos, sol->tam);
+		
 		list_add(solicitudes, sol);
 		list_map(solicitudes, traducir_a_dir_fisica); // xd
 	}
@@ -382,11 +393,12 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 	}
 	// esto se hace independientemente de la forma de obtencion
 	sol->dir_fisica_base = n_frame * tam_pagina;
-	void printear(tlb_element *elemento){
-		printf("(PID%i)=[%i-%i] |||| ",elemento->pid,elemento->pagina,elemento->frame);
+	void printear(tlb_element * elemento)
+	{
+		printf("(PID%i)=[%i-%i] |||| ", elemento->pid, elemento->pagina, elemento->frame);
 	}
 	printf("ESTADO TLB: ");
-	list_iterate(tlb_list,printear);
+	list_iterate(tlb_list, printear);
 	printf("\n");
 	return sol;
 }
@@ -415,7 +427,7 @@ int solicitar_frame_a_memoria(solicitud_unitaria_t *sol)
 	free(a_enviar);
 	eliminar_paquete(paquete);
 	int frame = recibir_frame();
-	log_info(logger,"PID: %i - OBTENER MARCO - Página: %i - Marco: %i",pcb_exec->pid,sol->pagina,frame);
+	log_info(logger, "PID: %i - OBTENER MARCO - Página: %i - Marco: %i", pcb_exec->pid, sol->pagina, frame);
 	return frame;
 }
 

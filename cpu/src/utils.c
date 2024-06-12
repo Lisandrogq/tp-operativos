@@ -111,7 +111,37 @@ void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // ha
     }
 }
 
-solicitud_unitaria_t *execute_mov_in(solicitud_unitaria_t *sol)
+void execute_mov_in(t_list *solicitudes, void *datos)
+{
+    list_map(solicitudes, execute_unitary_mov_in);
+    t_list_iterator *iterator = list_iterator_create(solicitudes);
+    int write_offset = 0;
+    while (list_iterator_has_next(iterator))
+    {
+        solicitud_unitaria_t *sol = list_iterator_next(iterator);
+        memcpy(datos + write_offset, sol->datos, sol->tam);
+        write_offset += sol->tam;
+    }
+}
+int execute_mov_out(t_list *solicitudes)
+{
+    t_list_iterator *iterator = list_iterator_create(solicitudes);
+    int status = MEM_W_OK;
+    while (list_iterator_has_next(iterator))
+    {
+        solicitud_unitaria_t *sol = list_iterator_next(iterator);
+        int status = execute_unitary_mov_out(sol);
+
+        if (status != MEM_W_OK)// NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
+        {
+            log_error(logger,"ERROR EN LA ESCRITURA NUMERO %i",list_iterator_index(iterator));
+            return MEM_W_NO_OK;
+        } 
+    }
+    return status;
+}
+
+solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol)
 {
     u_int32_t dir_fisica = sol->dir_fisica_base + sol->offset;
     int tam_r_datos = sol->tam;
@@ -127,7 +157,7 @@ solicitud_unitaria_t *execute_mov_in(solicitud_unitaria_t *sol)
     free(logeable);
     return sol;
 }
-int execute_mov_out(solicitud_unitaria_t *sol)
+int execute_unitary_mov_out(solicitud_unitaria_t *sol)
 {
     solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
@@ -141,6 +171,17 @@ int execute_mov_out(solicitud_unitaria_t *sol)
     return status_escritura;
 }
 
+void liberar_solicitudes(t_list*solicitudes){
+    t_list_iterator *iterator = list_iterator_create(solicitudes);
+    while (list_iterator_has_next(iterator))
+    {
+        solicitud_unitaria_t *sol = list_iterator_next(iterator);
+        free(sol->datos);
+        free(sol);
+    }
+    list_iterator_destroy(iterator);
+    list_destroy(solicitudes);
+}
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos)
 {
     t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -279,8 +320,8 @@ int handshake(int socket_cliente)
 }
 void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion)
 {
-    pcb.registros->SI = 99;
-    pcb.registros->DI = 99;
+/*     pcb.registros->SI = 99;
+    pcb.registros->DI = 99; */
     int tam_instruccion = instruccion->tamcod + instruccion->tamp1 + instruccion->tamp2 + instruccion->tamp3 + instruccion->tamp4 + instruccion->tamp5;
     char *p1 = "Int1";
 
@@ -383,7 +424,6 @@ void *client_handler_dispatch(int socket_cliente)
     {
         int cod_op = recibir_operacion(socket_cliente);
         // log_warning(logger, "recibí la operacion: codop:%i", cod_op);
-        printf("CODIGO DE OPERACION:%i\n", cod_op);
         switch (cod_op)
         {
         case OPERACION_KERNEL_1:
