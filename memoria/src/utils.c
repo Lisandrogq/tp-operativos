@@ -210,20 +210,17 @@ void handle_cpu_client(int socket_cliente)
 			break;
 		case READ_MEM:
 			read_t *solicitud_r = recibir_pedido_lectura(socket_cliente);
-			log_info(logger, "r_dir: %i|| tam: %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			void *datos_leidos = leer_memoria(solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			int a_loggear = 0;
 
-			log_info(logger, "datos_leidos: %d", *(u_int8_t *)datos_leidos); // si es un int8 se muestra mal
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
-			log_info(logger, "PID: XD_TODO - Accion: LEER - Direccion fisica: %i - Tamaño %i >", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
+			log_info(logger, "PID: XD_TODO - Accion: LEER - Direccion fisica: %i - Tamaño %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			break; // no se recibe pid en read/write(creo)
 		case WRITE_MEM:
 			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
-			log_info(logger, "w_dir: %i, tam: %i, datos: %d", solicitud_w->dir_fisica, solicitud_w->tam_escritura, *(u_int32_t *)solicitud_w->datos);
 			int write_status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 			enviar_status_escritura(write_status, socket_cliente);
-			log_info(logger, "PID: XD_TODO - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i >", solicitud_w->dir_fisica, solicitud_w->tam_escritura);
+			log_info(logger, "PID: XD_TODO - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i", solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 
 			break;
 		case -1:
@@ -335,6 +332,8 @@ void *client_handler(void *arg)
 		break;
 	case 3:
 		log_info(logger, "se conecto el modulo io");
+		handle_cpu_client(socket_cliente);//debería ser uno separado q solo acepte write y read
+
 		break;
 
 	default:
@@ -645,7 +644,7 @@ int *calcular_frame(get_frame_t *solicitud)
 	t_list *tabla = ((elemento_lista_tablas *)list_find(lista_tablas_paginas, is_pid))->tabla;
 
 	int *frame = list_get(tabla, solicitud->pagina);
-	log_info(logger, "PID: %i - Pagina:%i - Marco: %i", solicitud->pid, solicitud->pagina, frame);
+	log_info(logger, "PID: %i - Pagina:%i - Marco: %i", solicitud->pid, solicitud->pagina, *frame);
 	return frame;
 }
 void enviar_frame(int frame, int socket_cliente)

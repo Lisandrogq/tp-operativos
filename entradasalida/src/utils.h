@@ -13,6 +13,7 @@
 #include <commons/config.h>
 #include <assert.h>
 #include <utils/utils_generales.h>
+#include <readline/readline.h>
 
 extern char *nombre;
 extern t_log *logger;
@@ -22,6 +23,7 @@ extern int socket_memoria;
 extern int *tiempo_Unidad_Trabajo;
 // Cliente
 // void enviar_mensaje(char* mensaje, int socket_cliente);
+void inicializar_cliente_memoria();
 io_task *gen_recibir_peticion();
 void gen_resolver_peticion(int cant_sleep);
 void iniciar_interfaz_generica();

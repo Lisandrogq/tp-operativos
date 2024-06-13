@@ -56,7 +56,6 @@ io_task *recibir_pedido_io(int socket_kernel)
 	free(buffer->stream);
 	free(buffer);
 
-	log_warning(logger, "LLEGO un pedido de sleep del pid %i", pedido->pid_solicitante);
 
 	return pedido;
 }

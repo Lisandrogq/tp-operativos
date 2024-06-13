@@ -18,9 +18,11 @@ void iniciar_interfaz_generica()
 	while (1) // xd
 	{
 		io_task *pedido = recibir_peticion();
+		log_debug(logger, "Llego un pedido SLEEP del pid %i", pedido->pid_solicitante);
+
 		int cant_sleep = decode_buffer_sleep(pedido->buffer_instruccion);
 		gen_resolver_peticion(cant_sleep);
-		
+
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_GEN_SLEEP");
 	}
 }
@@ -29,4 +31,3 @@ void gen_resolver_peticion(int cant_sleep) // gran nombre
 {
 	sleep(cant_sleep);
 }
-
