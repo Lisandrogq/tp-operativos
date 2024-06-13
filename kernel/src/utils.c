@@ -274,7 +274,7 @@ void comando_ejecutar_script(char *path, FILE *archivo)
         }
         if (!strcmp(instruccion[0], "ddd"))
             return;
-        free(linea);//ESTE FREE TIRA double free o corruption cuando se ejecuta un script por tercera vez
+        free(linea); // ESTE FREE TIRA double free o corruption cuando se ejecuta un script por tercera vez
     }
     // cierra el archivo//
     fclose(archivo);
@@ -535,7 +535,10 @@ bool io_acepta_operacion(t_interfaz *io, char *cod_instruccion)
         if (strcmp(cod_instruccion, "IO_GEN_SLEEP") == 0)
             return true;
         break;
-
+    case STDIN:
+        if (strcmp(cod_instruccion, "IO_STDIN_READ") == 0)
+            return true;
+        break;
     default:
         break;
     }

@@ -16,7 +16,8 @@
 			"random": "c",
 			"deque": "c",
 			"unordered_map": "c",
-			"vector": "c"
+			"vector": "c",
+			"stdin": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

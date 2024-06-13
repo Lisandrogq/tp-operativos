@@ -27,7 +27,8 @@ void ejecutar_cliclos()
 			// if temporal(las exec_van a estar adentro de decode) //!!to do despues del merge con recursos
 			if (status != STATUS_DESALOJADO)
 			{
-				status = execute(instruccion);
+				int result = execute(instruccion);
+				status = result;
 			}
 			if (status == STATUS_OK) // si el proceso justo desalojo en execute, la interrupcion se leera en luego de
 			{						 // que se ejecute la siguiente ejecucion
@@ -197,6 +198,31 @@ int decode(t_strings_instruccion *instruccion)
 		}
 	}
 
+	if (strcmp(instruccion->cod_instruccion, "IO_STDIN_READ") == 0) // IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
+	{
+		// a la io se le manda una lista de solicitudes con el .datos vacio(sin malloc)
+		// y alla se populan las solicitudes de la forma iterator para luego enviarlos a memoría de la forma mov_out
+		char *nombre = instruccion->p1;
+		void *p_max_tam = dictionary_get(dic_p_registros, instruccion->p3);
+		int tam_r_max_tam = *(int *)dictionary_get(dic_p_registros, instruccion->p3);
+		int max_tam = 0;
+		memcpy(&max_tam, p_max_tam, tam_r_max_tam);
+
+		int dir_logica = 0;
+		void *p_dir_logica = 0;
+		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
+		p_dir_logica = dictionary_get(dic_p_registros, instruccion->p2);
+		memcpy(&dir_logica, p_dir_logica, tam_r_dir);
+
+		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, max_tam);
+
+		// serializar solicitudes
+
+		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes(solicitudes, max_tam);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
+		liberar_solicitudes(solicitudes);
+		return STATUS_DESALOJADO;
+	}
 	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
 	{
 		int tam_string = atoi(instruccion->p1);
@@ -231,7 +257,7 @@ int decode(t_strings_instruccion *instruccion)
 		int status = recibir_status_resize();
 		if (status == -1)
 		{
-			devolver_pcb(OUT_OF_MEMORY, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
+			devolver_pcb(OUT_OF_MEMORY, *pcb_exec, socket_dispatch, instruccion, 0); // habria que ponerle mutex a dispatch
 			return STATUS_DESALOJADO;
 		}
 	}
@@ -516,18 +542,18 @@ int execute(t_strings_instruccion *instruccion)
 	if ((strstr(instruccion->cod_instruccion, "EXIT") != NULL)) // Fix termporal a aparicion random de '%'o'5'
 	{
 
-		devolver_pcb(SUCCESS, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
+		devolver_pcb(SUCCESS, *pcb_exec, socket_dispatch, instruccion, 0); // habria que ponerle mutex a dispatch
 		return STATUS_DESALOJADO;
 	}
 	if (strcmp(instruccion->cod_instruccion, "WAIT") == 0)
 	{
-		devolver_pcb(WAIT, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
+		devolver_pcb(WAIT, *pcb_exec, socket_dispatch, instruccion, 0); // habria que ponerle mutex a dispatch
 		sem_wait(&hay_proceso);
 		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "SIGNAL") == 0)
 	{
-		devolver_pcb(SIGNAL, *pcb_exec, socket_dispatch, instruccion,0); // habria que ponerle mutex a dispatch
+		devolver_pcb(SIGNAL, *pcb_exec, socket_dispatch, instruccion, 0); // habria que ponerle mutex a dispatch
 		sem_wait(&hay_proceso);
 		return STATUS_OK; // Wait semaforo hay pcb o proceso
 	}
@@ -550,7 +576,7 @@ void check_intr(int *status)
 			case INTERRUPTED_BY_USER:
 				//	retornar por dispatch(mutex por las dudas)
 				// marcar como desalojado
-				devolver_pcb(INTERRUPTED_BY_USER, *pcb_exec, socket_dispatch, instruccion_vacia,0);
+				devolver_pcb(INTERRUPTED_BY_USER, *pcb_exec, socket_dispatch, instruccion_vacia, 0);
 				// liberar_pcb(pcb_exec);
 				*status = STATUS_DESALOJADO;
 				log_debug(logger, "SE DESALOJO UN PROCESO POR TERMINAR_PROCESO_INTR");
@@ -558,7 +584,7 @@ void check_intr(int *status)
 			case CLOCK:
 				// retornar por dispatch(mutex por las dudas)
 				//	marcar como desalojado
-				devolver_pcb(CLOCK, *pcb_exec, socket_dispatch, instruccion_vacia,0);
+				devolver_pcb(CLOCK, *pcb_exec, socket_dispatch, instruccion_vacia, 0);
 				// liberar_pcb(pcb_exec);
 				*status = STATUS_DESALOJADO;
 				log_debug(logger, "SE DESALOJO UN PROCESO POR CLOCK_INTR");
@@ -676,7 +702,6 @@ void inicializar_diccionario_tams()
 int main(int argc, char const *argv[])
 {
 	sem_init(&hay_proceso, 0, 0);
-	sem_init(&desalojar, 0, 0);
 	dic_p_registros = dictionary_create();
 	dic_tam_registros = dictionary_create();
 	inicializar_diccionario_tams();

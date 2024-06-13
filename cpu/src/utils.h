@@ -23,7 +23,6 @@ extern t_dictionary *dic_tam_registros;
 extern int socket_memoria;
 extern t_list *tlb_list; // cada elemento es un tlb_element
 extern sem_t hay_proceso;
-extern sem_t desalojar;
 extern pcb_t *pcb_exec;
 extern int socket_dispatch;
 extern int socket_interrupt;
@@ -39,6 +38,7 @@ typedef struct
     // int timestamp//para lru
 } tlb_element;
 interrupcion_t *recibir_interrupcion(int socket_interrupt);
+buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam);
 t_strings_instruccion *fetch(int PC);
 int decode(t_strings_instruccion *instruccion);
 int execute(t_strings_instruccion *instruccion);

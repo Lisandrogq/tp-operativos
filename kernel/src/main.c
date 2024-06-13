@@ -262,7 +262,7 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_unlock(&mutex_lista_ready);
 				sem_post(&elementos_ready);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
-				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);//SSSANCHO PQ SE ITERA POR LOS RECURSOS AL SALIR POR CLOCK.GIL
 				log_debug(logger, "Se desalojo un proceso por clock");
 			}
 			break;

@@ -25,6 +25,7 @@ extern int *tiempo_Unidad_Trabajo;
 io_task *gen_recibir_peticion();
 void gen_resolver_peticion(int cant_sleep);
 void iniciar_interfaz_generica();
+io_task *recibir_peticion();
 void iniciar_interfaz_generica();
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 int handshake(int socket_cliente);

@@ -1,7 +1,7 @@
 #include "utils.h"
 extern t_log *logger;
 int contador; // 0 es el contador para generica
-char*nombre;
+char *nombre;
 t_log *logger;
 t_config *config;
 int socket_kernel;
@@ -29,7 +29,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 void enviar_interfaz(int cod_op, t_interfaz interfaz, int socket_cliente)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
-	int tam_nombre= strlen(interfaz.nombre)+1;//\0
+	int tam_nombre = strlen(interfaz.nombre) + 1; //\0
 	paquete->codigo_operacion = cod_op;
 	paquete->buffer = malloc(sizeof(t_buffer));
 	paquete->buffer->size = sizeof(int) * 3 + tam_nombre;
@@ -57,16 +57,26 @@ void enviar_interfaz(int cod_op, t_interfaz interfaz, int socket_cliente)
 }
 t_interfaz *crear_estrcutura_io(int tipo)
 {
-	switch (tipo)
+	t_interfaz *interfaz = malloc(sizeof(t_interfaz));
+
+	switch (tipo) // NO SE PAKE ESTA ESTO
 	{
 	case GENERICA:
-		t_interfaz *interfaz = malloc(sizeof(t_interfaz));
 		memset(interfaz, 0, sizeof(t_interfaz));
-		interfaz->nombre = malloc(strlen(nombre)+1);
-		interfaz->nombre =nombre; // hay que hacer que sea distinto
+		interfaz->nombre = malloc(strlen(nombre) + 1);
+		interfaz->nombre = nombre; // hay que hacer que sea distinto
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
-		interfaz->socket=0;
+		interfaz->socket = 0;
+		return interfaz;
+		break;
+	case STDIN:
+		memset(interfaz, 0, sizeof(t_interfaz));
+		interfaz->nombre = malloc(strlen(nombre) + 1);
+		interfaz->nombre = nombre; // hay que hacer que sea distinto
+		interfaz->estado = DISPONIBLE;
+		interfaz->tipo = STDIN;
+		interfaz->socket = 0;
 		return interfaz;
 		break;
 	default:

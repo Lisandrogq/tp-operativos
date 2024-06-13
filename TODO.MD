@@ -8,6 +8,7 @@
 - [ ] ARREGLAR cuando se mueve el offset haciendo stream+=... , Cuando se quiera liberar stream, no se va a liberar nada, pq stream esta al final.
 - [ ] unificar los tipos de  de int a U_int_X ***en vm int 32 == int, capaz en el labo la pasamos mal***
 - [ ] TERMINAR DE AGREGAR MUTEX
+
 ____
 #### CHECKPOINT 3 #######
 - [ ] !CREO Q el if sigterm puede ser un if general||| UNIFICAR DONDE SE LIBERAN COSAS Y AGREGA A EXIT AL FINALIZAR_PROCESO

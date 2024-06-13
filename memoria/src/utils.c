@@ -47,10 +47,6 @@ void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
 	// signal
-	sem_t *sem = malloc(sizeof(sem_t));
-	sem_init(sem, 0, 1);
-	list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se
-																		// borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 }
 void eliminar_tabla_paginas(int pid_a_eliminar)
 {
@@ -60,6 +56,8 @@ void eliminar_tabla_paginas(int pid_a_eliminar)
 	};
 	elemento_lista_tablas *elemento = list_remove_by_condition(lista_tablas_paginas, is_pid);
 	t_list_iterator *iterator = list_iterator_create(elemento->tabla);
+	log_info(logger, "Eliminacion de Tabla de Páginas - PID: %i - Tamaño: 0", pid_a_eliminar, list_size(elemento->tabla));
+
 	while (list_iterator_has_next(iterator))
 	{
 		int *frame = list_iterator_next(iterator);
@@ -76,6 +74,8 @@ void crear_tabla_paginas(int pid)
 	elemento->pid = pid;
 	elemento->tabla = list_create();
 	list_add(lista_tablas_paginas, elemento);
+	log_info(logger, "Creación de Tabla de Páginas - PID: %i - Tamaño: 0", pid);
+
 	/* 	// prueba:
 		list_add(elemento->tabla, 0); // indice = pagina||elem = frame
 		list_add(elemento->tabla, 2);
@@ -123,7 +123,6 @@ int ampliar_proceso(t_list *tabla, int bytes_a_agregar)
 	{
 		paginas_a_agregar++;
 	}
-	log_debug(logger, "Se pidio aumentar %i bytes, se asignan %i paginas mas", bytes_a_agregar, paginas_a_agregar);
 	if (!hay_paginas_disponibles(paginas_a_agregar))
 		return -1; // solo un proceso puede estar pidiendo frames a la vez, asi que con la validacion inicial, ya esta
 	for (int i = 0; paginas_a_agregar > i; i++)
@@ -187,11 +186,14 @@ void handle_cpu_client(int socket_cliente)
 			if (bytes_actuales > solicitud_resize->bytes)
 			{
 				reducir_proceso(elemento->tabla, solicitud_resize->bytes);
-			}
+				log_info(logger, "PID: %i - Tamaño Actual: %i - Tamaño a Reducir: %i", solicitud_resize->pid, bytes_actuales, solicitud_resize->bytes);
+
+			} //!!!!TODO: HACER CALCULO DEL TAMAÑO A...
 			if (bytes_actuales < solicitud_resize->bytes)
 			{
 				// eliminar ultimas paginas
 				resize_status = ampliar_proceso(elemento->tabla, solicitud_resize->bytes - bytes_actuales);
+				log_info(logger, "PID: %i - Tamaño Actual: %i - Tamaño a Ampliar: %i", solicitud_resize->pid, bytes_actuales, solicitud_resize->bytes);
 			}
 			devolver_status_resize(resize_status, socket_cliente);
 			break;
@@ -214,17 +216,15 @@ void handle_cpu_client(int socket_cliente)
 
 			log_info(logger, "datos_leidos: %d", *(u_int8_t *)datos_leidos); // si es un int8 se muestra mal
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
-			// se recibe dirfisica,longitud, se devuelve lo leido.
-			//! CREO Q SI SE TIENE Q LEER MAS DE UNA PAGINA, SE HACER POR SEPARADO!
+			log_info(logger, "PID: XD_TODO - Accion: LEER - Direccion fisica: %i - Tamaño %i >", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			break; // no se recibe pid en read/write(creo)
 		case WRITE_MEM:
 			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
 			log_info(logger, "w_dir: %i, tam: %i, datos: %d", solicitud_w->dir_fisica, solicitud_w->tam_escritura, *(u_int32_t *)solicitud_w->datos);
 			int write_status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 			enviar_status_escritura(write_status, socket_cliente);
+			log_info(logger, "PID: XD_TODO - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i >", solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 
-			// se recibe dirfisica,longitud,dato a escribir. se devuelve OK(NO_OK TAMBIEN?).
-			//! CREO Q SI SE TIENE Q ESCRIBIR MAS DE UNA PAGINA, SE HACER POR SEPARADO!
 			break;
 		case -1:
 			return -1;
@@ -296,9 +296,14 @@ void handle_kerel_client(int socket)
 		{
 		case CREAR_ESTRUC_ADMIN:
 			solicitud_creacion_t *e_admin = recibir_solicitud_de_creacion(socket);
+			sem_t *sem = malloc(sizeof(sem_t));
+			sem_init(sem, 0, 0);
+			list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
 			crear_tabla_paginas(e_admin->pid);
+
+			sem_post(sem);
 			break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
@@ -640,6 +645,7 @@ int *calcular_frame(get_frame_t *solicitud)
 	t_list *tabla = ((elemento_lista_tablas *)list_find(lista_tablas_paginas, is_pid))->tabla;
 
 	int *frame = list_get(tabla, solicitud->pagina);
+	log_info(logger, "PID: %i - Pagina:%i - Marco: %i", solicitud->pid, solicitud->pagina, frame);
 	return frame;
 }
 void enviar_frame(int frame, int socket_cliente)

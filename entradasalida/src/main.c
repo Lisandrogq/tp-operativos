@@ -102,22 +102,30 @@ int main(int argc, char *argv[])
 	config = iniciar_config();
 	config = config_create("IO.config");
 	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
-	nombre = "Int1";
-	char *tipo = "GENERICA";
+	nombre = "stdin";
+	char *tipo = "STDIN";
 	if (strcmp(tipo, "GENERICA") == 0)
 	{
 		iniciar_interfaz_generica();
 	}
 	if (strcmp(tipo, "STDIN") == 0)
 	{
-		// iniciar_interfaz_stdin();
+		iniciar_interfaz_stdin();
 	}
 	if (strcmp(tipo, "STDOUT") == 0)
 	{
 		// iniciar_interfaz_stdout();
 	}
 }
+io_task *recibir_peticion()
+{
 
+	int cod_op = recibir_operacion(socket_kernel);
+	if (cod_op == -1)
+		return -1;
+	io_task *pedido = recibir_pedido_io(socket_kernel);
+	return pedido;
+}
 t_log *iniciar_logger(void)
 {
 	t_log *nuevo_logger;

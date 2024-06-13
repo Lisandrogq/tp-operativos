@@ -5,7 +5,6 @@ t_dictionary *dic_p_registros; // tiene punteros a los registros
 t_dictionary *dic_tam_registros;
 t_list *tlb_list;
 sem_t hay_proceso;
-sem_t desalojar;
 pcb_t *pcb_exec;
 int socket_dispatch;
 int socket_interrupt;
@@ -122,6 +121,7 @@ void execute_mov_in(t_list *solicitudes, void *datos)
         memcpy(datos + write_offset, sol->datos, sol->tam);
         write_offset += sol->tam;
     }
+    list_iterator_destroy(iterator);
 }
 int execute_mov_out(t_list *solicitudes)
 {
@@ -319,6 +319,29 @@ int handshake(int socket_cliente)
     }
     return tam_pagina;
 }
+buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam) // en io se va a generar elementos hasta q se llegue a size
+{
+    buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
+    buffer_instruccion->size = 3 * list_size(solicitudes)*sizeof(u_int32_t);
+    buffer_instruccion->buffer = malloc(buffer_instruccion->size);
+    t_list_iterator *iterator = list_iterator_create(solicitudes);
+    int offset = 0;
+
+    while (list_iterator_has_next(iterator))
+    {
+        solicitud_unitaria_t *sol = list_iterator_next(iterator);
+
+        memcpy(buffer_instruccion->buffer + offset, &(sol->dir_fisica_base), sizeof(u_int32_t));
+        offset += sizeof(u_int32_t);
+        memcpy(buffer_instruccion->buffer + offset, &(sol->offset), sizeof(u_int32_t));
+        offset += sizeof(u_int32_t);
+        memcpy(buffer_instruccion->buffer + offset, &(sol->tam), sizeof(u_int32_t));
+        offset += sizeof(u_int32_t);
+    }
+
+    list_iterator_destroy(iterator);
+    return buffer_instruccion;
+}
 void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion, buffer_instr_io_t *buffer_instruccion_io)
 {
     /*     pcb.registros->SI = 99;
@@ -362,7 +385,7 @@ void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_b, sizeof(int));
     paquete->buffer->offset += sizeof(int);
-    
+
     if (buffer_instruccion_io != 0)
     {
         memcpy(paquete->buffer->stream + paquete->buffer->offset, buffer_instruccion_io->buffer, tam_b);
