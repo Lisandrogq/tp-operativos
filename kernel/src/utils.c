@@ -233,18 +233,15 @@ void comando_listar_procesos_por_estado()
 
 void comando_ejecutar_script(char *path, FILE *archivo)
 {
-    // abro el archivo como lectura//
-
     char *linea = malloc(100);
     size_t len = 50;
-    ssize_t read;
 
     // Mientras haya lineas en el archivo//
-    while ((read = fgets(linea, len, archivo)) != NULL)
+    while (fgets(linea, len, archivo) != NULL)
     {
         char *instruccion[2];
-        instruccion[0] = malloc(strlen(linea));
-        instruccion[1] = malloc(strlen(linea));
+        //instruccion[0] = malloc(strlen(linea));
+        //instruccion[1] = malloc(strlen(linea));
         instruccion[0] = strtok(linea, " \n");
         instruccion[1] = strtok(NULL, " \n");
         if (strcmp(linea, "\0") == 0)
@@ -253,9 +250,6 @@ void comando_ejecutar_script(char *path, FILE *archivo)
             continue;
         }
         log_info(logger, "Instruccion: %s", linea);
-        // HAY QUE EJECUTAR CADA COMANDO//
-        // seguro hay que ver como hacerlo sin repetir logica//
-        // ¿generar una funcion que se repita?//
         if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
         {
             char *copia;
@@ -274,9 +268,9 @@ void comando_ejecutar_script(char *path, FILE *archivo)
         }
         if (!strcmp(instruccion[0], "ddd"))
             return;
-        free(linea); // ESTE FREE TIRA double free o corruption cuando se ejecuta un script por tercera vez
     }
     // cierra el archivo//
+    free(linea);
     fclose(archivo);
 }
 void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual)
