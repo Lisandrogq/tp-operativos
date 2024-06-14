@@ -2,6 +2,31 @@
 #include <readline/readline.h>
 #include <semaphore.h>
 
+int main(int argc, char *argv[])
+{
+
+	logger = iniciar_logger();
+	logger = log_create("IO.log", "IO_MateLavado", 1, LOG_LEVEL_INFO);
+	config = iniciar_config();
+	config = config_create("IO.config");
+	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
+	nombre = "stdin";
+	char *tipo = "STDIN";/*
+	nombre = "stdout";
+	char *tipo = "STDOUT";*/
+	if (strcmp(tipo, "GENERICA") == 0)
+	{
+		iniciar_interfaz_generica();
+	}
+	if (strcmp(tipo, "STDIN") == 0)
+	{
+		iniciar_interfaz_stdin();
+	}
+	if (strcmp(tipo, "STDOUT") == 0)
+	{
+		iniciar_interfaz_stdout();
+	}
+}
 int inicializar_cliente_kernel()
 {
 	char *ip;
@@ -56,7 +81,6 @@ io_task *recibir_pedido_io(int socket_kernel)
 	free(buffer->stream);
 	free(buffer);
 
-
 	return pedido;
 }
 
@@ -93,29 +117,6 @@ void informar_fin_de_tarea(int socket_kernel, int status, int pid, char *operaci
 	eliminar_paquete(paquete);
 }
 
-int main(int argc, char *argv[])
-{
-
-	logger = iniciar_logger();
-	logger = log_create("IO.log", "IO_MateLavado", 1, LOG_LEVEL_INFO);
-	config = iniciar_config();
-	config = config_create("IO.config");
-	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
-	nombre = "stdin";
-	char *tipo = "STDIN";
-	if (strcmp(tipo, "GENERICA") == 0)
-	{
-		iniciar_interfaz_generica();
-	}
-	if (strcmp(tipo, "STDIN") == 0)
-	{
-		iniciar_interfaz_stdin();
-	}
-	if (strcmp(tipo, "STDOUT") == 0)
-	{
-		// iniciar_interfaz_stdout();
-	}
-}
 io_task *recibir_peticion()
 {
 

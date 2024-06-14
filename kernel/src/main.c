@@ -275,7 +275,7 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
-				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list); // pq aca dice dic_recursos??
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list); // pq aca dice dictionary_recursos??
 																				  // samcho gil aflojale al ctrlc
 			}
 			else

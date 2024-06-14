@@ -6,7 +6,28 @@ t_log *logger;
 t_config *config;
 int socket_kernel;
 int socket_memoria;
-int *tiempo_Unidad_Trabajo;
+int tiempo_Unidad_Trabajo;
+
+t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam)
+{
+	void *buffer = buffer_instruccion->buffer;
+	t_list *solicitudes = list_create(); // solicitud_unitaria_t *
+	int offset = 0;
+	while (offset < buffer_instruccion->size) // en stdin, siempre se reciben sizes multiplos de 3
+	{
+		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
+		memset(sol, 0, sizeof(solicitud_unitaria_t));
+		memcpy(&(sol->dir_fisica_base), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		memcpy(&(sol->offset), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		memcpy(&(sol->tam), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		*max_tam += sol->tam;
+		list_add(solicitudes, sol);
+	}
+	return solicitudes;
+}
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -59,12 +80,12 @@ t_interfaz *crear_estrcutura_io(int tipo)
 {
 	t_interfaz *interfaz = malloc(sizeof(t_interfaz));
 
-	switch (tipo) // NO SE PAKE ESTA ESTO
+	switch (tipo) // NO SE PAKE ESTA ESTO, son todos lo mismo
 	{
 	case GENERICA:
 		memset(interfaz, 0, sizeof(t_interfaz));
 		interfaz->nombre = malloc(strlen(nombre) + 1);
-		interfaz->nombre = nombre; // hay que hacer que sea distinto
+		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
 		interfaz->socket = 0;
@@ -73,9 +94,18 @@ t_interfaz *crear_estrcutura_io(int tipo)
 	case STDIN:
 		memset(interfaz, 0, sizeof(t_interfaz));
 		interfaz->nombre = malloc(strlen(nombre) + 1);
-		interfaz->nombre = nombre; // hay que hacer que sea distinto
+		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = STDIN;
+		interfaz->socket = 0;
+		return interfaz;
+		break;
+	case STDOUT:
+		memset(interfaz, 0, sizeof(t_interfaz));
+		interfaz->nombre = malloc(strlen(nombre) + 1);
+		interfaz->nombre = nombre;
+		interfaz->estado = DISPONIBLE;
+		interfaz->tipo = STDOUT;
 		interfaz->socket = 0;
 		return interfaz;
 		break;

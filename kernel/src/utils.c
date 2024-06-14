@@ -533,6 +533,10 @@ bool io_acepta_operacion(t_interfaz *io, char *cod_instruccion)
         if (strcmp(cod_instruccion, "IO_STDIN_READ") == 0)
             return true;
         break;
+    case STDOUT:
+        if (strcmp(cod_instruccion, "IO_STDOUT_WRITE") == 0)
+            return true;
+        break;
     default:
         break;
     }
@@ -742,6 +746,7 @@ void *client_handler(void *arg)
             if (list_size(struct_cola->cola_de_io_pedido) != 0) // esto no va en desbloquear pcb ppq despues va a haber recursos
             {
                 log_error(logger, "ENTRE AL FIN IO TASK-MANDAR OTRO TASK");
+                //wait de la cola
                 elemento_cola_io *elemento = list_get(struct_cola->cola_de_io_pedido, 0);
                 pedir_io_task(elemento->pcb->pid, interfaz, elemento->buffer_instruccion);
             }

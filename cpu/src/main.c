@@ -173,7 +173,7 @@ int decode(t_strings_instruccion *instruccion)
 
 		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, tam_r_datos);
 		execute_mov_in(solicitudes, datos);
-		liberar_solicitudes(solicitudes);
+		liberar_y_eliminar_solicitudes(solicitudes);
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "MOV_OUT") == 0) // MOV_OUT (Registro Dirección, Registro Datos)
@@ -191,7 +191,7 @@ int decode(t_strings_instruccion *instruccion)
 		t_list *solicitudes = obtener_direcciones_fisicas_write(datos, dir_logica, tam_r_datos);
 
 		int status = execute_mov_out(solicitudes); // los datosa escribir no se pasan pq estan en solicitud
-		liberar_solicitudes(solicitudes);
+		liberar_y_eliminar_solicitudes(solicitudes);
 		if (status == MEM_W_NO_OK)
 		{
 			// NOSE QUE DICE LA CONSIGNAXD
@@ -202,7 +202,6 @@ int decode(t_strings_instruccion *instruccion)
 	{
 		// a la io se le manda una lista de solicitudes con el .datos vacio(sin malloc)
 		// y alla se populan las solicitudes de la forma iterator para luego enviarlos a memoría de la forma mov_out
-		char *nombre = instruccion->p1;
 		void *p_max_tam = dictionary_get(dic_p_registros, instruccion->p3);
 		int tam_r_max_tam = *(int *)dictionary_get(dic_p_registros, instruccion->p3);
 		int max_tam = 0;
@@ -220,9 +219,31 @@ int decode(t_strings_instruccion *instruccion)
 
 		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes(solicitudes, max_tam);
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
-		liberar_solicitudes(solicitudes);
+		liberar_y_eliminar_solicitudes(solicitudes);
 		return STATUS_DESALOJADO;
 	}
+	if (strcmp(instruccion->cod_instruccion, "IO_STDOUT_WRITE") == 0) // IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
+	{
+
+		void *p_max_tam = dictionary_get(dic_p_registros, instruccion->p3);
+		int tam_r_max_tam = *(int *)dictionary_get(dic_p_registros, instruccion->p3);
+		int max_tam = 0;
+		memcpy(&max_tam, p_max_tam, tam_r_max_tam);
+
+		int dir_logica = 0;
+		void *p_dir_logica = 0;
+		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p2));
+		p_dir_logica = dictionary_get(dic_p_registros, instruccion->p2);
+		memcpy(&dir_logica, p_dir_logica, tam_r_dir);
+
+		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, max_tam);
+
+		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes(solicitudes, max_tam);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
+		liberar_y_eliminar_solicitudes(solicitudes);
+		return STATUS_DESALOJADO;
+	}
+	
 	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
 	{
 		int tam_string = atoi(instruccion->p1);
@@ -234,19 +255,19 @@ int decode(t_strings_instruccion *instruccion)
 		t_list *solicitudes_r = obtener_direcciones_fisicas_read(*dir_logica_read, tam_string);
 		execute_mov_in(solicitudes_r, buffer_intermedio);
 		log_info(logger, "EL STRING COPIADO ES:%s", buffer_intermedio);
-		liberar_solicitudes(solicitudes_r);
+		liberar_y_eliminar_solicitudes(solicitudes_r);
 
 		// traduccion write
 		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI");
 		t_list *solicitudes_w = obtener_direcciones_fisicas_write(buffer_intermedio, *dir_logica_write, tam_string);
 		execute_mov_out(solicitudes_w);
-		liberar_solicitudes(solicitudes_w);
+		liberar_y_eliminar_solicitudes(solicitudes_w);
 
 		/* //TEST: lo escrito por 2 proceso simultaneamente esta bien:
 		t_list *solicitudes_T = obtener_direcciones_fisicas_read(*dir_logica_write, tam_string);
 		execute_mov_in(solicitudes_T, buffer_intermedio);
 		log_info(logger, "EL STRING ESCRITO, AL VOLVER A LEERSE ES:%s", buffer_intermedio);
-		liberar_solicitudes(solicitudes_T); */
+		liberar_y_eliminar_solicitudes(solicitudes_T); */
 	}
 
 	if (strcmp(instruccion->cod_instruccion, "RESIZE") == 0) // RESIZE (bytes)

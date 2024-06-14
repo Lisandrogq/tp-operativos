@@ -1,6 +1,18 @@
 #include <utils/utils_generales.h>
 #include <errno.h>
-void decir_hola(char* quien) {
+#include <commons/collections/list.h>
+
+void liberar_solicitud(solicitud_unitaria_t *sol)
+{
+    free(sol->datos);
+    free(sol);
+}
+void liberar_y_eliminar_solicitudes(t_list *solicitudes)
+{
+    list_destroy_and_destroy_elements(solicitudes, liberar_solicitud);
+}
+void decir_hola(char *quien)
+{
     printf("Hola desde %s!!\n", quien);
 }
 void crear_buffer(t_paquete *paquete)
@@ -33,27 +45,27 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
 
 pcb_t *recibir_paquete(int socket_cliente)
 {
-	t_paquete *paquete = malloc(sizeof(t_paquete));
-	paquete->buffer = malloc(sizeof(t_buffer));
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+    paquete->buffer = malloc(sizeof(t_buffer));
 
-	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
+    recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
 
-	pcb_t *pcb = malloc(sizeof(pcb_t));
-	pcb->registros = malloc(sizeof(registros_t));
-	void *stream = paquete->buffer->stream;
-	memcpy(&(pcb->pid), stream, sizeof(int));
-	stream += sizeof(int);
-	memcpy(&(pcb->quantum), stream, sizeof(int));
-	stream += sizeof(int);
-	memcpy(pcb->registros, stream, sizeof(registros_t));
+    pcb_t *pcb = malloc(sizeof(pcb_t));
+    pcb->registros = malloc(sizeof(registros_t));
+    void *stream = paquete->buffer->stream;
+    memcpy(&(pcb->pid), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(pcb->quantum), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(pcb->registros, stream, sizeof(registros_t));
     stream += sizeof(registros_t);
     memcpy(&(pcb->state), stream, sizeof(state_t));
-	eliminar_paquete(paquete);
-	return pcb;
+    eliminar_paquete(paquete);
+    return pcb;
 }
-int crear_conexion(char *ip, char *puerto,t_log *logger)
+int crear_conexion(char *ip, char *puerto, t_log *logger)
 {
     struct addrinfo hints;
     struct addrinfo *server_info;
@@ -85,21 +97,20 @@ int crear_conexion(char *ip, char *puerto,t_log *logger)
     return socket_cliente;
 }
 
-
-int esperar_cliente(int socket_servidor, void *client_handler (void*))
+int esperar_cliente(int socket_servidor, void *client_handler(void *))
 {
-	while (1) // reemplazar por condicion de terminacion de sistema/modulo
-	{
-		pthread_t thread;
-		int *socket_cliente = malloc(sizeof(int)); // cuando liberar esto, en el handler??
-		// Aceptamos un nuevo cliente
-		*socket_cliente = accept(socket_servidor, NULL, NULL);
-		pthread_create(&thread,
-					   NULL,
-					   client_handler,
-					   socket_cliente);
-		pthread_detach(thread); // creo q debería ser detach pq la condicion de terminacion de sistema es externa
-	}
+    while (1) // reemplazar por condicion de terminacion de sistema/modulo
+    {
+        pthread_t thread;
+        int *socket_cliente = malloc(sizeof(int)); // cuando liberar esto, en el handler??
+        // Aceptamos un nuevo cliente
+        *socket_cliente = accept(socket_servidor, NULL, NULL);
+        pthread_create(&thread,
+                       NULL,
+                       client_handler,
+                       socket_cliente);
+        pthread_detach(thread); // creo q debería ser detach pq la condicion de terminacion de sistema es externa
+    }
 }
 int recibir_operacion(int socket_cliente)
 {
@@ -115,8 +126,7 @@ int recibir_operacion(int socket_cliente)
     }
 }
 
-
-int iniciar_servidor(char* PUERTO,t_log *logger)
+int iniciar_servidor(char *PUERTO, t_log *logger)
 {
     int socket_servidor;
 
@@ -133,28 +143,29 @@ int iniciar_servidor(char* PUERTO,t_log *logger)
     socket_servidor = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
     if (socket_servidor == -1)
     {
-        log_error(logger,"Error at socket: %s\n", strerror(errno));
+        log_error(logger, "Error at socket: %s\n", strerror(errno));
         return -1;
     }
     // Asociamos el socket a un puerto
     int resultado_bind = bind(socket_servidor, server_info->ai_addr, server_info->ai_addrlen);
     if (resultado_bind == -1)
     {
-       log_error(logger,"Error at bind: %s\n", strerror(errno));
+        log_error(logger, "Error at bind: %s\n", strerror(errno));
         return -1;
     }
     // Escuchamos las conexiones entrantes
     int resultado_listen = listen(socket_servidor, SOMAXCONN); // error en el listen
-     if (resultado_listen == -1)
+    if (resultado_listen == -1)
     {
-        log_error(logger,"Error at listen: %s\n", strerror(errno));
+        log_error(logger, "Error at listen: %s\n", strerror(errno));
         return -1;
     }
     freeaddrinfo(server_info);
 
     return socket_servidor;
 }
-void eliminar_pcb(pcb_t *pcb){
+void eliminar_pcb(pcb_t *pcb)
+{
     free(pcb->registros);
     free(pcb);
 }
@@ -179,7 +190,7 @@ void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 }
 void enviar_paquete(t_paquete *paquete, int socket_cliente)
 {
-    int bytes = paquete->buffer->size + 2 * sizeof(int);//ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+    int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
     void *a_enviar = serializar_paquete(paquete, bytes);
 
     send(socket_cliente, a_enviar, bytes, 0);

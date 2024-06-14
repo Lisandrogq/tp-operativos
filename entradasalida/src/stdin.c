@@ -1,26 +1,7 @@
 #include "client.h"
 #include <readline/readline.h>
 #include <semaphore.h>
-t_list *decode_buffer_stdin(buffer_instr_io_t *buffer_instruccion, int *max_tam)
-{
-	void *buffer = buffer_instruccion->buffer;
-	t_list *solicitudes = list_create(); // solicitud_unitaria_t *
-	int offset = 0;
-	while (offset < buffer_instruccion->size) // en stdin, siempre se reciben sizes multiplos de 3
-	{
-		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
-		memset(sol, 0, sizeof(solicitud_unitaria_t));
-		memcpy(&(sol->dir_fisica_base), buffer + offset, sizeof(u_int32_t));
-		offset += sizeof(u_int32_t);
-		memcpy(&(sol->offset), buffer + offset, sizeof(u_int32_t));
-		offset += sizeof(u_int32_t);
-		memcpy(&(sol->tam), buffer + offset, sizeof(u_int32_t));
-		offset += sizeof(u_int32_t);
-		*max_tam += sol->tam;
-		list_add(solicitudes, sol);
-	}
-	return solicitudes;
-}
+
 
 void iniciar_interfaz_stdin()
 {
@@ -35,12 +16,14 @@ void iniciar_interfaz_stdin()
 		io_task *pedido = recibir_peticion();
 		log_debug(logger, "Llego un pedido STDIN del pid %i", pedido->pid_solicitante);
 
-		t_list *solicitudes = decode_buffer_stdin(pedido->buffer_instruccion, &max_tam);
+		t_list *solicitudes = decode_addresses_buffer(pedido->buffer_instruccion, &max_tam);
 		char *input_string = malloc(max_tam);
 		input_string = readline(">");
-		popular_solicitudes(solicitudes, input_string);
+		populate_solicitudes(solicitudes, input_string);
 		escribir_memoria(solicitudes);
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_STDIN_READ");
+		liberar_y_eliminar_solicitudes(solicitudes);
+		
 		free(input_string);
 	}
 }
@@ -112,7 +95,7 @@ void escribir_memoria(t_list *solicitudes)
 	list_iterator_destroy(iterator);
 	// destruir y liberar lista
 }
-void popular_solicitudes(t_list *solicitudes, char *input_string) // gran nombre
+void populate_solicitudes(t_list *solicitudes, char *input_string) // gran nombre
 {
 	t_list_iterator *iterator = list_iterator_create(solicitudes);
 	int write_offset = 0;

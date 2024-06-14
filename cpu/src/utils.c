@@ -148,7 +148,6 @@ solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol)
     solicitar_leer_memoria(dir_fisica, tam_r_datos);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     void *datos_obtenidos = recibir_datos_leidos();
-    log_info(logger, "datos_obtenidos:%d", *(u_int8_t *)datos_obtenidos);
     memcpy(sol->datos, datos_obtenidos, sol->tam);
     int *logeable = malloc(sizeof(int));
     memset(logeable, 0, sizeof(int));
@@ -171,18 +170,7 @@ int execute_unitary_mov_out(solicitud_unitaria_t *sol)
     return status_escritura;
 }
 
-void liberar_solicitudes(t_list *solicitudes)
-{
-    t_list_iterator *iterator = list_iterator_create(solicitudes);
-    while (list_iterator_has_next(iterator))
-    {
-        solicitud_unitaria_t *sol = list_iterator_next(iterator);
-        free(sol->datos);
-        free(sol);
-    }
-    list_iterator_destroy(iterator);
-    list_destroy(solicitudes);
-}
+
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos)
 {
     t_paquete *paquete = malloc(sizeof(t_paquete));

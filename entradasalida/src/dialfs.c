@@ -31,7 +31,7 @@ int inicializar_cliente_kernel()
 	char *puerto;
 	char *modulo;
 	char *tipo_Interfaz;
-	int	*tiempo_Unidad_Trabajo;
+	int	tiempo_Unidad_Trabajo;
 	char* ip_Memoria;
 	char* puerto_Memoria;
 	char path_Base_Dialfs;

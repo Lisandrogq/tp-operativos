@@ -1,152 +1,102 @@
-/*#include "client.h"
+#include "client.h"
 #include <readline/readline.h>
+#include <semaphore.h>
 
-t_log *logger;
-t_config *config;
-pthread_t tid[2];
-pthread_t hilos_generica[10];
-int socket_cliente;
-int inicializar_cliente_memoria() // todavia no se usa
-{	
-	int conexion_fd;
-	char *ip;
-	char *puerto;
-	char *modulo;
+void iniciar_interfaz_stdout()
+{
 
-	modulo = config_get_string_value(config, "MODULO");
-	log_info(logger, "Este es el modulo: %s", modulo);
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-
-	conexion_fd = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(conexion_fd);
-	if (resultado == -1)
-		return;
-	
-	return conexion_fd;
-}
-int inicializar_cliente_kernel()
-{	
-	char *ip;
-	char *puerto;
-	char *modulo;
-	char *tipo_Interfaz;
-	int	*tiempo_Unidad_Trabajo;
-	char* ip_Memoria;
-	char* puerto_Memoria;
-	
-	char path_Base_Dialfs;
-	int block_Size;
-	int block_Count;
-	int retraso_Compactacion;
-
-
-	ip = config_get_string_value(config, "IP_KERNEL");
-	puerto = config_get_string_value(config, "PUERTO_KERNEL");
-	ip_Memoria = config_get_string_value(config, "IP_MEMORIA");
-	puerto_Memoria = config_get_string_value(config, "PUERTO_MEMORIA");
-	tipo_Interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-	//path_Base_Dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
-	//block_Size = config_get_int_value(config, "BLOCK_SIZE");
-	//block_Count = config_get_int_value(config, "BLOCK_COUNT");
-	//retraso_Compactacion = config_get_int_value(config, "RETRASO_COMPACTACION");
-
-
-	socket_cliente = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(socket_cliente);
-	if (resultado == -1)
-		return;
-
-	if(strcmp(tipo_Interfaz,"GENERICA") == 0){
-		pthread_create(&(hilos_generica[0]), NULL, iniciar_interfaz_generica, NULL); //Se crea cada una con su propio archivo
-	}
-
-	if(strcmp(tipo_Interfaz,"STDIN") == 0){
-		//interfaz_stdin(conexion_fd);
-	}
-
-	if(strcmp(tipo_Interfaz,"STDOUT") == 0{
-		//interfaz_stdout(conexion_fd);
-	}
-
-	if(strcmp(tipo_Interfaz,"FS") == 0{
-		//interfaz_fs(conexion_fd, path_Base_Dialfs, block_Size, block_Count, retraso_Compactacion);
-	}
-	
-}
-void interfaz_generica(int tiempo_Unidad_Trabajo){
-    sleep(tiempo_Unidad_Trabajo*10);
-	
-    
-}
-void iniciar_interfaz_generica(){
-
-	int tiempo_Unidad_Trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	inicializar_cliente_kernel();
+	inicializar_cliente_memoria();
 	t_interfaz *nueva_interfaz = crear_estrcutura_io(STDOUT);
-	enviar_interfaz(CREACION_IO, *nueva_interfaz, crear_conexion);
-	while (nueva_interfaz->estado == DISPONIBLE)
+	enviar_interfaz(CREACION_IO, *nueva_interfaz, socket_kernel);
+	while (1) // xd
 	{
-		int cod_op = recibir_operacion(socket_cliente);
-        switch (cod_op)
-        {
-        case SOLICITAR_IO:
-            interfaz_generica(tiempo_Unidad_Trabajo);
-            break;
-        default:
-            log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-            break;
-        }
+		int max_tam = 0;
+		io_task *pedido = recibir_peticion();
+		log_debug(logger, "Llego un pedido STDOUT del pid %i", pedido->pid_solicitante);
+
+		t_list *solicitudes = decode_addresses_buffer(pedido->buffer_instruccion, &max_tam);
+		char *output_string = malloc(max_tam);//POR ALGUNA RAZON ESTO FUNCIONA SIN AGREGAR \0 AL FINAL
+		leer_memoria(solicitudes, output_string);
+		log_info(logger, "STDOUT: %s", output_string);
+		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_STDOUT_WRITE");
+		liberar_y_eliminar_solicitudes(solicitudes);
+
+		free(output_string);
 	}
-    
 }
-int main(void)
+solicitud_unitaria_t *leer_memoria_unitario(solicitud_unitaria_t *sol)
 {
-	int nombre_ios = 0;
-	logger = iniciar_logger();
-	logger = log_create("IO.log","IO_MateLavado",1,LOG_LEVEL_INFO);
-	config = iniciar_config();
-	config = config_create("IO.config");
-	int err;
-	err = pthread_create(&(tid[0]), NULL, inicializar_cliente_memoria, NULL); // todavia no se usa
-	if (err != 0)
+	u_int32_t dir_fisica = sol->dir_fisica_base + sol->offset;
+	int tam_r_datos = sol->tam;
+	solicitar_leer_memoria(dir_fisica, tam_r_datos);
+	int cod_op = recibir_operacion(socket_memoria); // waitall y codop
+	void *datos_obtenidos = recibir_datos_leidos();
+	sol->datos = malloc(sol->tam);
+	memcpy(sol->datos, datos_obtenidos, sol->tam);
+	int *logeable = malloc(sizeof(int));
+	memset(logeable, 0, sizeof(int));
+	memcpy(logeable, datos_obtenidos, sol->tam);
+	log_debug(logger, "Lei en la Dir Física: %i - Valor: %i", sol->dir_fisica_base + sol->offset, *logeable);
+	free(logeable);
+	return sol;
+}
+void *recibir_datos_leidos()
+{
+	void *datos_leidos;
+	int tam_leido = 0;
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+
+	recv(socket_memoria, &(paquete->buffer->size), sizeof(int), 0);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket_memoria, paquete->buffer->stream, paquete->buffer->size, 0);
+
+	void *stream = paquete->buffer->stream;
+	memcpy(&tam_leido, stream, sizeof(int));
+	stream += sizeof(int);
+	datos_leidos = malloc(tam_leido);
+	memcpy(datos_leidos, stream, tam_leido);
+
+	eliminar_paquete(paquete);
+
+	return datos_leidos;
+}
+
+void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = READ_MEM;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int) * 2;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	paquete->buffer->offset = 0;
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &dir_fisica, sizeof(u_int32_t));
+	paquete->buffer->offset += sizeof(int);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
+
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
+
+	void *a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_memoria, a_enviar, bytes, 0);
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+void leer_memoria(t_list *solicitudes, void *datos)
+{
+	list_map(solicitudes, leer_memoria_unitario);
+	t_list_iterator *iterator = list_iterator_create(solicitudes);
+	int write_offset = 0;
+	while (list_iterator_has_next(iterator))
 	{
-		log_error(logger, "Hubo un problema al crear el thread cliente-memoria:[%s]", strerror(err));
-		return err;
+		solicitud_unitaria_t *sol = list_iterator_next(iterator);
+		memcpy(datos + write_offset, sol->datos, sol->tam);
+		write_offset += sol->tam;
 	}
-	log_info(logger, "El thread cliente-memoria inició su ejecución");
-	err = pthread_create(&(tid[1]), NULL, inicializar_cliente_kernel, NULL);
-	if (err != 0)
-	{
-		log_error(logger, "Hubo un problema al crear el thread cliente-kernel:[%s]", strerror(err));
-		return err;
-	}
-	log_info(logger, "El thread cliente-kernel inició su ejecución");
-	pthread_join(tid[0], NULL); //join para que no termine el main creo que puede llegar a terminar igual
-	pthread_join(tid[1], NULL); 
-	
-
+	list_iterator_destroy(iterator);
 }
-
-
-t_log* iniciar_logger(void)
-{
-	t_log* nuevo_logger;
-
-	return nuevo_logger;
-}
-
-t_config* iniciar_config(void)
-{
-	t_config* nuevo_config;
-
-	return nuevo_config;
-}
-
-
-void terminar_programa(int conexion, t_log* logger, t_config* config)
-{
-	log_destroy(logger);
-	config_destroy(config);
-	liberar_conexion(conexion);
-}
-*/
