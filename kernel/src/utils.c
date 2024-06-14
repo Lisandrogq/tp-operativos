@@ -431,6 +431,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     int restante_quantum = 0;
 
     // FLACO EL ALGORITMO PUEDE SER GLOBAL
+    // si, pero no hace falta prefiero que este asi
     if (strcmp(algoritmo, "RR") == 0)
     {
         pthread_t quantum;

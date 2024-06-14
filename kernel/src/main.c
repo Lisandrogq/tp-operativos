@@ -167,8 +167,6 @@ void *cliente_cpu_dispatch()
 					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
 				};
 				pcb_t *pcb_bloqueado = list_remove_by_condition(struct_recurso->cola_de_recurso_pedido, is_pid);
-
-				struct_recurso->instancias++;
 				if (pcb_bloqueado)
 				{
 					sem_wait(&elementos_ready);
@@ -261,8 +259,6 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_ready, pcb_desalojado);
 				pthread_mutex_unlock(&mutex_lista_ready);
 				sem_post(&elementos_ready);
-				log_error(logger, "JUSTO ANTES DE ITERAR");
-				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);//SSSANCHO PQ SE ITERA POR LOS RECURSOS AL SALIR POR CLOCK.GIL
 				log_debug(logger, "Se desalojo un proceso por clock");
 			}
 			break;
@@ -275,8 +271,7 @@ void *cliente_cpu_dispatch()
 				list_add(lista_pcbs_exit, pcb_desalojado);	 // Post(contador multiprogramacion)
 				sem_post(&contador_multi);
 				log_error(logger, "JUSTO ANTES DE ITERAR");
-				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list); // pq aca dice dictionary_recursos??
-																				  // samcho gil aflojale al ctrlc
+				dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
 			}
 			else
 			{
