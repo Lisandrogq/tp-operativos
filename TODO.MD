@@ -28,11 +28,13 @@ ____
 #### ENTREGA FINAL #######
 - [ ] IMPLEMENTAR DESCONEXION DE ios
 - [x] TLB (LRU)
+- [ ] DETENER_PLANIFICACION, en principo un solo semaforo(en total) que bloquee las cosas.
 - [ ] FS(GIGANTE)
 - [ ] Agregar logs requeridos en consigna
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
+- [ ] Hay que tener cuidado con nuestra planificacion, ya que no planificamos como tal(NUNCA ordenamos las listas) simplemente nos aseguramos de siempre agregar bien(Al final ya que todos usan fifo de alguna forma) esto podria estar mal desde el punto de vista teorico ya que solo se planifica e algunos casos y tambien porque no planificcamos como tal
 
 #### CHECKPOINT 2 ####
 - [] -unificar sigterm (un solo if antes del switch?)

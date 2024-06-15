@@ -15,6 +15,7 @@ void *hilo_largo_plazo()
 {
 	while (1)
 	{
+		//Aca se deberia lockear para detener la planificacion
 		sem_wait(&hay_new);
 		sem_wait(&contador_multi);
 		elemento_cola_new *elemento = list_remove(lista_pcbs_new, 0);
@@ -47,16 +48,26 @@ void *consola()
 		if (!strcmp(instruccion[0], "INICIAR_PROCESO"))
 		{
 			int tam = 1 + strlen(instruccion[1]);
-			comando_iniciar_proceso(instruccion[1], tam); // NUEVA FUNCION DEL TIPO HILO
+			comando_iniciar_proceso(instruccion[1], tam); // Debe poder crearse procesos en new pero no pasara a rready
+			// Una posible solucion y creo la unica es volver a esta funcion un hilo
 		}
 		if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
 		{
 			int tam = 1 + sizeof(strlen(linea));
-			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
+			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER); //Aca no puedo hacer un lock mutex_plani a las colas porque se bloquea la consola y ya no puedo reanudar, esto depende de si se pueden matar procesos con la plani detenida
+			// Seguramente se puedan matar procesos y esto no tenga que ser un hilo
 		}
 		if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
 		{
 			comando_listar_procesos_por_estado();
+		}
+		if (!strcmp(instruccion[0], "DETENER_PLANIFICACION"))
+		{
+			comando_detener_planificacion();
+		}
+		if (!strcmp(instruccion[0], "INICIAR_PLANIFICACION"))
+		{
+			comando_reanudar_planificacion();
 		}
 		if (!strcmp(instruccion[0], "EJECUTAR_SCRIPT"))
 		{
@@ -118,7 +129,7 @@ void *cliente_cpu_dispatch()
 	enviar_operacion(OPERACION_KERNEL_1, modulo, conexion_fd);
 	enviar_operacion(MENSAJE, "SOY EL CLIENTE DISPATCH", conexion_fd);
 
-	while (1)
+	while (1) // no habria problema en lockear esto
 	{
 		// reemplazar por void*buffer_instruccion sin malloc
 		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));

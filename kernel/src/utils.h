@@ -91,6 +91,8 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
 void comando_iniciar_proceso(char *path, int tam);
 void comando_finalizar_proceso(char *pid_str, int motivo);
 void comando_listar_procesos_por_estado();
+void comando_detener_planificacion();
+void comando_reanudar_planificacion();
 void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual);
 void ejecutar_script(char *path);
 void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
