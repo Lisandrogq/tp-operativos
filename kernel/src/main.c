@@ -9,6 +9,7 @@
 #include "utils.h"
 #include <errno.h>
 
+int primero = 0;
 pthread_t tid[4];
 void *hilo_largo_plazo()
 {
@@ -71,22 +72,31 @@ void *consola()
 		}
 		if (!strcmp(instruccion[0], "MULTIPROGRAMACION"))
 		{
-			int grado = atoi(instruccion[1]);
-			FILE *archivo = fopen("kernel.config", "r+");
-			if (archivo == NULL)
-			{
-				log_error(logger, "No se pudo abrir el archivo de configuracion");
-				return;
+			int nuevo_grado = atoi(instruccion[1]);
+			int grado_incial = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+			int grado_actual;
+			//cuando ande ok lo paso a utils//
+			if(primero == 0){
+				grado_actual = grado_incial;
+				primero = 1;
 			}
-			int grado_actual = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
-			printf("Grado de multiprogramacion actual: %d\n", grado_actual);
-			modificar_multiprogramacion(grado, archivo, grado_actual);
+    		// Ajustar semáforos según el nuevo grado
+    		while (nuevo_grado > grado_actual) {
+        		sem_post(&contador_multi);
+        		grado_actual++;
+    		}
+    		while (nuevo_grado < grado_actual) {
+        		sem_wait(&contador_multi);
+        		grado_actual--;
+    		}
+			grado_actual = nuevo_grado;
 		}
+		
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
 		free(linea);
-	}
-}
+	}}
+
 void *cliente_cpu_dispatch()
 {
 

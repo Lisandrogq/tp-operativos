@@ -296,8 +296,8 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     while (fgets(linea, len, archivo) != NULL)
     {
         char *instruccion[2];
-        // instruccion[0] = malloc(strlen(linea));
-        // instruccion[1] = malloc(strlen(linea));
+        instruccion[0] = malloc(strlen(linea));
+        instruccion[1] = malloc(strlen(linea));
         instruccion[0] = strtok(linea, " \n");
         instruccion[1] = strtok(NULL, " \n");
         if (strcmp(linea, "\0") == 0)
@@ -327,44 +327,6 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     }
     // cierra el archivo//
     free(linea);
-    fclose(archivo);
-}
-void modificar_multiprogramacion(int grado, FILE *archivo, int grado_actual)
-{
-    int encontrado = 0;
-    char *linea = malloc(100);
-    size_t len = 100;
-    while (fgets(linea, len, archivo) != NULL)
-    {
-        if (ferror(archivo))
-        {
-            perror("Error de lectura");
-            break;
-        }
-        if (!strncmp(linea, "GRADO_MULTIPROGRAMACION=", strlen("GRADO_MULTIPROGRAMACION=")))
-        {
-            fseek(archivo, -strlen(linea), SEEK_CUR);
-            fprintf(archivo, "GRADO_MULTIPROGRAMACION=%i", grado);
-            encontrado = 1;
-            while (grado > grado_actual)
-            {
-                sem_post(&contador_multi);
-                grado_actual++;
-            }
-            while (grado < grado_actual)
-            {
-                sem_wait(&contador_multi);
-                grado_actual--;
-            }
-            free(linea);
-            break;
-        }
-    }
-    if (encontrado == 0)
-    {
-        log_info(logger, "no encontre el parametro");
-        free(linea);
-    }
     fclose(archivo);
 }
 
@@ -414,33 +376,6 @@ void solicitar_eliminar_estructuras_administrativas(int pid)
     eliminar_paquete(paquete);
     free(a_enviar);
 }
-
-/* void ejecutar_script(const char *path)
-{
-
-    FILE *archivo = fopen(path, "r");
-    if (archivo == NULL)
-    {
-        printf("Error: No se pudo abrir el archivo");
-        return;
-    }
-
-    char comando[100]; // Asumimos que ninguna línea del archivo tiene más de 100 caracteres
-    while (fgets(comando, sizeof(comando), archivo) != NULL)
-    {
-
-        char *posicion_salto_linea = strchr(comando, '\n');
-        if (posicion_salto_linea != NULL)
-        {
-            *posicion_salto_linea = '\0';
-        }
-
-        printf("Ejecutando comando: %s\n", comando);
-        system(comando);
-    }
-
-    fclose(archivo);
-} */
 
 void enviar_interrupcion(int motivo, int pid)
 {
