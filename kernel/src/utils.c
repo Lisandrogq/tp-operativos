@@ -111,11 +111,14 @@ void free_all_resources_taken(int pid)
     void *liberar(char *nombre_io, t_cola_recurso *struct_recurso)
     {
         t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+        t_list *lista_bloqueado = struct_recurso->cola_de_bloqueados_por_recurso;
+        list_remove_by_condition(lista_bloqueado, is_pid);
         pcb_t *a_borrar = list_remove_by_condition(lista, is_pid);
         while (a_borrar != NULL)
         {
-            log_debug(logger, "SUME A INSTANCIAS");
-
+            if(list_is_empty(struct_recurso->cola_de_bloqueados_por_recurso)){
+                return;
+            }
             pcb_t *pcb_bloqueado = list_remove(struct_recurso->cola_de_bloqueados_por_recurso, 0); // SI LA LISTA ES VACIA DA ERROR
             if (pcb_bloqueado)
             {
@@ -138,6 +141,7 @@ void free_all_resources_taken(int pid)
                 sem_post(&elementos_ready);
             }
             struct_recurso->instancias++;
+            log_debug(logger, "SUME A INSTANCIAS");
             a_borrar = list_remove_by_condition(lista, is_pid);
         }
     };
@@ -166,6 +170,11 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         {
             t_list *lista = struct_recurso->cola_de_bloqueados_por_recurso;
             pcb_a_terminar = list_find(lista, is_pid);
+            if ((pcb_a_terminar == NULL))
+            {
+               return; // Esto es por ahora para que el log no tire error cuando se itere en un recurso que el proceso no tiene
+            }
+            
             log_info(logger, "pcb_a_terminar->pid:%i", pcb_a_terminar->pid);
         }
     };
@@ -622,7 +631,7 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
     {
         pthread_mutex_unlock(&mutex_lista_exec);
         pthread_mutex_lock(&mutex_lista_ready_mas);
-        if (list_is_empty(lista_ready_mas)) 
+        if (list_is_empty(lista_ready_mas))
         {
             pthread_mutex_unlock(&mutex_lista_ready_mas);
             log_debug(logger, "Enviando a ejecutar desde normal");

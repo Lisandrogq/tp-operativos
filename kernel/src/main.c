@@ -179,36 +179,36 @@ void *cliente_cpu_dispatch()
 
 			if (dictionary_has_key(dictionary_recursos, instruccion_de_desalojo->p1))
 			{
-
-				bool is_pid(void *pcb)
+				if (!list_is_empty(struct_recurso_signal->cola_de_bloqueados_por_recurso)) // si la lista no esta vacia
 				{
-					return ((pcb_t *)pcb)->pid == pcb_desalojado->pid;
-				};
-				pcb_t *pcb_bloqueado = list_remove_by_condition(struct_recurso_signal->cola_de_bloqueados_por_recurso, is_pid);
-				if (pcb_bloqueado)
-				{
-
-					int quantum = config_get_int_value(config, "QUANTUM");
-					if (pcb_bloqueado->quantum != quantum)
+					pcb_t *pcb_bloqueado = list_remove(struct_recurso_signal->cola_de_bloqueados_por_recurso, 0);
+					if (pcb_bloqueado)
 					{
-						pthread_mutex_lock(&mutex_lista_ready_mas);
-						list_add(lista_ready_mas, pcb_bloqueado);
-						pthread_mutex_unlock(&mutex_lista_ready_mas);
+
+						int quantum = config_get_int_value(config, "QUANTUM");
+						if (pcb_bloqueado->quantum != quantum)
+						{
+							pthread_mutex_lock(&mutex_lista_ready_mas);
+							list_add(lista_ready_mas, pcb_bloqueado);
+							pthread_mutex_unlock(&mutex_lista_ready_mas);
+						}
+						else
+						{
+							pthread_mutex_lock(&mutex_lista_ready);
+							list_add(lista_pcbs_ready, pcb_bloqueado);
+							pthread_mutex_unlock(&mutex_lista_ready);
+						}
+						log_info(logger, "Desbloqueando desde signal");
+						sem_post(&elementos_ready); // ESTE POST SE HACE POR EL PCB DESBLOQUEADO
 					}
-					else
-					{	
-						pthread_mutex_lock(&mutex_lista_ready);
-						list_add(lista_pcbs_ready, pcb_bloqueado);
-						pthread_mutex_unlock(&mutex_lista_ready);
-					}
-					sem_post(&elementos_ready);//ESTE POST SE HACE POR EL PCB DESBLOQUEADO
 				}
+
 				pthread_mutex_lock(&mutex_lista_exec);
 				list_add(lista_pcbs_exec, pcb_desalojado);
 				pthread_mutex_unlock(&mutex_lista_exec);
 				pcb_desalojado->state = EXEC_S;
 				struct_recurso_signal->instancias++;
-				sem_post(&elementos_ready);//ESTE POST SE HACE POR EL PCB QUE VUELVE A EJECUTAR
+				sem_post(&elementos_ready); // ESTE POST SE HACE POR EL PCB QUE VUELVE A EJECUTAR
 			}
 			else
 			{
