@@ -13,6 +13,7 @@ pthread_mutex_t mutex_pcb_desalojado;
 // pthread_mutex_t mutex_lista_bloqueado;
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_lista_exec;
+pthread_mutex_t mutex_lista_ready_mas;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 t_dictionary *dictionary_pcbs_bloqueado;
 t_dictionary *dictionary_recursos;
@@ -82,8 +83,9 @@ int get_pid_state(int pid_buscado)
         else
             return;
     };
-
+    pthread_mutex_lock(&mutex_lista_ready);
     int esta_ready = (int)list_any_satisfy(lista_pcbs_ready, is_pid);
+    pthread_mutex_unlock(&mutex_lista_ready);
     dictionary_iterator(dictionary_pcbs_bloqueado, is_pid_in_blocked_io);
     dictionary_iterator(dictionary_recursos, is_pid_in_blocked_resources);
     int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
@@ -122,11 +124,15 @@ void free_all_resources_taken(int pid)
                     int quantum = config_get_int_value(config, "QUANTUM");
                     if (pcb_bloqueado->quantum != quantum)
                     {
+                        pthread_mutex_lock(&mutex_lista_ready_mas);
                         list_add(lista_ready_mas, pcb_bloqueado);
+                        pthread_mutex_unlock(&mutex_lista_ready_mas);
                     }
                     else
                     {
+                        pthread_mutex_lock(&mutex_lista_ready);
                         list_add(lista_pcbs_ready, pcb_bloqueado);
+                        pthread_mutex_unlock(&mutex_lista_ready);
                     }
                 }
                 sem_post(&elementos_ready);
@@ -652,15 +658,17 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     free(elemento_borrado->buffer_instruccion);
     free(elemento_borrado);
     int quantum = config_get_int_value(config, "QUANTUM");
-    if (pcb_a_desbloquear->quantum == quantum) // hay veces que queda en negativo el quantum TENER EN CUENTA
+    if (pcb_a_desbloquear->quantum != quantum)
+    {
+        pthread_mutex_lock(&mutex_lista_ready_mas);
+        list_add(lista_ready_mas, pcb_a_desbloquear);
+        pthread_mutex_unlock(&mutex_lista_ready_mas);
+    }
+    else
     {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_pcbs_ready, pcb_a_desbloquear);
         pthread_mutex_unlock(&mutex_lista_ready);
-    }
-    else
-    {
-        list_add(lista_ready_mas, pcb_a_desbloquear); // capaz ready plus no tienq existir y solo se agregan en ready[0
     }
     pcb_a_desbloquear->state = READY_S;
     sem_post(&elementos_ready);
@@ -675,7 +683,7 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
         pthread_mutex_unlock(&mutex_lista_exec);
         log_debug(logger, "Enviando a ejecutar desde exec");
     }
-    else if (list_is_empty(lista_ready_mas))
+    else if (list_is_empty(lista_ready_mas)) // Hay que poner mutex aca no? @lisandro @lichu @limchu @lisan @Gonzalez @Quiroga @Fernan
     {
         log_debug(logger, "Enviando a ejecutar desde normal");
         pthread_mutex_lock(&mutex_lista_ready);
@@ -689,7 +697,9 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
     else
     {
         log_debug(logger, "Enviando a ejecutar desde ready+");
+        pthread_mutex_lock(&mutex_lista_ready_mas);
         pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
+        pthread_mutex_unlock(&mutex_lista_ready_mas);
         pthread_mutex_lock(&mutex_lista_exec);
         list_add(lista_pcbs_exec, pcb_a_ejecutar);
         pthread_mutex_unlock(&mutex_lista_exec);

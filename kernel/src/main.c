@@ -181,11 +181,15 @@ void *cliente_cpu_dispatch()
 					int quantum = config_get_int_value(config, "QUANTUM");
 					if (pcb_bloqueado->quantum != quantum)
 					{
+						pthread_mutex_lock(&mutex_lista_ready_mas);
 						list_add(lista_ready_mas, pcb_bloqueado);
+						pthread_mutex_unlock(&mutex_lista_ready_mas);
 					}
 					else
-					{
+					{	
+						pthread_mutex_lock(&mutex_lista_ready);
 						list_add(lista_pcbs_ready, pcb_bloqueado);
+						pthread_mutex_unlock(&mutex_lista_ready);
 					}
 					sem_post(&elementos_ready);//ESTE POST SE HACE POR EL PCB DESBLOQUEADO
 				}
@@ -381,6 +385,9 @@ int main(int argc, char const *argv[])
 	pid_sig_term = -1;
 	sem_init(&elementos_ready, 0, 0);
 	sem_init(&hay_new, 0, 0);
+	pthread_mutex_t_init(mutex_lista_ready_mas, NULL);
+	pthread_mutex_unlock(&mutex_lista_ready_mas);
+
 	pthread_mutex_init(&mutex_lista_exit, NULL);
 	pthread_mutex_unlock(&mutex_lista_exit); // debe empezar desbloqueado, pq todos hacen lock primero
 
