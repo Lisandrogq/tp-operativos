@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <errno.h>
+#include <commons/temporal.h>
 
 t_dictionary *dic_p_registros; // tiene punteros a los registros
 t_dictionary *dic_tam_registros;
@@ -10,7 +11,8 @@ int socket_dispatch;
 int socket_interrupt;
 int socket_memoria;
 int CANTIDAD_ENTRADAS_TLB;
-
+char* ALGORITMO_TLB;
+t_temporal *cronometro_lru;
 int tam_pagina;
 interrupcion_t *recibir_interrupcion(int socket_interrupt)
 {

@@ -17,6 +17,7 @@
 
 #include <commons/string.h>
 #include <utils/utils_generales.h>
+#include <commons/temporal.h>
 
 extern t_dictionary *dic_p_registros;
 extern t_dictionary *dic_tam_registros;
@@ -28,6 +29,8 @@ extern int socket_dispatch;
 extern int socket_interrupt;
 extern int tam_pagina;
 extern int CANTIDAD_ENTRADAS_TLB;
+extern char* ALGORITMO_TLB;
+extern t_temporal *cronometro_lru;
 // Cliente
 
 typedef struct
@@ -35,8 +38,12 @@ typedef struct
     int pid;
     int pagina;
     int frame;
-    // int timestamp//para lru
+    int64_t timestamp; // para lru
 } tlb_element;
+
+tlb_element *remove_LRU_entry();
+void *menor_timestamp(tlb_element *elemento1, tlb_element *elemento2);
+tlb_element *get_element_tlb(solicitud_unitaria_t *sol);
 interrupcion_t *recibir_interrupcion(int socket_interrupt);
 buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam);
 t_strings_instruccion *fetch(int PC);

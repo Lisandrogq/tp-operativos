@@ -243,7 +243,7 @@ int decode(t_strings_instruccion *instruccion)
 		liberar_y_eliminar_solicitudes(solicitudes);
 		return STATUS_DESALOJADO;
 	}
-	
+
 	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
 	{
 		int tam_string = atoi(instruccion->p1);
@@ -435,11 +435,11 @@ int recibir_frame()
 }
 solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 {
-	int n_frame = -1;
+	int n_frame = NULL;
 
-	n_frame = get_frame_tlb(sol);
+	tlb_element *elemento = get_element_tlb(sol);
 
-	if (n_frame == -1)
+	if (elemento == NULL)
 	{
 		log_info(logger, "PID: %i - TLB MISS - Pagina: %i", pcb_exec->pid, sol->pagina);
 
@@ -449,11 +449,21 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 		elemento->pid = pcb_exec->pid;
 		elemento->pagina = sol->pagina;
 		elemento->frame = n_frame;
+
+		if (strcmp(ALGORITMO_TLB,"LRU")==0)
+		{
+			elemento->timestamp = temporal_gettime(cronometro_lru);
+		}
 		actualizar_tlb(elemento);
 	}
 	else
 	{
+		n_frame = elemento->frame;
 		log_info(logger, "PID: %i - TLB HIT - Pagina: %i", pcb_exec->pid, sol->pagina);
+		if (strcmp(ALGORITMO_TLB,"LRU")==0)
+		{
+			elemento->timestamp = temporal_gettime(cronometro_lru);
+		}
 	}
 	// esto se hace independientemente de la forma de obtencion
 	sol->dir_fisica_base = n_frame * tam_pagina;
@@ -495,7 +505,7 @@ int solicitar_frame_a_memoria(solicitud_unitaria_t *sol)
 	return frame;
 }
 
-int get_frame_tlb(solicitud_unitaria_t *sol)
+tlb_element *get_element_tlb(solicitud_unitaria_t *sol)
 {
 	bool find_page(void *arg)
 	{
@@ -503,24 +513,42 @@ int get_frame_tlb(solicitud_unitaria_t *sol)
 		return elemento->pid == pcb_exec->pid && elemento->pagina == sol->pagina;
 	};
 	tlb_element *elemento = list_find(tlb_list, find_page);
-	if (elemento == NULL)
-		return -1;
-	return elemento->frame;
+	return elemento; // RETORNA NULL SI NO SE ENCONTRO
 }
-void actualizar_tlb(tlb_element *elemento) // al irse un proceso, se borra la tlb?
+void actualizar_tlb(tlb_element *elemento) // al irse un proceso, se borra sus entradas de tlb?
 {
+	tlb_element *a_liberar;
 	if (list_size(tlb_list) < CANTIDAD_ENTRADAS_TLB)
 	{
 		list_add_in_index(tlb_list, 0, elemento);
 	}
 	else
 	{
-		// reemplazo por fifo//[5,4,3,2,1,0]: add[0],remove[size-1]
-		list_add_in_index(tlb_list, 0, elemento);
-		list_remove(tlb_list, list_size(tlb_list) - 1);
+		if (strcmp(ALGORITMO_TLB,"LRU")==0)
+		{
+			a_liberar = remove_LRU_entry();
+			list_add_in_index(tlb_list, 0, elemento);
+		}
+		if (strcmp(ALGORITMO_TLB,"FIFO")==0)
+		{
+			a_liberar = list_remove(tlb_list, list_size(tlb_list) - 1);
+			list_add_in_index(tlb_list, 0, elemento);
+		}
+		free(a_liberar);
 	}
 }
 
+tlb_element *remove_LRU_entry()
+{
+	tlb_element *a_liberar = (tlb_element *)list_get_minimum(tlb_list, menor_timestamp);
+	list_remove_element(tlb_list, a_liberar);
+	return a_liberar;
+}
+
+void *menor_timestamp(tlb_element *elemento1, tlb_element *elemento2)
+{
+	return elemento1->timestamp <= elemento2->timestamp ? elemento1 : elemento2;
+}
 int execute(t_strings_instruccion *instruccion)
 {
 	log_instruccion_ejecutada(instruccion); // en teoría debería ir al final de cada if,xd
@@ -722,6 +750,7 @@ void inicializar_diccionario_tams()
 }
 int main(int argc, char const *argv[])
 {
+	cronometro_lru = temporal_create();
 	sem_init(&hay_proceso, 0, 0);
 	dic_p_registros = dictionary_create();
 	dic_tam_registros = dictionary_create();
@@ -737,6 +766,7 @@ int main(int argc, char const *argv[])
 	config = iniciar_config();
 	config = config_create("cpu.config");
 	CANTIDAD_ENTRADAS_TLB = config_get_int_value(config, "CANTIDAD_ENTRADAS_TLB");
+	ALGORITMO_TLB = config_get_string_value(config, "ALGORITMO_TLB");
 	iniciar_thread_dispatch();
 	iniciar_thread_interrupt();
 	socket_memoria = iniciar_conexion_memoria(config, logger);
