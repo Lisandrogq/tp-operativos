@@ -385,7 +385,7 @@ int main(int argc, char const *argv[])
 	pid_sig_term = -1;
 	sem_init(&elementos_ready, 0, 0);
 	sem_init(&hay_new, 0, 0);
-	pthread_mutex_t_init(mutex_lista_ready_mas, NULL);
+	pthread_mutex_init(&mutex_lista_ready_mas, NULL);
 	pthread_mutex_unlock(&mutex_lista_ready_mas);
 
 	pthread_mutex_init(&mutex_lista_exit, NULL);
