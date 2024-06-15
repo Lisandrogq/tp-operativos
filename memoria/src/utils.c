@@ -212,15 +212,14 @@ void handle_cpu_client(int socket_cliente)
 			read_t *solicitud_r = recibir_pedido_lectura(socket_cliente);
 			void *datos_leidos = leer_memoria(solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			int a_loggear = 0;
-
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
-			log_info(logger, "PID: XD_TODO - Accion: LEER - Direccion fisica: %i - Tamaño %i", solicitud_r->dir_fisica, solicitud_r->tam_lectura);
+			log_info(logger, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", solicitud_r->pid, solicitud_r->dir_fisica, solicitud_r->tam_lectura);
 			break; // no se recibe pid en read/write(creo)
 		case WRITE_MEM:
 			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
 			int write_status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 			enviar_status_escritura(write_status, socket_cliente);
-			log_info(logger, "PID: XD_TODO - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i", solicitud_w->dir_fisica, solicitud_w->tam_escritura);
+			log_info(logger, "PID: %i - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i", solicitud_w->pid,solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 
 			break;
 		case -1:
@@ -609,6 +608,8 @@ write_t *recibir_pedido_escritura(int socket_cliente)
 	stream += sizeof(int);
 	memcpy(&(solicitud_w->tam_escritura), stream, sizeof(int));
 	stream += sizeof(int);
+	memcpy(&(solicitud_w->pid), stream, sizeof(int));
+	stream += sizeof(int);
 	solicitud_w->datos = malloc(solicitud_w->tam_escritura);
 	memcpy(solicitud_w->datos, stream, solicitud_w->tam_escritura);
 
@@ -683,6 +684,8 @@ read_t *recibir_pedido_lectura(int socket_cliente)
 	memcpy(&(sol_lectura->dir_fisica), stream, sizeof(int));
 	stream += sizeof(int);
 	memcpy(&(sol_lectura->tam_lectura), stream, sizeof(int));
+	stream += sizeof(int);
+	memcpy(&(sol_lectura->pid), stream, sizeof(int));
 
 	eliminar_paquete(paquete);
 

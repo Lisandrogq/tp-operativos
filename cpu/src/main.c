@@ -340,6 +340,7 @@ t_list *obtener_direcciones_fisicas_read(int dir_logica, int tam_r_datos) // ret
 		{
 			solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t)); // free de esto luego de pedir
 			tam_siguiente = tam_siguiente - offset;
+			sol->pid = pcb_exec->pid;
 			sol->tam = tam_siguiente;
 			sol->pagina = pagina;
 			sol->offset = offset;
@@ -358,6 +359,7 @@ t_list *obtener_direcciones_fisicas_read(int dir_logica, int tam_r_datos) // ret
 	else
 	{
 		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
+		sol->pid = pcb_exec->pid;
 		sol->pagina = pagina;
 		sol->offset = offset;
 		sol->tam = tam_r_datos;
@@ -381,6 +383,7 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 		{
 			solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t)); // free de esto luego de pedir
 			tam_siguiente = tam_siguiente - offset;
+			sol->pid = pcb_exec->pid;
 			sol->tam = tam_siguiente;
 			sol->pagina = pagina;
 			sol->offset = offset;
@@ -402,6 +405,7 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 	else
 	{
 		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
+		sol->pid = pcb_exec->pid;
 		sol->pagina = pagina;
 		sol->offset = offset;
 		sol->tam = tam_r_datos;
@@ -450,7 +454,7 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 		elemento->pagina = sol->pagina;
 		elemento->frame = n_frame;
 
-		if (strcmp(ALGORITMO_TLB,"LRU")==0)
+		if (strcmp(ALGORITMO_TLB, "LRU") == 0)
 		{
 			elemento->timestamp = temporal_gettime(cronometro_lru);
 		}
@@ -460,7 +464,7 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 	{
 		n_frame = elemento->frame;
 		log_info(logger, "PID: %i - TLB HIT - Pagina: %i", pcb_exec->pid, sol->pagina);
-		if (strcmp(ALGORITMO_TLB,"LRU")==0)
+		if (strcmp(ALGORITMO_TLB, "LRU") == 0)
 		{
 			elemento->timestamp = temporal_gettime(cronometro_lru);
 		}
@@ -524,12 +528,12 @@ void actualizar_tlb(tlb_element *elemento) // al irse un proceso, se borra sus e
 	}
 	else
 	{
-		if (strcmp(ALGORITMO_TLB,"LRU")==0)
+		if (strcmp(ALGORITMO_TLB, "LRU") == 0)
 		{
 			a_liberar = remove_LRU_entry();
 			list_add_in_index(tlb_list, 0, elemento);
 		}
-		if (strcmp(ALGORITMO_TLB,"FIFO")==0)
+		if (strcmp(ALGORITMO_TLB, "FIFO") == 0)
 		{
 			a_liberar = list_remove(tlb_list, list_size(tlb_list) - 1);
 			list_add_in_index(tlb_list, 0, elemento);

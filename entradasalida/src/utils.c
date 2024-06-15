@@ -8,7 +8,7 @@ int socket_kernel;
 int socket_memoria;
 int tiempo_Unidad_Trabajo;
 
-t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam)
+t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam)//max tam = suma de tam de cada sol
 {
 	void *buffer = buffer_instruccion->buffer;
 	t_list *solicitudes = list_create(); // solicitud_unitaria_t *
@@ -22,6 +22,8 @@ t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_
 		memcpy(&(sol->offset), buffer + offset, sizeof(u_int32_t));
 		offset += sizeof(u_int32_t);
 		memcpy(&(sol->tam), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		memcpy(&(sol->pid), buffer + offset, sizeof(u_int32_t));
 		offset += sizeof(u_int32_t);
 		*max_tam += sol->tam;
 		list_add(solicitudes, sol);

@@ -11,7 +11,7 @@ int socket_dispatch;
 int socket_interrupt;
 int socket_memoria;
 int CANTIDAD_ENTRADAS_TLB;
-char* ALGORITMO_TLB;
+char *ALGORITMO_TLB;
 t_temporal *cronometro_lru;
 int tam_pagina;
 interrupcion_t *recibir_interrupcion(int socket_interrupt)
@@ -147,20 +147,21 @@ solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol)
 {
     u_int32_t dir_fisica = sol->dir_fisica_base + sol->offset;
     int tam_r_datos = sol->tam;
-    solicitar_leer_memoria(dir_fisica, tam_r_datos);
+
+    solicitar_leer_memoria(dir_fisica, tam_r_datos, sol->pid);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     void *datos_obtenidos = recibir_datos_leidos();
     memcpy(sol->datos, datos_obtenidos, sol->tam);
     int *logeable = malloc(sizeof(int));
     memset(logeable, 0, sizeof(int));
     memcpy(logeable, datos_obtenidos, sol->tam);
-    log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %i - Valor: %i", pcb_exec->pid, sol->dir_fisica_base + sol->offset, *logeable);
+    log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %i - Valor: %i", sol->pid, sol->dir_fisica_base + sol->offset, *logeable);
     free(logeable);
     return sol;
 }
 int execute_unitary_mov_out(solicitud_unitaria_t *sol)
 {
-    solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam);
+    solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam, sol->pid);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     int status_escritura = recibir_status_escritura();
     int *logeable = malloc(sizeof(int));
@@ -172,14 +173,13 @@ int execute_unitary_mov_out(solicitud_unitaria_t *sol)
     return status_escritura;
 }
 
-
-void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos, int pid)
 {
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = WRITE_MEM;
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->buffer->size = sizeof(int) * 2 + tam_r_datos;
+    paquete->buffer->size = sizeof(int) * 3 + tam_r_datos;
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
 
@@ -187,6 +187,8 @@ void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_dat
     paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
     paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, datos, tam_r_datos);
@@ -240,13 +242,13 @@ void *recibir_datos_leidos()
 
     return datos_leidos;
 }
-void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos)
+void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos, int pid)
 {
     t_paquete *paquete = malloc(sizeof(t_paquete));
 
     paquete->codigo_operacion = READ_MEM;
     paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->buffer->size = sizeof(int) * 2;
+    paquete->buffer->size = sizeof(int) * 3;
     paquete->buffer->stream = malloc(paquete->buffer->size);
     paquete->buffer->offset = 0;
 
@@ -254,6 +256,8 @@ void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos)
     paquete->buffer->offset += sizeof(int);
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
+    paquete->buffer->offset += sizeof(int);
+    memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
     paquete->buffer->offset += sizeof(int);
 
     int bytes = paquete->buffer->size + 2 * sizeof(int);
@@ -312,7 +316,7 @@ int handshake(int socket_cliente)
 buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam) // en io se va a generar elementos hasta q se llegue a size
 {
     buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
-    buffer_instruccion->size = 3 * list_size(solicitudes)*sizeof(u_int32_t);
+    buffer_instruccion->size = 4 * list_size(solicitudes) * sizeof(u_int32_t);
     buffer_instruccion->buffer = malloc(buffer_instruccion->size);
     t_list_iterator *iterator = list_iterator_create(solicitudes);
     int offset = 0;
@@ -326,6 +330,8 @@ buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam) // e
         memcpy(buffer_instruccion->buffer + offset, &(sol->offset), sizeof(u_int32_t));
         offset += sizeof(u_int32_t);
         memcpy(buffer_instruccion->buffer + offset, &(sol->tam), sizeof(u_int32_t));
+        offset += sizeof(u_int32_t);
+        memcpy(buffer_instruccion->buffer + offset, &(sol->pid), sizeof(u_int32_t));
         offset += sizeof(u_int32_t);
     }
 

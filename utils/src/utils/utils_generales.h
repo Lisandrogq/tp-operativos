@@ -20,6 +20,7 @@
 #define PUERTO_CPU_INTERRUPT "4447"
 typedef struct
 {
+	int pid;
 	int32_t pagina;
 	int32_t dir_fisica_base;
 	int tam;
@@ -28,11 +29,13 @@ typedef struct
 } solicitud_unitaria_t; // tanto read como write
 typedef struct
 {
+	int pid;
 	int32_t dir_fisica;
 	int tam_lectura;
 } read_t;
 typedef struct
 {
+	int pid;
 	int32_t dir_fisica;
 	int tam_escritura;
 	void *datos;

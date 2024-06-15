@@ -16,7 +16,7 @@ void iniciar_interfaz_stdout()
 		log_debug(logger, "Llego un pedido STDOUT del pid %i", pedido->pid_solicitante);
 
 		t_list *solicitudes = decode_addresses_buffer(pedido->buffer_instruccion, &max_tam);
-		char *output_string = malloc(max_tam);//POR ALGUNA RAZON ESTO FUNCIONA SIN AGREGAR \0 AL FINAL
+		char *output_string = malloc(max_tam); // POR ALGUNA RAZON ESTO FUNCIONA SIN AGREGAR \0 AL FINAL
 		leer_memoria(solicitudes, output_string);
 		log_info(logger, "STDOUT: %s", output_string);
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_STDOUT_WRITE");
@@ -29,7 +29,7 @@ solicitud_unitaria_t *leer_memoria_unitario(solicitud_unitaria_t *sol)
 {
 	u_int32_t dir_fisica = sol->dir_fisica_base + sol->offset;
 	int tam_r_datos = sol->tam;
-	solicitar_leer_memoria(dir_fisica, tam_r_datos);
+	solicitar_leer_memoria(dir_fisica, tam_r_datos, sol->pid);
 	int cod_op = recibir_operacion(socket_memoria); // waitall y codop
 	void *datos_obtenidos = recibir_datos_leidos();
 	sol->datos = malloc(sol->tam);
@@ -63,13 +63,13 @@ void *recibir_datos_leidos()
 	return datos_leidos;
 }
 
-void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos)
+void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos, int pid)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = READ_MEM;
 	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = sizeof(int) * 2;
+	paquete->buffer->size = sizeof(int) * 3;
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	paquete->buffer->offset = 0;
 
@@ -78,7 +78,8 @@ void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos)
 
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
 	paquete->buffer->offset += sizeof(int);
-
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
 	int bytes = paquete->buffer->size + 2 * sizeof(int);
 
 	void *a_enviar = serializar_paquete(paquete, bytes);

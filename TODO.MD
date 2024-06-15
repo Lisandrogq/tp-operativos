@@ -27,7 +27,7 @@ ____
 
 #### ENTREGA FINAL #######
 - [ ] IMPLEMENTAR DESCONEXION DE ios
-- [ ] TLB (LRU)
+- [x] TLB (LRU)
 - [ ] FS(GIGANTE)
 - [ ] Agregar logs requeridos en consigna
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]

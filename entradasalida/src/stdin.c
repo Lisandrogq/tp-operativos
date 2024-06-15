@@ -27,13 +27,13 @@ void iniciar_interfaz_stdin()
 		free(input_string);
 	}
 }
-void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos)
+void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos, int pid)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = WRITE_MEM;
 	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = sizeof(int) * 2 + tam_r_datos;
+	paquete->buffer->size = sizeof(int) * 3 + tam_r_datos;
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	paquete->buffer->offset = 0;
 
@@ -42,7 +42,8 @@ void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_dat
 
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, &tam_r_datos, sizeof(int));
 	paquete->buffer->offset += sizeof(int);
-
+	memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
+	paquete->buffer->offset += sizeof(int);
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, datos, tam_r_datos);
 	paquete->buffer->offset += tam_r_datos;
 
@@ -74,7 +75,7 @@ int recibir_status_escritura()
 
 void escribir_memoria_unitario(solicitud_unitaria_t *sol)
 {
-	solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam);
+	solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam,sol->pid);
 	int cod_op = recibir_operacion(socket_memoria);	   // waitall y codop
 	int status_escritura = recibir_status_escritura(); // es irrelevante el status(no aclaran q la escritura falle)
 	int *logeable = malloc(sizeof(int));
