@@ -677,33 +677,39 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
 {
     pcb_t *pcb_a_ejecutar;
     pthread_mutex_lock(&mutex_lista_exec);
+    pthread_mutex_lock(&mutex_lista_ready_mas);
     if (!list_is_empty(lista_pcbs_exec))
     {
         pcb_a_ejecutar = list_get(lista_pcbs_exec, 0);
         pthread_mutex_unlock(&mutex_lista_exec);
         log_debug(logger, "Enviando a ejecutar desde exec");
     }
-    else if (list_is_empty(lista_ready_mas)) // Hay que poner mutex aca no? @lisandro @lichu @limchu @lisan @Gonzalez @Quiroga @Fernan
-    {
-        log_debug(logger, "Enviando a ejecutar desde normal");
-        pthread_mutex_lock(&mutex_lista_ready);
-        pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
-        pthread_mutex_unlock(&mutex_lista_ready);
-        pthread_mutex_lock(&mutex_lista_exec);
-        list_add(lista_pcbs_exec, pcb_a_ejecutar);
-        pthread_mutex_unlock(&mutex_lista_exec);
-        pcb_a_ejecutar->state = EXEC_S;
-    }
     else
     {
-        log_debug(logger, "Enviando a ejecutar desde ready+");
         pthread_mutex_lock(&mutex_lista_ready_mas);
-        pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
-        pthread_mutex_unlock(&mutex_lista_ready_mas);
-        pthread_mutex_lock(&mutex_lista_exec);
-        list_add(lista_pcbs_exec, pcb_a_ejecutar);
-        pthread_mutex_unlock(&mutex_lista_exec);
-        pcb_a_ejecutar->state = EXEC_S;
+        if (list_is_empty(lista_ready_mas)) 
+        {
+            pthread_mutex_unlock(&mutex_lista_ready_mas);
+            log_debug(logger, "Enviando a ejecutar desde normal");
+            pthread_mutex_lock(&mutex_lista_ready);
+            pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
+            pthread_mutex_unlock(&mutex_lista_ready);
+            pthread_mutex_lock(&mutex_lista_exec);
+            list_add(lista_pcbs_exec, pcb_a_ejecutar);
+            pthread_mutex_unlock(&mutex_lista_exec);
+            pcb_a_ejecutar->state = EXEC_S;
+        }
+        else
+        {
+            log_debug(logger, "Enviando a ejecutar desde ready+");
+            pthread_mutex_lock(&mutex_lista_ready_mas);
+            pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
+            pthread_mutex_unlock(&mutex_lista_ready_mas);
+            pthread_mutex_lock(&mutex_lista_exec);
+            list_add(lista_pcbs_exec, pcb_a_ejecutar);
+            pthread_mutex_unlock(&mutex_lista_exec);
+            pcb_a_ejecutar->state = EXEC_S;
+        }
     }
 
     log_debug(logger, "Enviando PID %i a ejecutar", pcb_a_ejecutar->pid);

@@ -21,7 +21,6 @@
 #include <utils/utils_generales.h>
 extern t_log *logger;
 extern t_config *config;
-extern pcb_t lista_pcbs[100];
 extern int next_pid;
 extern int socket_memoria;
 extern int socket_interrupt;
