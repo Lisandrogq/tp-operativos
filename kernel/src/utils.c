@@ -87,7 +87,9 @@ int get_pid_state(int pid_buscado)
     dictionary_iterator(dictionary_pcbs_bloqueado, is_pid_in_blocked_io);
     dictionary_iterator(dictionary_recursos, is_pid_in_blocked_resources);
     int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
+    pthread_mutex_lock(&mutex_lista_exec);
     int esta_exec = (int)list_any_satisfy(lista_pcbs_exec, is_pid);
+    pthread_mutex_unlock(&mutex_lista_exec);
 
     // solo uno de los esta_ debería estar en 1
     int estado_encontrado = esta_ready * READY_S + esta_exec * EXEC_S + esta_bloqueado * BLOCK_S + esta_new * NEW_S;
@@ -187,7 +189,9 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         // intr a cpu y llevar a exit(creo q no hay mutex)
         enviar_interrupcion(motivo, pid_a_terminar);
         pid_sig_term = pid_a_terminar;
+        pthread_mutex_lock(&mutex_lista_exec);
         pcb_a_terminar = list_get(lista_pcbs_exec, 0); // se obtiene sin removerlo, pq que el remove se hace al desalojarse el pcb
+        pthread_mutex_unlock(&mutex_lista_exec);
         pthread_mutex_lock(&mutex_pcb_desalojado);
         sem_post(&contador_multi);
         log_error(logger, "JUSTO ANTES DE ITERAR");
@@ -664,9 +668,11 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo, buffer_instr_io_t *buffer_instruccion)
 {
     pcb_t *pcb_a_ejecutar;
+    pthread_mutex_lock(&mutex_lista_exec);
     if (!list_is_empty(lista_pcbs_exec))
     {
         pcb_a_ejecutar = list_get(lista_pcbs_exec, 0);
+        pthread_mutex_unlock(&mutex_lista_exec);
         log_debug(logger, "Enviando a ejecutar desde exec");
     }
     else if (list_is_empty(lista_ready_mas))
@@ -675,14 +681,18 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
         pthread_mutex_lock(&mutex_lista_ready);
         pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
         pthread_mutex_unlock(&mutex_lista_ready);
+        pthread_mutex_lock(&mutex_lista_exec);
         list_add(lista_pcbs_exec, pcb_a_ejecutar);
+        pthread_mutex_unlock(&mutex_lista_exec);
         pcb_a_ejecutar->state = EXEC_S;
     }
     else
     {
         log_debug(logger, "Enviando a ejecutar desde ready+");
         pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
+        pthread_mutex_lock(&mutex_lista_exec);
         list_add(lista_pcbs_exec, pcb_a_ejecutar);
+        pthread_mutex_unlock(&mutex_lista_exec);
         pcb_a_ejecutar->state = EXEC_S;
     }
 

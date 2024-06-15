@@ -118,7 +118,9 @@ void *cliente_cpu_dispatch()
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
 		int motivo_desalojo = -1;
 		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo, buffer_instruccion);
+		pthread_mutex_lock(&mutex_lista_exec);
 		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
+		pthread_mutex_unlock(&mutex_lista_exec);
 		switch (motivo_desalojo)
 		{
 		case OUT_OF_MEMORY: // AGREGAR MANEJO SIGTERM
@@ -142,7 +144,9 @@ void *cliente_cpu_dispatch()
 				}
 				else
 				{
+					pthread_mutex_lock(&mutex_lista_exec);
 					list_add(lista_pcbs_exec, pcb_desalojado);
+					pthread_mutex_unlock(&mutex_lista_exec);
 					list_add(struct_recurso_wait->cola_de_pcbs_con_recurso, pcb_desalojado);
 					pcb_desalojado->state = EXEC_S;
 					sem_post(&elementos_ready);
@@ -185,7 +189,9 @@ void *cliente_cpu_dispatch()
 					}
 					sem_post(&elementos_ready);//ESTE POST SE HACE POR EL PCB DESBLOQUEADO
 				}
+				pthread_mutex_lock(&mutex_lista_exec);
 				list_add(lista_pcbs_exec, pcb_desalojado);
+				pthread_mutex_unlock(&mutex_lista_exec);
 				pcb_desalojado->state = EXEC_S;
 				struct_recurso_signal->instancias++;
 				sem_post(&elementos_ready);//ESTE POST SE HACE POR EL PCB QUE VUELVE A EJECUTAR
