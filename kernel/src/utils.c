@@ -116,7 +116,7 @@ void free_all_resources_taken(int pid)
         {
             log_debug(logger, "SUME A INSTANCIAS");
 
-            pcb_t *pcb_bloqueado = list_remove(struct_recurso->cola_de_bloqueados_por_recurso, 0);
+            pcb_t *pcb_bloqueado = list_remove(struct_recurso->cola_de_bloqueados_por_recurso, 0); // SI LA LISTA ES VACIA DA ERROR
             if (pcb_bloqueado)
             {
                 if (struct_recurso->instancias < 0)
@@ -685,6 +685,7 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
     }
     else
     {
+        pthread_mutex_unlock(&mutex_lista_exec);
         pthread_mutex_lock(&mutex_lista_ready_mas);
         if (list_is_empty(lista_ready_mas)) 
         {
