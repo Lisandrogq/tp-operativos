@@ -677,7 +677,6 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
 {
     pcb_t *pcb_a_ejecutar;
     pthread_mutex_lock(&mutex_lista_exec);
-    pthread_mutex_lock(&mutex_lista_ready_mas);
     if (!list_is_empty(lista_pcbs_exec))
     {
         pcb_a_ejecutar = list_get(lista_pcbs_exec, 0);
