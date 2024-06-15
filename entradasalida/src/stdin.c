@@ -14,14 +14,15 @@ void iniciar_interfaz_stdin()
 	{
 		int max_tam = 0;
 		io_task *pedido = recibir_peticion();
-		log_debug(logger, "Llego un pedido STDIN del pid %i", pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Operacion:  IO:STDIN_READ", pedido->pid_solicitante);
+
 
 		t_list *solicitudes = decode_addresses_buffer(pedido->buffer_instruccion, &max_tam);
 		char *input_string = malloc(max_tam);
 		input_string = readline(">");
 		populate_solicitudes(solicitudes, input_string);
 		escribir_memoria(solicitudes);
-		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_STDIN_READ");
+		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
 		liberar_y_eliminar_solicitudes(solicitudes);
 		
 		free(input_string);

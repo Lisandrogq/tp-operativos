@@ -31,7 +31,7 @@ void leer_memoria(t_list *solicitudes, void *datos);
 void escribir_memoria(t_list *solicitudes);
 void populate_solicitudes(t_list *solicitudes, char *input_string);
 t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam);
-void informar_fin_de_tarea(int socket_kernel, int status, int pid, char *operacion) ;
+void informar_fin_de_tarea(int socket_kernel, int status, int pid) ;
 int inicializar_cliente_kernel();
 void inicializar_cliente_memoria();
 io_task *gen_recibir_peticion();

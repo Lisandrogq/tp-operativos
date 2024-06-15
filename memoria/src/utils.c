@@ -11,7 +11,7 @@ int TAM_MEMORIA;
 void *espacio_usuario;
 int marcos;
 t_bitarray *bitarray;
-char *leer_codigo(char *path)
+char *leer_codigo(char *path)//REVISAR POSIBLES LEAKS DE ESTO
 {
 	// leer el pseudocodigo
 	FILE *file;
@@ -160,6 +160,7 @@ void handle_cpu_client(int socket_cliente)
 	while (!conexion_terminada)
 	{
 		int cod_op = recibir_operacion(socket_cliente);
+		usleep(RETARDO_RESPUESTA * 1000); // MILISEGUNDOS PEDIDOS POR CONFIG(consigna);
 		switch (cod_op)
 		{
 
@@ -167,7 +168,6 @@ void handle_cpu_client(int socket_cliente)
 			fetch_t *p_info = recibir_process_info(socket_cliente);
 			log_info(logger, "pid:%i", p_info->pid);
 			log_info(logger, "pc:%i", p_info->pc);
-			usleep(RETARDO_RESPUESTA); // MILISEGUNDOS PEDIDOS POR CONFIG(consigna);
 			sem_t *sem = list_get(sems_espera_creacion_codigos, p_info->pid);
 			sem_wait(sem);
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
@@ -219,7 +219,7 @@ void handle_cpu_client(int socket_cliente)
 			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
 			int write_status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 			enviar_status_escritura(write_status, socket_cliente);
-			log_info(logger, "PID: %i - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i", solicitud_w->pid,solicitud_w->dir_fisica, solicitud_w->tam_escritura);
+			log_info(logger, "PID: %i - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i", solicitud_w->pid, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 
 			break;
 		case -1:
@@ -331,7 +331,7 @@ void *client_handler(void *arg)
 		break;
 	case 3:
 		log_info(logger, "se conecto el modulo io");
-		handle_cpu_client(socket_cliente);//debería ser uno separado q solo acepte write y read
+		handle_cpu_client(socket_cliente); // debería ser uno separado q solo acepte write y read
 
 		break;
 
@@ -450,7 +450,7 @@ void *recibir_buffer(int *size, int socket_cliente)
 }
 char *get_linea_buscada(const char *input_string, int linea_buscada)
 {
-	char *lines[100];
+	char *lines[1000];
 	int line_count = 0;
 	char *copy = strdup(input_string);
 	char *token = strtok(copy, "\n");

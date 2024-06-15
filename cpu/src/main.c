@@ -203,7 +203,7 @@ int decode(t_strings_instruccion *instruccion)
 		// a la io se le manda una lista de solicitudes con el .datos vacio(sin malloc)
 		// y alla se populan las solicitudes de la forma iterator para luego enviarlos a memoría de la forma mov_out
 		void *p_max_tam = dictionary_get(dic_p_registros, instruccion->p3);
-		int tam_r_max_tam = *(int *)dictionary_get(dic_p_registros, instruccion->p3);
+		int tam_r_max_tam = *(int *)dictionary_get(dic_tam_registros, instruccion->p3);
 		int max_tam = 0;
 		memcpy(&max_tam, p_max_tam, tam_r_max_tam);
 
@@ -226,7 +226,7 @@ int decode(t_strings_instruccion *instruccion)
 	{
 
 		void *p_max_tam = dictionary_get(dic_p_registros, instruccion->p3);
-		int tam_r_max_tam = *(int *)dictionary_get(dic_p_registros, instruccion->p3);
+		int tam_r_max_tam = *(int *)dictionary_get(dic_tam_registros, instruccion->p3);
 		int max_tam = 0;
 		memcpy(&max_tam, p_max_tam, tam_r_max_tam);
 

@@ -17,13 +17,14 @@ void iniciar_interfaz_generica()
 	enviar_interfaz(CREACION_IO, *nueva_interfaz, socket_kernel);
 	while (1) // xd
 	{
+
 		io_task *pedido = recibir_peticion();
-		log_debug(logger, "Llego un pedido SLEEP del pid %i", pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Operacion: IO_GEEN_SLEEP", pedido->pid_solicitante);
 
 		int cant_sleep = decode_buffer_sleep(pedido->buffer_instruccion);
 		gen_resolver_peticion(cant_sleep);
 
-		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante, "IO_GEN_SLEEP");
+		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
 	}
 }
 

@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 	config = iniciar_config();
 	config = config_create("IO.config");
 	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
-	nombre = "ESPERA";
+	nombre = "GENERICA";
 	char *tipo = "GENERICA";/*
 	nombre = "stdout";
 	char *tipo = "STDOUT";*/
@@ -84,11 +84,10 @@ io_task *recibir_pedido_io(int socket_kernel)
 	return pedido;
 }
 
-void informar_fin_de_tarea(int socket_kernel, int status, int pid, char *operacion) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
+void informar_fin_de_tarea(int socket_kernel, int status, int pid) // esta podríía llegar a ser usada por todos los io,depende de los params q manden
 {
 	int codop = FIN_IO_TASK;
 
-	log_info(logger, "PID: %i - Operacion: %s", pid, operacion);
 
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	int tam_nombre = strlen(nombre) + 1; //\0
