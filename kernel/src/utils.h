@@ -55,7 +55,7 @@ typedef struct
 {
 	int instancias;
 	sem_t *elementos_cola_recurso;
-	t_list *cola_de_recurso_pedido;
+	t_list *cola_de_bloqueados_por_recurso;
 	t_list *cola_de_pcbs_con_recurso;
 } t_cola_recurso;
 typedef struct
@@ -80,6 +80,8 @@ typedef enum
 	INICIAR_PROCESO,
 
 } kernel_opcode;
+
+void free_all_resources_taken(int pid);
 bool pcb_esta_en_exit(int pid);
 void solicitar_eliminar_estructuras_administrativas(int pid);
 int es_una_io_valida(int pid, t_strings_instruccion *instruccion);

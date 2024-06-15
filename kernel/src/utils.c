@@ -66,7 +66,7 @@ int get_pid_state(int pid_buscado)
     {
         return ((elemento_cola_io *)elemento)->pcb->pid == pid_buscado; // requeiere otra lista pq los elementos son structs
     };
-    void *is_pid_in_list(char *nombre_io, t_cola_io *struct_cola)
+    void *is_pid_in_blocked_io(char *nombre_io, t_cola_io *struct_cola)
     {
         t_list *lista = struct_cola->cola_de_io_pedido;
         if (!esta_bloqueado)
@@ -74,8 +74,18 @@ int get_pid_state(int pid_buscado)
         else
             return;
     };
+    void *is_pid_in_blocked_resources(char *nombre_io, t_cola_recurso *struct_cola)
+    {
+        t_list *lista = struct_cola->cola_de_bloqueados_por_recurso;
+        if (!esta_bloqueado)
+            esta_bloqueado = list_any_satisfy(lista, is_pid); // no hay colores pq vscode no se la banca, no es bug
+        else
+            return;
+    };
+
     int esta_ready = (int)list_any_satisfy(lista_pcbs_ready, is_pid);
-    dictionary_iterator(dictionary_pcbs_bloqueado, is_pid_in_list);
+    dictionary_iterator(dictionary_pcbs_bloqueado, is_pid_in_blocked_io);
+    dictionary_iterator(dictionary_recursos, is_pid_in_blocked_resources);
     int esta_new = (int)list_any_satisfy(lista_pcbs_new, is_pid);
     int esta_exec = (int)list_any_satisfy(lista_pcbs_exec, is_pid);
 
@@ -85,11 +95,53 @@ int get_pid_state(int pid_buscado)
     return estado_encontrado;
 }
 
+void free_all_resources_taken(int pid)
+{
+    log_debug(logger, "ESTOY LIBERANDO TODOS LOS RECURSOS TOMADOS");
+
+    bool is_pid(void *pcb) /// NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
+    {
+        return ((pcb_t *)pcb)->pid == pid; // no hay colores pq vscode no se la banca, no es bug
+    };
+
+    void *liberar(char *nombre_io, t_cola_recurso *struct_recurso)
+    {
+        t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
+        pcb_t *a_borrar = list_remove_by_condition(lista, is_pid);
+        while (a_borrar != NULL)
+        {
+            log_debug(logger, "SUME A INSTANCIAS");
+
+            pcb_t *pcb_bloqueado = list_remove(struct_recurso->cola_de_bloqueados_por_recurso, 0);
+            if (pcb_bloqueado)
+            {
+                if (struct_recurso->instancias < 0)
+                {
+                    int quantum = config_get_int_value(config, "QUANTUM");
+                    if (pcb_bloqueado->quantum != quantum)
+                    {
+                        list_add(lista_ready_mas, pcb_bloqueado);
+                    }
+                    else
+                    {
+                        list_add(lista_pcbs_ready, pcb_bloqueado);
+                    }
+                }
+                sem_post(&elementos_ready);
+            }
+            struct_recurso->instancias++;
+            a_borrar = list_remove_by_condition(lista, is_pid);
+        }
+    };
+
+    dictionary_iterator(dictionary_recursos, liberar);
+}
+
 void comando_finalizar_proceso(char *pid_str, int motivo)
 {
     int pid_a_terminar = atoi(pid_str);
-    int pid_state = get_pid_state(pid_a_terminar);
-    pcb_t *pcb_a_terminar;
+    int pid_state = get_pid_state(pid_a_terminar); /// TODO:QUE ESTO TAMBIEN DEVUELVA UN INDICE PARA REMOVE(INDEX)
+    pcb_t *pcb_a_terminar = NULL;
 
     bool is_pid(void *pcb) /// NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
     {
@@ -98,6 +150,16 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     bool is_pid_in_blocked(void *elemento) /// NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
     {
         return ((elemento_cola_io *)elemento)->pcb->pid == pid_a_terminar; // no hay colores pq vscode no se la banca, no es bug
+    };
+
+    void *is_pid_in_blocked_resource(char *nombre_io, t_cola_recurso *struct_recurso)
+    {
+        if (pcb_a_terminar == NULL)
+        {
+            t_list *lista = struct_recurso->cola_de_bloqueados_por_recurso;
+            pcb_a_terminar = list_find(lista, is_pid);
+            log_info(logger, "pcb_a_terminar->pid:%i", pcb_a_terminar->pid);
+        }
     };
     void *eliminar_de_bloqueado_si_corresponde(char *nombre_io, t_cola_io *struct_io) // NO ENCONTRE FORMA DE NO DECLARAR ESTAS FUNCIONES ADENTRO
     {
@@ -146,7 +208,8 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     }
     if (pid_state == BLOCK_S) // revisar situacion con IOs pendientes(issue)
     {
-        dictionary_iterator(dictionary_pcbs_bloqueado, (void *)eliminar_de_bloqueado_si_corresponde); // habría que validar si realmente se borro
+        dictionary_iterator(dictionary_pcbs_bloqueado, (void *)eliminar_de_bloqueado_si_corresponde);
+        dictionary_iterator(dictionary_recursos, (void *)is_pid_in_blocked_resource); // NO BORRA, SOLO PONE EL ELEMENTO
     }
     if (pid_state == READY_S)
     {
@@ -161,27 +224,10 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         pthread_mutex_lock(&mutex_socket_memoria);
         solicitar_eliminar_estructuras_administrativas(pid_a_terminar);
         pthread_mutex_unlock(&mutex_socket_memoria);
+        free_all_resources_taken(pcb_a_terminar->pid);
+        list_add(lista_pcbs_exit, pcb_a_terminar); // Post(contador multiprogramacion)
         pcb_a_terminar->state = EXIT_S;
-        if (pid_state != EXEC_S)
-        {
-            list_add(lista_pcbs_exit, pcb_a_terminar); // Post(contador multiprogramacion)
-            sem_post(&contador_multi);
-            log_error(logger, "JUSTO ANTES DE ITERAR");
-            bool is_pid(void *pcb)
-            {
-                return ((pcb_t *)pcb)->pid == pcb_a_terminar->pid;
-            };
-            void *is_pid_in_list(char *nombre_io, t_cola_recurso *struct_recurso)
-            {
-                t_list *lista = struct_recurso->cola_de_pcbs_con_recurso;
-                if (list_remove_by_condition(lista, is_pid))
-                {
-                    log_error(logger, "SUME A INSTANCIAS");
-                    struct_recurso->instancias++;
-                }
-            };
-            dictionary_iterator(dictionary_recursos, (void *)is_pid_in_list);
-        }
+        sem_post(&contador_multi);
     }
 
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid_a_terminar, motivo); // hacerlo string
@@ -240,8 +286,8 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     while (fgets(linea, len, archivo) != NULL)
     {
         char *instruccion[2];
-        //instruccion[0] = malloc(strlen(linea));
-        //instruccion[1] = malloc(strlen(linea));
+        // instruccion[0] = malloc(strlen(linea));
+        // instruccion[1] = malloc(strlen(linea));
         instruccion[0] = strtok(linea, " \n");
         instruccion[1] = strtok(NULL, " \n");
         if (strcmp(linea, "\0") == 0)
@@ -606,15 +652,14 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_pcbs_ready, pcb_a_desbloquear);
-        sem_post(&elementos_ready);
         pthread_mutex_unlock(&mutex_lista_ready);
     }
     else
     {
         list_add(lista_ready_mas, pcb_a_desbloquear); // capaz ready plus no tienq existir y solo se agregan en ready[0
-        sem_post(&elementos_ready);
     }
     pcb_a_desbloquear->state = READY_S;
+    sem_post(&elementos_ready);
 }
 int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo, buffer_instr_io_t *buffer_instruccion)
 {
@@ -747,7 +792,7 @@ void *client_handler(void *arg)
             if (list_size(struct_cola->cola_de_io_pedido) != 0) // esto no va en desbloquear pcb ppq despues va a haber recursos
             {
                 log_error(logger, "ENTRE AL FIN IO TASK-MANDAR OTRO TASK");
-                //wait de la cola
+                // wait de la cola
                 elemento_cola_io *elemento = list_get(struct_cola->cola_de_io_pedido, 0);
                 pedir_io_task(elemento->pcb->pid, interfaz, elemento->buffer_instruccion);
             }

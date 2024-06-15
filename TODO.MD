@@ -20,7 +20,7 @@ ____
 - [x] MMU
 - [x] TLB (FIFO)
 - [x] Instrucciones adicionales
-- [ ] IOs
+- [x] IOs
 - [ ] El issue #3807 dice que hay retardo ante cualquier peticion, creo q hay q ponerla justo despues del codop o ago así
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
 - [ ] Revisar uso de 'exit(-1);' para cerrar sockets
