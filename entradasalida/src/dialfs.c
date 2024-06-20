@@ -23,46 +23,151 @@ void iniciar_interfaz_dialfs()
 
 	inicializar_bloques(); // abre/crea el file y lo mmapea para poder usarlo con memcpy
 	inicializar_bitmap();  // abre/crea el file y lo mmapea para poder usarlo con memcpy
-
-	/*crear_archivo("persistira1.t");
-	crear_archivo("aborrar.t");
-	crear_archivo("persistira2.t");
-	eliminar_archivo("t1");
-	eliminar_archivo("t2");
-	eliminar_archivo("t3");
-	return;*/
 	inicializar_cliente_kernel();
 	inicializar_cliente_memoria();
+
+	// crear_archivo("t.test");
+	truncate_t *sol = malloc(sizeof(truncate_t));
+	sol->bytes = 0;
+	sol->file = "t.test";
+	truncar_archivo(sol);
+	return;
 	t_interfaz *nueva_interfaz = crear_estrcutura_io(DIALFS);
 	enviar_interfaz(CREACION_IO, *nueva_interfaz, socket_kernel);
 	while (1) // xd
 	{
 		io_task *pedido = recibir_peticion();
 		int operacion = decode_operation(pedido->buffer_instruccion);
-		
+
 		handle_operations(operacion, pedido);
 
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
 	}
 }
-handle_operations(int operacion, io_task*pedido)
+handle_operations(int operacion, io_task *pedido)
 {
 	buffer_instr_io_t *buffer_instruccion = pedido->buffer_instruccion;
 	switch (operacion)
 	{
 	case IO_FS_CREATE:
-		char *nombre_c = decode_file_name(buffer_instruccion);
+		char *nombre_c = decode_buffer_file_name(buffer_instruccion);
 		crear_archivo(nombre_c);
 		log_info(logger, "PID: %i - Operacion: IO_FS_CREATE", pedido->pid_solicitante);
 		break;
 	case IO_FS_DELETE:
-		char *nombre_d = decode_file_name(buffer_instruccion);
+		char *nombre_d = decode_buffer_file_name(buffer_instruccion);
 		eliminar_archivo(nombre_d);
 		log_info(logger, "PID: %i - Operacion: IO_FS_DELETE", pedido->pid_solicitante);
 		break;
+	case IO_FS_TRUNCATE:
+		truncate_t *sol_truncate = decode_buffer_bytes(buffer_instruccion);
+		truncar_archivo(sol_truncate);
+		log_info(logger, "PID: %i - Operacion: IO_FS_TRUNCATE", pedido->pid_solicitante);
 	}
 }
-char *decode_file_name(buffer_instr_io_t *buffer_instruccion)
+void truncar_archivo(truncate_t *sol)
+{
+	int bytes_actuales = get_actual_bytes(sol->file);
+	int nuevos_bytes = sol->bytes;
+	int bloques_actuales = ceil(((double)bytes_actuales) / BLOCK_SIZE);
+	int nuevos_bloques = ceil(((double)nuevos_bytes) / BLOCK_SIZE);
+	bloques_actuales = bloques_actuales ? bloques_actuales : 1;
+	nuevos_bloques = nuevos_bloques ? nuevos_bloques : 1; // un resize 0 no debe eliminar el bloque inicial
+	if (nuevos_bloques - bloques_actuales > 0)			  // ampliar
+	{
+		int bloques_a_agregar = nuevos_bloques - bloques_actuales;
+		if (!es_posible_agrandar(sol->file, bloques_actuales, bloques_a_agregar))
+		{
+			// todo COMPACTAR
+		}
+		agrandar_archivo(sol->file, bloques_actuales, bloques_a_agregar, nuevos_bytes);
+	}
+	if (nuevos_bloques - bloques_actuales < 0) // reducir
+	{
+		int bloques_a_reducir = bloques_actuales - nuevos_bloques;
+		reducir_archivo(sol->file, bloques_actuales, bloques_a_reducir, nuevos_bytes);
+	}
+	// ante cualquiera de los 3 casos:
+	actualizar_tamanio(sol->file, nuevos_bytes);
+}
+
+void actualizar_tamanio(char *nombre, int nuevos_bytes)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	char *s = string_itoa(nuevos_bytes);
+	config_set_value(metadata, "TAMANIO_ARCHIVO", s);
+	free(s); // una paja tener q hacer esto
+	config_save(metadata);
+	config_destroy(metadata);
+}
+
+void agrandar_archivo(char *nombre, int bloques_actuales, int bloques_a_agregar, int nuevos_bytes)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+	int inicio_ampliacion = bloque_inicial + bloques_actuales;
+	for (int i = inicio_ampliacion; i < inicio_ampliacion + bloques_a_agregar; i++)
+	{ // no hace falta validar que se vaya del bitmap pq eso ya se hizo en 'es_posible_agrandar'
+		ocupar_bloque(i);
+	}
+	config_destroy(metadata);
+}
+
+void reducir_archivo(char *nombre, int bloques_actuales, int bloques_a_reducir, int nuevos_bytes)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");		  // 1100000
+	int inicio_reduccion = bloque_inicial + bloques_actuales - 1;				  // i_r=3
+	for (int i = inicio_reduccion; i > inicio_reduccion - bloques_a_reducir; i--) // i_r-b_r=3-2=1
+	{
+		desocupar_bloque(i);
+	}
+	config_destroy(metadata);
+}
+bool es_posible_agrandar(char *nombre, int bloques_actuales, int bloques_a_agregar)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+	int inicio_ampliacion = bloque_inicial + bloques_actuales;
+	for (int i = inicio_ampliacion; i < inicio_ampliacion + bloques_a_agregar; i++)
+	{
+		if (i >= BLOCK_COUNT) // fin pracito de bitmap
+			return false;
+		if (bitarray_test_bit(bitmap, i) == 1) // si no hay espacio continuo para agrandar, no se puede.
+			return false;
+	}
+	config_destroy(metadata);
+	return true;
+}
+
+int get_actual_bytes(char *nombre)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	int tam = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+	config_destroy(metadata);
+	return tam;
+}
+truncate_t *decode_buffer_bytes(buffer_instr_io_t *buffer_instruccion)
+{
+	truncate_t *sol = malloc(sizeof(truncate_t));
+	void *buffer = buffer_instruccion->buffer;
+	int offset = sizeof(u_int32_t); // pq sigue teniendo el op
+	int tam_nombre = 0;
+	memcpy(&tam_nombre, buffer + offset, sizeof(u_int32_t));
+	offset += sizeof(u_int32_t);
+	sol->file = malloc(tam_nombre); // FALTA EL +1 PARA /0???
+	memcpy(sol->file, buffer + offset, tam_nombre);
+	offset += tam_nombre;
+	memcpy(sol->bytes, buffer + offset, sizeof(u_int32_t));
+
+	return sol;
+}
+char *decode_buffer_file_name(buffer_instr_io_t *buffer_instruccion)
 {
 	void *buffer = buffer_instruccion->buffer;
 	int offset = sizeof(u_int32_t); // pq sigue teniendo el op
@@ -85,7 +190,11 @@ void crear_archivo(char *nombre)
 	ocupar_bloque(bloque);
 	crear_metadata(nombre, bloque);
 }
-
+void desocupar_bloque(int index)
+{
+	bitarray_clean_bit(bitmap, index);
+	msync(mmbitmap, tam_bitmap_file, MS_SYNC);
+}
 void ocupar_bloque(int index)
 {
 	bitarray_set_bit(bitmap, index);
@@ -115,8 +224,10 @@ void crear_metadata(char *nombre, int bloque)
 	FILE *file = fopen(path, "w+"); // crear file
 	fclose(file);
 	t_config *metadata = config_create(path);
-	config_set_value(metadata, "BLOQUE_INICIAL", string_itoa(bloque));
-	config_set_value(metadata, "TAMANIO_ARCHIVO", string_itoa(0));
+	char *s = string_itoa(bloque);
+	config_set_value(metadata, "BLOQUE_INICIAL", s);
+	free(s);
+	config_set_value(metadata, "TAMANIO_ARCHIVO", "0");
 	config_save(metadata);
 	config_destroy(metadata);
 	free(path); // este free incluye a nombre
@@ -172,7 +283,7 @@ void inicializar_bitmap()
 	}
 	file_fd = fileno(file);
 	mmbitmap = mmap(NULL, tam_bitmap_file, PROT_READ | PROT_WRITE, MAP_SHARED, file_fd, 0);
-	bitmap = bitarray_create_with_mode(mmbitmap, tam_bitmap_file, MSB_FIRST);//SI ES MSB, ES MAS FACIL LEERLO EN EL HEX EDITOR. EN MEMORIA NO VI QUE ESTO IMPORTARA
+	bitmap = bitarray_create_with_mode(mmbitmap, tam_bitmap_file, MSB_FIRST); // SI ES MSB, ES MAS FACIL LEERLO EN EL HEX EDITOR. EN MEMORIA NO VI QUE ESTO IMPORTARA
 
 	////NO SE DONDE HACER munmap y fclose pq el proceso se cierra con ctrl c
 	fclose(file);

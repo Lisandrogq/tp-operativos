@@ -14,7 +14,7 @@ t_bitarray *bitarray;
 char *PATH_INSTRUCCIONES;
 char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 {
-	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES));//tecnicamente no es absoluto pero podría serlo
+	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES)); // tecnicamente no es absoluto pero podría serlo
 	strcpy(path_absoluto, PATH_INSTRUCCIONES);
 	string_append(&path_absoluto, path_relativo);
 
@@ -37,7 +37,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 
 	printf("%s\n", codigo);
 	fclose(file);
-	free(path_absoluto);//esto hace free al relativo
+	free(path_absoluto); // esto hace free al relativo
 	return codigo;
 }
 void int_to_char(int pid, char *pid_str)
@@ -51,7 +51,6 @@ void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	char pid_str[5] = "";
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
-	free(e_admin);//el free de .path se hace en leer codigo
 }
 void eliminar_tabla_paginas(int pid_a_eliminar)
 {
@@ -148,7 +147,7 @@ int reducir_proceso(t_list *tabla, int bytes)
 	}
 	log_debug(logger, "Se pidio reducir %i bytes. Nueva cantidad de paginas = %i", bytes, nuevas_paginas);
 
-	for (int i = list_size(tabla) - 1; i > nuevas_paginas; i--)
+	for (int i = list_size(tabla) - 1; i >= nuevas_paginas; i--)
 	{
 		int *frame_a_liberar = list_remove(tabla, i);
 		bitarray_clean_bit(bitarray, *frame_a_liberar);
@@ -303,7 +302,7 @@ void handle_kerel_client(int socket)
 			log_info(logger, "path:%s", e_admin->path);
 			crear_estructuras_administrativas(e_admin);
 			crear_tabla_paginas(e_admin->pid);
-
+			free(e_admin); // el free de .path se hace en leer codigo
 			sem_post(sem);
 			break;
 		case ELIMINAR_ESTRUC_ADMIN:

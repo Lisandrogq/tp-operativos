@@ -15,7 +15,7 @@
 #include <utils/utils_generales.h>
 #include <readline/readline.h>
 #include <commons/bitarray.h>
-#include <sys/mman.h>  
+#include <sys/mman.h>
 #include <math.h>
 extern char *nombre;
 extern t_log *logger;
@@ -23,6 +23,11 @@ extern t_config *config;
 extern int socket_kernel;
 extern int socket_memoria;
 extern int tiempo_Unidad_Trabajo;
+typedef struct
+{
+    char *file;
+    int bytes;
+} truncate_t;
 // Cliente
 // void enviar_mensaje(char* mensaje, int socket_cliente);
 void inicializar_bloques();
@@ -30,12 +35,18 @@ int get_next_free_block();
 void inicializar_bitmap();
 void ocupar_bloque(int index);
 void liberar_bloque(int index);
-char* get_complete_path(char*nombre);
+bool es_posible_agrandar(char *nombre, int bloques_actuales, int bloques_a_agregar);
+void reducir_archivo(char *nombre, int bloques_actuales, int bloques_a_reducir, int nuevos_bytes);
+void agrandar_archivo(char*nombre,int bloques_actuales,int bloques_a_agregar, int nuevos_bytes);
+void truncar_archivo(truncate_t *sol);
+char *get_complete_path(char *nombre);
+truncate_t *decode_buffer_bytes(buffer_instr_io_t *buffer_instruccion);
 void liberar_bloques_desde(int bloque_inicial, int bloques_a_liberar);
 char *get_complete_path(char *nombre);
 void eliminar_archivo(char *nombre);
-void crear_metadata(char *nombre,int bloque);
-char *decode_file_name(buffer_instr_io_t *buffer_instruccion);
+void desocupar_bloque(int index);
+void crear_metadata(char *nombre, int bloque);
+char *decode_buffer_file_name(buffer_instr_io_t *buffer_instruccion);
 int decode_operation(buffer_instr_io_t *buffer_instruccion);
 solicitud_unitaria_t *leer_memoria_unitario(solicitud_unitaria_t *sol);
 void *recibir_datos_leidos();

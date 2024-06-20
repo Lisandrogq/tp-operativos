@@ -18,7 +18,8 @@
 			"unordered_map": "c",
 			"vector": "c",
 			"stdin": "c",
-			"dialfs": "c"
+			"dialfs": "c",
+			"cstddef": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},
