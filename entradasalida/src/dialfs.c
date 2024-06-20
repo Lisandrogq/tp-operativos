@@ -1,151 +1,176 @@
-/*#include "client.h"
+#include "client.h"
 #include <readline/readline.h>
+#include <semaphore.h>
+int BLOCK_SIZE;
+int BLOCK_COUNT;
+int tam_blocks_file;
+int tam_bitmap_file;
+char *PATH_BASE_DIALFS;
+void *bloques;
+void *mmbitmap;
+t_bitarray *bitmap;
 
-t_log *logger;
-t_config *config;
-pthread_t tid[2];
-pthread_t hilos_generica[10];
-int socket_cliente;
-int inicializar_cliente_memoria() // todavia no se usa
-{	
-	int conexion_fd;
-	char *ip;
-	char *puerto;
-	char *modulo;
+void iniciar_interfaz_dialfs()
+{
 
-	modulo = config_get_string_value(config, "MODULO");
-	log_info(logger, "Este es el modulo: %s", modulo);
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+	PATH_BASE_DIALFS = config_get_string_value(config, "PATH_BASE_DIALFS");
+	BLOCK_SIZE = config_get_int_value(config, "BLOCK_SIZE");
+	BLOCK_COUNT = config_get_int_value(config, "BLOCK_COUNT");
+	tam_blocks_file = BLOCK_SIZE * BLOCK_COUNT;
+	tam_bitmap_file = BLOCK_COUNT / 8;
+	if (BLOCK_COUNT % 8 != 0)
+		tam_bitmap_file++;
 
-	conexion_fd = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(conexion_fd);
-	if (resultado == -1)
+	inicializar_bloques(); // abre/crea el file y lo mmapea para poder usarlo con memcpy
+	inicializar_bitmap();  // abre/crea el file y lo mmapea para poder usarlo con memcpy
+
+/* 	 crear_archivo("persistira1.t");
+	 crear_archivo("aborrar.t");
+	 crear_archivo("persistira2.t"); */
+	eliminar_archivo("t1");
+	eliminar_archivo("t2");
+	eliminar_archivo("t3");
+	return;
+	inicializar_cliente_kernel();
+	inicializar_cliente_memoria();
+	t_interfaz *nueva_interfaz = crear_estrcutura_io(DIALFS);
+	enviar_interfaz(CREACION_IO, *nueva_interfaz, socket_kernel);
+	while (1) // xd
+	{
+		io_task *pedido = recibir_peticion();
+		// decode operation
+		// switch(operacion)
+		// decode_create_file...
+		log_info(logger, "PID: %i - Operacion: xxxxxx", pedido->pid_solicitante);
+
+		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
+	}
+}
+void crear_archivo(char *nombre)
+{
+	int bloque = get_next_free_block();
+	ocupar_bloque(bloque);
+	crear_metadata(nombre, bloque);
+}
+
+void ocupar_bloque(int index)
+{
+	bitarray_set_bit(bitmap, index);
+	msync(mmbitmap, tam_bitmap_file, MS_SYNC);
+}
+void liberar_bloque(int index)
+{
+	bitarray_clean_bit(bitmap, index);
+	msync(mmbitmap, tam_bitmap_file, MS_SYNC);
+}
+int get_next_free_block()
+{
+
+	for (int i = 0; i < BLOCK_COUNT; i++)
+	{
+		if (!bitarray_test_bit(bitmap, i))
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+void crear_metadata(char *nombre, int bloque)
+{
+	char *path = get_complete_path(nombre);
+
+	FILE *file = fopen(path, "w+"); // crear file
+	fclose(file);
+	t_config *metadata = config_create(path);
+	config_set_value(metadata, "BLOQUE_INICIAL", string_itoa(bloque));
+	config_set_value(metadata, "TAMANIO_ARCHIVO", string_itoa(0));
+	config_save(metadata);
+	config_destroy(metadata);
+	free(path); // este free incluye a nombre
+}
+
+void eliminar_archivo(char *nombre)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	if (metadata == 0)
 		return;
-	
-	return conexion_fd;
+	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+	int tam = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+	int bloques_a_liberar = ceil(((double)tam) / BLOCK_SIZE);
+	bloques_a_liberar = bloques_a_liberar?bloques_a_liberar:1;//estoespq siempre se toma un bloque inicialmente
+	liberar_bloques_desde(bloque_inicial, bloques_a_liberar);
+	config_destroy(metadata);
+	remove(path);
+	free(path);
 }
-int inicializar_cliente_kernel()
-{	
-	char *ip;
-	char *puerto;
-	char *modulo;
-	char *tipo_Interfaz;
-	int	tiempo_Unidad_Trabajo;
-	char* ip_Memoria;
-	char* puerto_Memoria;
-	char path_Base_Dialfs;
-	int block_Size;
-	int block_Count;
-	int retraso_Compactacion;
-
-
-	ip = config_get_string_value(config, "IP_KERNEL");
-	puerto = config_get_string_value(config, "PUERTO_KERNEL");
-	ip_Memoria = config_get_string_value(config, "IP_MEMORIA");
-	puerto_Memoria = config_get_string_value(config, "PUERTO_MEMORIA");
-	tipo_Interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-	path_Base_Dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
-	block_Size = config_get_int_value(config, "BLOCK_SIZE");
-	block_Count = config_get_int_value(config, "BLOCK_COUNT");
-	retraso_Compactacion = config_get_int_value(config, "RETRASO_COMPACTACION");
-
-
-	socket_cliente = crear_conexion(ip, puerto, logger);
-	int resultado = handshake(socket_cliente);
-	if (resultado == -1)
-		return;
-	
-	if(strcmp(tipo_Interfaz,"GENERICA") == 0){
-		pthread_create(&(hilos_generica[0]), NULL, iniciar_interfaz_generica, NULL); //Se crea cada una con su propio archivo
-	}
-
-	if(strcmp(tipo_Interfaz,"STDIN") == 0){
-		//interfaz_stdin(conexion_fd);
-	}
-
-	if(strcmp(tipo_Interfaz,"STDOUT") == 0{
-		//interfaz_stdout(conexion_fd);
-	}
-
-	if(strcmp(tipo_Interfaz,"FS") == 0{
-		//interfaz_fs(conexion_fd, path_Base_Dialfs, block_Size, block_Count, retraso_Compactacion);
-	}
-	
-}
-void interfaz_generica(int tiempo_Unidad_Trabajo){
-    sleep(tiempo_Unidad_Trabajo*10);
-	
-    
-}
-void iniciar_interfaz_generica(){
-
-	int tiempo_Unidad_Trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
-	t_interfaz *nueva_interfaz = crear_estrcutura_io(FS);
-	enviar_interfaz(CREACION_IO, *nueva_interfaz, crear_conexion);
-	while (nueva_interfaz->estado == DISPONIBLE)
+void liberar_bloques_desde(int bloque_inicial, int bloques_a_liberar)
+{
+	for (int i = bloque_inicial; i < bloque_inicial + bloques_a_liberar; i++)
 	{
-		int cod_op = recibir_operacion(socket_cliente);
-        switch (cod_op)
-        {
-        case SOLICITAR_IO:
-            interfaz_generica(tiempo_Unidad_Trabajo);
-            break;
-        default:
-            log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-            break;
-        }
+		liberar_bloque(i);
 	}
-    
 }
-int main(void)
+char *get_complete_path(char *nombre)
 {
-	int nombre_ios = 0;
-	logger = iniciar_logger();
-	logger = log_create("IO.log","IO_MateLavado",1,LOG_LEVEL_INFO);
-	config = iniciar_config();
-	config = config_create("IO.config");
-	int err;
-	err = pthread_create(&(tid[0]), NULL, inicializar_cliente_memoria, NULL); // todavia no se usa
-	if (err != 0)
+	char *path = malloc(strlen(PATH_BASE_DIALFS));
+	strcpy(path, PATH_BASE_DIALFS);
+	string_append(&path, nombre);
+	return path;
+}
+void inicializar_bitmap()
+{
+	char *nombre = "bitmap.dat";
+	char *path = get_complete_path(nombre);
+
+	FILE *file;
+	int file_fd;
+
+	file = fopen(path, "r+");
+	if (file == NULL) // sino existe, se crea
 	{
-		log_error(logger, "Hubo un problema al crear el thread cliente-memoria:[%s]", strerror(err));
-		return err;
+		file = fopen(path, "w+");
+		file_fd = fileno(file);
+		if (ftruncate(file_fd, tam_bitmap_file) != 0)
+		{
+			perror("Error truncating file");
+			return EXIT_FAILURE;
+		}
 	}
-	log_info(logger, "El thread cliente-memoria inició su ejecución");
-	err = pthread_create(&(tid[1]), NULL, inicializar_cliente_kernel, NULL);
-	if (err != 0)
+	file_fd = fileno(file);
+	mmbitmap = mmap(NULL, tam_bitmap_file, PROT_READ | PROT_WRITE, MAP_SHARED, file_fd, 0);
+	// memset(mmbitmap, 7, tam_bitmap_file);
+	// msync(mmbitmap, tam_bitmap_file, MS_SYNC);
+	bitmap = bitarray_create_with_mode(mmbitmap, tam_bitmap_file, LSB_FIRST);
+
+	////NO SE DONDE HACER munmap y fclose pq el proceso se cierra con ctrl c
+	fclose(file);
+	free(path);
+}
+void inicializar_bloques()
+{
+	char *nombre = "bloques.dat";
+	char *path = get_complete_path(nombre);
+
+	FILE *file;
+	int file_fd;
+
+	file = fopen(path, "r+");
+	if (file == NULL) // sino existe, se crea
 	{
-		log_error(logger, "Hubo un problema al crear el thread cliente-kernel:[%s]", strerror(err));
-		return err;
+		file = fopen(path, "w+");
+		file_fd = fileno(file);
+		if (ftruncate(file_fd, tam_blocks_file) != 0)
+		{
+			perror("Error truncating file");
+			return EXIT_FAILURE;
+		}
 	}
-	log_info(logger, "El thread cliente-kernel inició su ejecución");
-	pthread_join(tid[0], NULL); //join para que no termine el main creo que puede llegar a terminar igual
-	pthread_join(tid[1], NULL); 
-	
-
+	file_fd = fileno(file);
+	bloques = mmap(NULL, tam_blocks_file, PROT_READ | PROT_WRITE, MAP_SHARED, file_fd, 0);
+	// memset(bloques, 6, tam_blocks_file);
+	// msync(bloques, tam_blocks_file, MS_SYNC);
+	////NO SE DONDE HACER munmap y fclose pq el proceso se cierra con ctrl c
+	fclose(file);
+	free(path);
 }
-
-
-t_log* iniciar_logger(void)
-{
-	t_log* nuevo_logger;
-
-	return nuevo_logger;
-}
-
-t_config* iniciar_config(void)
-{
-	t_config* nuevo_config;
-
-	return nuevo_config;
-}
-
-
-void terminar_programa(int conexion, t_log* logger, t_config* config)
-{
-	log_destroy(logger);
-	config_destroy(config);
-	liberar_conexion(conexion);
-}
-*/

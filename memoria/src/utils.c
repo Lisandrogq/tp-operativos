@@ -103,7 +103,7 @@ bool hay_paginas_disponibles(int paginas_a_agregar)
 	}
 	return accum >= paginas_a_agregar;
 }
-int get_next_free_frame()
+int take_next_free_frame()
 {
 
 	for (int i = 0; i < marcos; i++)
@@ -128,7 +128,7 @@ int ampliar_proceso(t_list *tabla, int bytes_a_agregar)
 	for (int i = 0; paginas_a_agregar > i; i++)
 	{
 		int *frame = malloc(sizeof(int));
-		*frame = get_next_free_frame(); // marca el frame como en uso.
+		*frame = take_next_free_frame(); // marca el frame como en uso.
 		list_add(tabla, frame);
 	}
 	return 0;

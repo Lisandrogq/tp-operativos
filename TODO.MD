@@ -11,9 +11,8 @@
 
 ____
 #### CHECKPOINT 3 #######
-- [ ] !CREO Q el if sigterm puede ser un if general||| UNIFICAR DONDE SE LIBERAN COSAS Y AGREGA A EXIT AL FINALIZAR_PROCESO
 - [ ] CMD:Iniciar planificación,Detener planificación,
-- [ ] Manejo de recursos
+- [x] Manejo de recursos
 - [x] Planificador largo plazo
 - [x] Memoría e instrucciones minimas
 - [x] Integrar con paginacion
@@ -21,20 +20,27 @@ ____
 - [x] TLB (FIFO)
 - [x] Instrucciones adicionales
 - [x] IOs
-- [ ] El issue #3807 dice que hay retardo ante cualquier peticion, creo q hay q ponerla justo despues del codop o ago así
+- [x] El issue #3807 dice que hay retardo ante cualquier peticion, creo q hay q ponerla justo despues del codop o ago así
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
-- [ ] Revisar uso de 'exit(-1);' para cerrar sockets
 
 #### ENTREGA FINAL #######
 - [ ] IMPLEMENTAR DESCONEXION DE ios
 - [x] TLB (LRU)
 - [ ] DETENER_PLANIFICACION, en principo un solo semaforo(en total) que bloquee las cosas.
-- [ ] FS(GIGANTE)
+- [ ] FS CREATE
+- [ ] FS DELETE
+- [ ] FS WRITE
+- [ ] FS READ
+- [ ] FS TRUNCATE
+- [ ] FS COMPACTACION 💀💀💀
+
+
 - [ ] Agregar logs requeridos en consigna
 - [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
 - [ ] Hay que tener cuidado con nuestra planificacion, ya que no planificamos como tal(NUNCA ordenamos las listas) simplemente nos aseguramos de siempre agregar bien(Al final ya que todos usan fifo de alguna forma) esto podria estar mal desde el punto de vista teorico ya que solo se planifica e algunos casos y tambien porque no planificcamos como tal
+- [ ] Revisar uso de 'exit(-1);' para cerrar sockets
 
 #### CHECKPOINT 2 ####
 - [] -unificar sigterm (un solo if antes del switch?)

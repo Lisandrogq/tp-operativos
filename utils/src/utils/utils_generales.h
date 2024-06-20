@@ -55,7 +55,7 @@ typedef enum
 	GENERICA,
 	STDIN,
 	STDOUT,
-	FS,
+	DIALFS,
 } tipo_interfaz;
 typedef enum
 {
