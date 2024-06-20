@@ -60,6 +60,7 @@ void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen);
 void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto);
+buffer_instr_io_t *serializar_nombre(char *nombre, int op);
 void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos,int pid);
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos, int pid);
 void *recibir_datos_leidos();

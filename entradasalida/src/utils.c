@@ -8,7 +8,7 @@ int socket_kernel;
 int socket_memoria;
 int tiempo_Unidad_Trabajo;
 
-t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam)//max tam = suma de tam de cada sol
+t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam) // max tam = suma de tam de cada sol
 {
 	void *buffer = buffer_instruccion->buffer;
 	t_list *solicitudes = list_create(); // solicitud_unitaria_t *
@@ -108,6 +108,15 @@ t_interfaz *crear_estrcutura_io(int tipo)
 		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = STDOUT;
+		interfaz->socket = 0;
+		return interfaz;
+		break;
+	case DIALFS:
+		memset(interfaz, 0, sizeof(t_interfaz));
+		interfaz->nombre = malloc(strlen(nombre) + 1);
+		interfaz->nombre = nombre;
+		interfaz->estado = DISPONIBLE;
+		interfaz->tipo = DIALFS;
 		interfaz->socket = 0;
 		return interfaz;
 		break;

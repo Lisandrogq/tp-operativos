@@ -24,13 +24,13 @@ void iniciar_interfaz_dialfs()
 	inicializar_bloques(); // abre/crea el file y lo mmapea para poder usarlo con memcpy
 	inicializar_bitmap();  // abre/crea el file y lo mmapea para poder usarlo con memcpy
 
-/* 	 crear_archivo("persistira1.t");
-	 crear_archivo("aborrar.t");
-	 crear_archivo("persistira2.t"); */
+	/*crear_archivo("persistira1.t");
+	crear_archivo("aborrar.t");
+	crear_archivo("persistira2.t");
 	eliminar_archivo("t1");
 	eliminar_archivo("t2");
 	eliminar_archivo("t3");
-	return;
+	return;*/
 	inicializar_cliente_kernel();
 	inicializar_cliente_memoria();
 	t_interfaz *nueva_interfaz = crear_estrcutura_io(DIALFS);
@@ -38,13 +38,46 @@ void iniciar_interfaz_dialfs()
 	while (1) // xd
 	{
 		io_task *pedido = recibir_peticion();
-		// decode operation
-		// switch(operacion)
-		// decode_create_file...
-		log_info(logger, "PID: %i - Operacion: xxxxxx", pedido->pid_solicitante);
+		int operacion = decode_operation(pedido->buffer_instruccion);
+		
+		handle_operations(operacion, pedido);
 
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
 	}
+}
+handle_operations(int operacion, io_task*pedido)
+{
+	buffer_instr_io_t *buffer_instruccion = pedido->buffer_instruccion;
+	switch (operacion)
+	{
+	case IO_FS_CREATE:
+		char *nombre_c = decode_file_name(buffer_instruccion);
+		crear_archivo(nombre_c);
+		log_info(logger, "PID: %i - Operacion: IO_FS_CREATE", pedido->pid_solicitante);
+		break;
+	case IO_FS_DELETE:
+		char *nombre_d = decode_file_name(buffer_instruccion);
+		eliminar_archivo(nombre_d);
+		log_info(logger, "PID: %i - Operacion: IO_FS_DELETE", pedido->pid_solicitante);
+		break;
+	}
+}
+char *decode_file_name(buffer_instr_io_t *buffer_instruccion)
+{
+	void *buffer = buffer_instruccion->buffer;
+	int offset = sizeof(u_int32_t); // pq sigue teniendo el op
+	int tam_nombre = 0;
+	memcpy(&tam_nombre, buffer + offset, sizeof(u_int32_t));
+	offset += sizeof(u_int32_t);
+	char *nombre = malloc(tam_nombre); // FALTA EL +1 PARA /0???
+	memcpy(nombre, buffer + offset, tam_nombre);
+	return nombre;
+}
+int decode_operation(buffer_instr_io_t *buffer_instruccion)
+{
+	int op = 0;
+	memcpy(&op, buffer_instruccion->buffer, sizeof(int));
+	return op;
 }
 void crear_archivo(char *nombre)
 {
@@ -98,7 +131,7 @@ void eliminar_archivo(char *nombre)
 	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
 	int tam = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
 	int bloques_a_liberar = ceil(((double)tam) / BLOCK_SIZE);
-	bloques_a_liberar = bloques_a_liberar?bloques_a_liberar:1;//estoespq siempre se toma un bloque inicialmente
+	bloques_a_liberar = bloques_a_liberar ? bloques_a_liberar : 1; // estoespq siempre se toma un bloque inicialmente
 	liberar_bloques_desde(bloque_inicial, bloques_a_liberar);
 	config_destroy(metadata);
 	remove(path);
@@ -139,9 +172,7 @@ void inicializar_bitmap()
 	}
 	file_fd = fileno(file);
 	mmbitmap = mmap(NULL, tam_bitmap_file, PROT_READ | PROT_WRITE, MAP_SHARED, file_fd, 0);
-	// memset(mmbitmap, 7, tam_bitmap_file);
-	// msync(mmbitmap, tam_bitmap_file, MS_SYNC);
-	bitmap = bitarray_create_with_mode(mmbitmap, tam_bitmap_file, LSB_FIRST);
+	bitmap = bitarray_create_with_mode(mmbitmap, tam_bitmap_file, MSB_FIRST);//SI ES MSB, ES MAS FACIL LEERLO EN EL HEX EDITOR. EN MEMORIA NO VI QUE ESTO IMPORTARA
 
 	////NO SE DONDE HACER munmap y fclose pq el proceso se cierra con ctrl c
 	fclose(file);

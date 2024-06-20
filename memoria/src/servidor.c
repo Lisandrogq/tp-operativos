@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
 	RETARDO_RESPUESTA = config_get_int_value(config, "RETARDO_RESPUESTA");
 	TAM_MEMORIA = config_get_int_value(config, "TAM_MEMORIA");
 	TAM_PAGINA = config_get_int_value(config, "TAM_PAGINA");
+	PATH_INSTRUCCIONES = config_get_string_value(config,"PATH_INSTRUCCIONES");
 	sems_espera_creacion_codigos = list_create();
 	espacio_usuario = malloc(TAM_MEMORIA);
 	memset(espacio_usuario, 0, TAM_MEMORIA);

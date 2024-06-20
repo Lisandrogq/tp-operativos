@@ -27,8 +27,8 @@ ____
 - [ ] IMPLEMENTAR DESCONEXION DE ios
 - [x] TLB (LRU)
 - [ ] DETENER_PLANIFICACION, en principo un solo semaforo(en total) que bloquee las cosas.
-- [ ] FS CREATE
-- [ ] FS DELETE
+- [X] FS CREATE
+- [X] FS DELETE
 - [ ] FS WRITE
 - [ ] FS READ
 - [ ] FS TRUNCATE

@@ -123,7 +123,7 @@ void informar_fin_de_tarea(int socket_kernel, int status, int pid) // esta podr√
 io_task *recibir_peticion()
 {
 
-	int cod_op = recibir_operacion(socket_kernel);
+	int cod_op = recibir_operacion(socket_kernel);//solo sirve para el waitall, el codop viene en buffer(para desacoplar a kernel)
 	if (cod_op == -1)
 		return -1;
 	io_task *pedido = recibir_pedido_io(socket_kernel);

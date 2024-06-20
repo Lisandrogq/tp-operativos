@@ -24,6 +24,7 @@ extern int TAM_MEMORIA;
 extern void *espacio_usuario;
 extern int marcos;
 extern t_bitarray *bitarray;
+extern char* PATH_INSTRUCCIONES;
 typedef struct
 {
     int pid;

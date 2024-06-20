@@ -243,7 +243,20 @@ int decode(t_strings_instruccion *instruccion)
 		liberar_y_eliminar_solicitudes(solicitudes);
 		return STATUS_DESALOJADO;
 	}
+	if (strcmp(instruccion->cod_instruccion, "IO_FS_CREATE") == 0) // IO_STDOUT_WRITE (Interfaz, nombre)
+	{
 
+		buffer_instr_io_t *buffer_instruccion = serializar_nombre(instruccion->p2, IO_FS_CREATE);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
+		return STATUS_DESALOJADO;
+	}
+	if (strcmp(instruccion->cod_instruccion, "IO_FS_DELETE") == 0) // IO_STDOUT_WRITE (Interfaz, nombre)
+	{
+
+		buffer_instr_io_t *buffer_instruccion = serializar_nombre(instruccion->p2, IO_FS_DELETE);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
+		return STATUS_DESALOJADO;
+	}
 	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
 	{
 		int tam_string = atoi(instruccion->p1);

@@ -1,0 +1,3 @@
+IO_FS_CREATE DIALFS file1.dial2
+IO_FS_CREATE DIALFS file2.dial2
+EXIT

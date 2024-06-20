@@ -116,7 +116,8 @@ void free_all_resources_taken(int pid)
         pcb_t *a_borrar = list_remove_by_condition(lista, is_pid);
         while (a_borrar != NULL)
         {
-            if(list_is_empty(struct_recurso->cola_de_bloqueados_por_recurso)){
+            if (list_is_empty(struct_recurso->cola_de_bloqueados_por_recurso))
+            {
                 return;
             }
             pcb_t *pcb_bloqueado = list_remove(struct_recurso->cola_de_bloqueados_por_recurso, 0); // SI LA LISTA ES VACIA DA ERROR
@@ -149,7 +150,7 @@ void free_all_resources_taken(int pid)
     dictionary_iterator(dictionary_recursos, liberar);
 }
 
-void comando_finalizar_proceso(char *pid_str, int motivo) //Aca no puedo hacer un lock mutex_plani a las colas porque se bloquea la consola y ya no puedo reanudar
+void comando_finalizar_proceso(char *pid_str, int motivo) // Aca no puedo hacer un lock mutex_plani a las colas porque se bloquea la consola y ya no puedo reanudar
 {
     int pid_a_terminar = atoi(pid_str);
     int pid_state = get_pid_state(pid_a_terminar); /// TODO:QUE ESTO TAMBIEN DEVUELVA UN INDICE PARA REMOVE(INDEX)
@@ -172,9 +173,9 @@ void comando_finalizar_proceso(char *pid_str, int motivo) //Aca no puedo hacer u
             pcb_a_terminar = list_find(lista, is_pid);
             if ((pcb_a_terminar == NULL))
             {
-               return; // Esto es por ahora para que el log no tire error cuando se itere en un recurso que el proceso no tiene
+                return; // Esto es por ahora para que el log no tire error cuando se itere en un recurso que el proceso no tiene
             }
-            
+
             log_info(logger, "pcb_a_terminar->pid:%i", pcb_a_terminar->pid);
         }
     };
@@ -277,21 +278,22 @@ void *imprimir_lista_bloqueado(char *nombre_io, t_cola_io *struct_interfaz)
     printf("\n");
     return 0;
 }
-void comando_reanudar_planificacion(){
-    //Unlock mutex_plani_exec por ejemplo y asi con todas las colas y cosas
-    //Unlock mutex_plani_exec por ejemplo
-    //Unlock mutex_plani_exec por ejemplo
-    //Unlock mutex_plani_exec por ejemplo
-    //Unlock mutex_plani_exec por ejemplo
+void comando_reanudar_planificacion()
+{
+    // Unlock mutex_plani_exec por ejemplo y asi con todas las colas y cosas
+    // Unlock mutex_plani_exec por ejemplo
+    // Unlock mutex_plani_exec por ejemplo
+    // Unlock mutex_plani_exec por ejemplo
+    // Unlock mutex_plani_exec por ejemplo
 }
-void comando_detener_planificacion(){
-    //lock mutex_plani_exec por ejemplo y asi con todas las colas y cosas
-    //lock mutex_plani_exec por ejemplo
-    //lock mutex_plani_exec por ejemplo
-    //lock mutex_plani_exec por ejemplo
-    //lock mutex_plani_exec por ejemplo
+void comando_detener_planificacion()
+{
+    // lock mutex_plani_exec por ejemplo y asi con todas las colas y cosas
+    // lock mutex_plani_exec por ejemplo
+    // lock mutex_plani_exec por ejemplo
+    // lock mutex_plani_exec por ejemplo
+    // lock mutex_plani_exec por ejemplo
 }
-
 
 void comando_listar_procesos_por_estado()
 {
@@ -427,7 +429,7 @@ void enviar_interrupcion(int motivo, int pid)
 void *hilo_quantum(void *parametro)
 {
     pcb_t *pcb = (pcb_t *)parametro;
-    usleep(pcb->quantum);//creo que esto deber+oa ser *1000
+    usleep(pcb->quantum); // creo que esto deber+oa ser *1000
     enviar_interrupcion(CLOCK, pcb->pid);
 }
 void *hilo_quantumVRR(void *parametro)
@@ -553,6 +555,18 @@ bool io_acepta_operacion(t_interfaz *io, char *cod_instruccion)
         if (strcmp(cod_instruccion, "IO_STDOUT_WRITE") == 0)
             return true;
         break;
+    case DIALFS:
+        if (strcmp(cod_instruccion, "IO_FS_WRITE") == 0)
+            return true;
+        if (strcmp(cod_instruccion, "IO_FS_READ") == 0)
+            return true;
+        if (strcmp(cod_instruccion, "IO_FS_TRUNCATE") == 0)
+            return true;
+        if (strcmp(cod_instruccion, "IO_FS_CREATE") == 0)
+            return true;
+        if (strcmp(cod_instruccion, "IO_FS_DELETE") == 0)
+            return true;
+        break;
     default:
         break;
     }
@@ -664,7 +678,7 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
             pthread_mutex_lock(&mutex_lista_ready_mas);
             pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
             pthread_mutex_unlock(&mutex_lista_ready_mas);
-        
+
             pthread_mutex_lock(&mutex_lista_exec);
             list_add(lista_pcbs_exec, pcb_a_ejecutar);
             pthread_mutex_unlock(&mutex_lista_exec);

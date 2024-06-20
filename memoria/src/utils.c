@@ -11,13 +11,17 @@ int TAM_MEMORIA;
 void *espacio_usuario;
 int marcos;
 t_bitarray *bitarray;
-char *leer_codigo(char *path)//REVISAR POSIBLES LEAKS DE ESTO
+char *PATH_INSTRUCCIONES;
+char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 {
+	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES));//tecnicamente no es absoluto pero podría serlo
+	strcpy(path_absoluto, PATH_INSTRUCCIONES);
+	string_append(&path_absoluto, path_relativo);
+
 	// leer el pseudocodigo
 	FILE *file;
-
 	char *codigo;
-	file = fopen(path, "r");
+	file = fopen(path_absoluto, "r");
 
 	fseek(file, 0, SEEK_END);
 	int file_size = ftell(file);
@@ -32,8 +36,9 @@ char *leer_codigo(char *path)//REVISAR POSIBLES LEAKS DE ESTO
 	}
 
 	printf("%s\n", codigo);
-	return codigo;
 	fclose(file);
+	free(path_absoluto);//esto hace free al relativo
+	return codigo;
 }
 void int_to_char(int pid, char *pid_str)
 {
@@ -46,7 +51,7 @@ void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	char pid_str[5] = "";
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
-	// signal
+	free(e_admin);//el free de .path se hace en leer codigo
 }
 void eliminar_tabla_paginas(int pid_a_eliminar)
 {

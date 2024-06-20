@@ -35,6 +35,8 @@ void liberar_bloques_desde(int bloque_inicial, int bloques_a_liberar);
 char *get_complete_path(char *nombre);
 void eliminar_archivo(char *nombre);
 void crear_metadata(char *nombre,int bloque);
+char *decode_file_name(buffer_instr_io_t *buffer_instruccion);
+int decode_operation(buffer_instr_io_t *buffer_instruccion);
 solicitud_unitaria_t *leer_memoria_unitario(solicitud_unitaria_t *sol);
 void *recibir_datos_leidos();
 void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos, int pid);

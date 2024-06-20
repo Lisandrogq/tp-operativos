@@ -17,7 +17,8 @@
 			"deque": "c",
 			"unordered_map": "c",
 			"vector": "c",
-			"stdin": "c"
+			"stdin": "c",
+			"dialfs": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},
