@@ -26,12 +26,6 @@ void iniciar_interfaz_dialfs()
 	inicializar_cliente_kernel();
 	inicializar_cliente_memoria();
 
-	// crear_archivo("t.test");
-	truncate_t *sol = malloc(sizeof(truncate_t));
-	sol->bytes = 0;
-	sol->file = "t.test";
-	truncar_archivo(sol);
-	return;
 	t_interfaz *nueva_interfaz = crear_estrcutura_io(DIALFS);
 	enviar_interfaz(CREACION_IO, *nueva_interfaz, socket_kernel);
 	while (1) // xd
@@ -60,7 +54,7 @@ handle_operations(int operacion, io_task *pedido)
 		log_info(logger, "PID: %i - Operacion: IO_FS_DELETE", pedido->pid_solicitante);
 		break;
 	case IO_FS_TRUNCATE:
-		truncate_t *sol_truncate = decode_buffer_bytes(buffer_instruccion);
+		truncate_t *sol_truncate = decode_buffer_truncate_sol(buffer_instruccion);
 		truncar_archivo(sol_truncate);
 		log_info(logger, "PID: %i - Operacion: IO_FS_TRUNCATE", pedido->pid_solicitante);
 	}
@@ -152,7 +146,7 @@ int get_actual_bytes(char *nombre)
 	config_destroy(metadata);
 	return tam;
 }
-truncate_t *decode_buffer_bytes(buffer_instr_io_t *buffer_instruccion)
+truncate_t *decode_buffer_truncate_sol(buffer_instr_io_t *buffer_instruccion)
 {
 	truncate_t *sol = malloc(sizeof(truncate_t));
 	void *buffer = buffer_instruccion->buffer;
@@ -160,10 +154,11 @@ truncate_t *decode_buffer_bytes(buffer_instr_io_t *buffer_instruccion)
 	int tam_nombre = 0;
 	memcpy(&tam_nombre, buffer + offset, sizeof(u_int32_t));
 	offset += sizeof(u_int32_t);
-	sol->file = malloc(tam_nombre); // FALTA EL +1 PARA /0???
+	sol->file = malloc(tam_nombre + 1);
+	memset(sol->file, 0, tam_nombre + 1);
 	memcpy(sol->file, buffer + offset, tam_nombre);
 	offset += tam_nombre;
-	memcpy(sol->bytes, buffer + offset, sizeof(u_int32_t));
+	memcpy(&(sol->bytes), buffer + offset, sizeof(u_int32_t));
 
 	return sol;
 }
@@ -174,7 +169,8 @@ char *decode_buffer_file_name(buffer_instr_io_t *buffer_instruccion)
 	int tam_nombre = 0;
 	memcpy(&tam_nombre, buffer + offset, sizeof(u_int32_t));
 	offset += sizeof(u_int32_t);
-	char *nombre = malloc(tam_nombre); // FALTA EL +1 PARA /0???
+	char *nombre = malloc(tam_nombre + 1); 
+	memset(nombre, 0, tam_nombre + 1);
 	memcpy(nombre, buffer + offset, tam_nombre);
 	return nombre;
 }

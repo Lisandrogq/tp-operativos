@@ -243,17 +243,28 @@ int decode(t_strings_instruccion *instruccion)
 		liberar_y_eliminar_solicitudes(solicitudes);
 		return STATUS_DESALOJADO;
 	}
-	if (strcmp(instruccion->cod_instruccion, "IO_FS_CREATE") == 0) // IO_STDOUT_WRITE (Interfaz, nombre)
+	if (strcmp(instruccion->cod_instruccion, "IO_FS_CREATE") == 0) // IO_FS_CREATE (Interfaz, Nombre Archivo):
 	{
 
 		buffer_instr_io_t *buffer_instruccion = serializar_nombre(instruccion->p2, IO_FS_CREATE);
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
 		return STATUS_DESALOJADO;
 	}
-	if (strcmp(instruccion->cod_instruccion, "IO_FS_DELETE") == 0) // IO_STDOUT_WRITE (Interfaz, nombre)
+	if (strcmp(instruccion->cod_instruccion, "IO_FS_DELETE") == 0) //IO_FS_DELETE (Interfaz, Nombre Archivo):
 	{
 
 		buffer_instr_io_t *buffer_instruccion = serializar_nombre(instruccion->p2, IO_FS_DELETE);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
+		return STATUS_DESALOJADO;
+	}
+	if (strcmp(instruccion->cod_instruccion, "IO_FS_TRUNCATE") == 0) //IO_FS_TRUNCATE (Interfaz, Nombre Archivo, Registro Tamaño):
+	{
+		void *p_r_bytes = dictionary_get(dic_p_registros, instruccion->p3);
+		int tam_r_bytes = *(int *)dictionary_get(dic_tam_registros, instruccion->p3);
+		int bytes = 0;
+		memcpy(&bytes, p_r_bytes, tam_r_bytes);
+
+		buffer_instr_io_t *buffer_instruccion = serializar_truncate_sol(instruccion->p2,bytes);
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
 		return STATUS_DESALOJADO;
 	}

@@ -40,7 +40,7 @@ void reducir_archivo(char *nombre, int bloques_actuales, int bloques_a_reducir, 
 void agrandar_archivo(char*nombre,int bloques_actuales,int bloques_a_agregar, int nuevos_bytes);
 void truncar_archivo(truncate_t *sol);
 char *get_complete_path(char *nombre);
-truncate_t *decode_buffer_bytes(buffer_instr_io_t *buffer_instruccion);
+truncate_t *decode_buffer_truncate_sol(buffer_instr_io_t *buffer_instruccion);
 void liberar_bloques_desde(int bloque_inicial, int bloques_a_liberar);
 char *get_complete_path(char *nombre);
 void eliminar_archivo(char *nombre);

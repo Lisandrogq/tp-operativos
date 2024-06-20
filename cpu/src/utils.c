@@ -313,6 +313,24 @@ int handshake(int socket_cliente)
     }
     return tam_pagina;
 }
+
+buffer_instr_io_t *serializar_truncate_sol(char *nombre, int bytes)
+{
+    int op =IO_FS_TRUNCATE;
+    int tam_nombre = strlen(nombre);
+    buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
+    buffer_instruccion->size = tam_nombre + sizeof(int32_t) * 3;
+    buffer_instruccion->buffer = malloc(buffer_instruccion->size);
+    int offset = 0;
+    memcpy(buffer_instruccion->buffer + offset, &op, sizeof(int32_t)); // CREATE/DELETE
+    offset += sizeof(int32_t);
+    memcpy(buffer_instruccion->buffer + offset, &(tam_nombre), sizeof(int32_t));
+    offset += sizeof(int32_t);
+    memcpy(buffer_instruccion->buffer + offset, nombre, tam_nombre);
+    offset += tam_nombre;
+    memcpy(buffer_instruccion->buffer + offset, &bytes, sizeof(int32_t));
+    return buffer_instruccion;
+}
 buffer_instr_io_t *serializar_nombre(char *nombre, int op)
 {
     int tam_nombre = strlen(nombre);

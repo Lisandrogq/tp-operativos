@@ -56,6 +56,7 @@ void execute_mov_in(t_list *solicitudes, void *datos);
 int execute_mov_out(t_list *solicitudes);
 solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol);
 int execute_unitary_mov_out(solicitud_unitaria_t *sol);
+buffer_instr_io_t *serializar_truncate_sol(char *nombre, int bytes);
 void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen);
