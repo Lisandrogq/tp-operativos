@@ -31,7 +31,7 @@ ____
 - [X] FS DELETE
 - [ ] FS WRITE
 - [ ] FS READ
-- [ ] FS TRUNCATE
+- [x] FS TRUNCATE
 - [ ] FS COMPACTACION 💀💀💀
 
 

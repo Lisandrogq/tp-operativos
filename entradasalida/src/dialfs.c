@@ -6,7 +6,7 @@ int BLOCK_COUNT;
 int tam_blocks_file;
 int tam_bitmap_file;
 char *PATH_BASE_DIALFS;
-void *bloques;
+char *bloques_path;
 void *mmbitmap;
 t_bitarray *bitmap;
 
@@ -57,7 +57,75 @@ handle_operations(int operacion, io_task *pedido)
 		truncate_t *sol_truncate = decode_buffer_truncate_sol(buffer_instruccion);
 		truncar_archivo(sol_truncate);
 		log_info(logger, "PID: %i - Operacion: IO_FS_TRUNCATE", pedido->pid_solicitante);
+		break;
+	case IO_FS_WRITE:
+		fs_write_t *sol_write = decode_buffer_write_sol(buffer_instruccion);
+		void *datos = malloc(sol_write->max_tam);
+		memset(datos, 0, sol_write->max_tam);
+		leer_memoria(sol_write->solicitudes, datos);
+		log_debug(logger, "datos leidos: %s", (char *)datos);
+		escribir_archivo(datos, sol_write->nombre, sol_write->puntero_archivo, sol_write->max_tam);
+		log_info(logger, "PID: %i - Operacion: IO_FS_WRITE", pedido->pid_solicitante);
+		free(datos);
+		free(sol_write->nombre);
+		free(sol_write);
+		break;
 	}
+	free(pedido->buffer_instruccion);
+	free(pedido);
+}
+
+fs_write_t *decode_buffer_write_sol(buffer_instr_io_t *buffer_instruccion) // max tam = suma de tam de cada sol
+{
+	void *buffer = buffer_instruccion->buffer;
+	fs_write_t *sol_write = malloc(sizeof(fs_write_t));
+	memset(sol_write, 0, sizeof(fs_write_t));
+	sol_write->solicitudes = list_create(); // solicitud_unitaria_t *
+	int offset = sizeof(u_int32_t);			// pq sigue estando el op
+
+	memcpy(&(sol_write->puntero_archivo), buffer + offset, sizeof(u_int32_t));
+	offset += sizeof(u_int32_t);
+	int tam_nombre = 0;
+	memcpy(&tam_nombre, buffer + offset, sizeof(u_int32_t));
+	offset += sizeof(u_int32_t);
+	sol_write->nombre = malloc(tam_nombre + 1); //+1 /0
+	memset(sol_write->nombre, 0, tam_nombre + 1);
+	memcpy(sol_write->nombre, buffer + offset, tam_nombre);
+	offset += tam_nombre;
+
+	while (offset < buffer_instruccion->size)
+	{
+		solicitud_unitaria_t *sol = malloc(sizeof(solicitud_unitaria_t));
+		memset(sol, 0, sizeof(solicitud_unitaria_t));
+		memcpy(&(sol->dir_fisica_base), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		memcpy(&(sol->offset), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		memcpy(&(sol->tam), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		memcpy(&(sol->pid), buffer + offset, sizeof(u_int32_t));
+		offset += sizeof(u_int32_t);
+		sol_write->max_tam += sol->tam;
+		list_add(sol_write->solicitudes, sol);
+	}
+	return sol_write;
+}
+void escribir_archivo(void *datos, char *nombre, int puntero, int tam)
+{
+	int puntero_base = get_puntero_base(nombre);
+	FILE *bloques = fopen(bloques_path, "r+");
+	fseek(bloques, puntero_base + puntero, SEEK_SET);
+	fwrite(datos, tam, 1, bloques);
+	fclose(bloques);
+	// free datos;
+}
+int get_puntero_base(char *nombre)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+	config_destroy(metadata);
+	return bloque_inicial * BLOCK_SIZE;
 }
 void truncar_archivo(truncate_t *sol)
 {
@@ -169,7 +237,7 @@ char *decode_buffer_file_name(buffer_instr_io_t *buffer_instruccion)
 	int tam_nombre = 0;
 	memcpy(&tam_nombre, buffer + offset, sizeof(u_int32_t));
 	offset += sizeof(u_int32_t);
-	char *nombre = malloc(tam_nombre + 1); 
+	char *nombre = malloc(tam_nombre + 1);
 	memset(nombre, 0, tam_nombre + 1);
 	memcpy(nombre, buffer + offset, tam_nombre);
 	return nombre;
@@ -288,15 +356,14 @@ void inicializar_bitmap()
 void inicializar_bloques()
 {
 	char *nombre = "bloques.dat";
-	char *path = get_complete_path(nombre);
-
+	bloques_path = get_complete_path(nombre);
 	FILE *file;
 	int file_fd;
 
-	file = fopen(path, "r+");
+	file = fopen(bloques_path, "r+");
 	if (file == NULL) // sino existe, se crea
 	{
-		file = fopen(path, "w+");
+		file = fopen(bloques_path, "w+");
 		file_fd = fileno(file);
 		if (ftruncate(file_fd, tam_blocks_file) != 0)
 		{
@@ -304,11 +371,5 @@ void inicializar_bloques()
 			return EXIT_FAILURE;
 		}
 	}
-	file_fd = fileno(file);
-	bloques = mmap(NULL, tam_blocks_file, PROT_READ | PROT_WRITE, MAP_SHARED, file_fd, 0);
-	// memset(bloques, 6, tam_blocks_file);
-	// msync(bloques, tam_blocks_file, MS_SYNC);
-	////NO SE DONDE HACER munmap y fclose pq el proceso se cierra con ctrl c
 	fclose(file);
-	free(path);
 }

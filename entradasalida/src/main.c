@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
 {
 
 	logger = iniciar_logger();
-	logger = log_create("IO.log", "IO_MateLavado", 1, LOG_LEVEL_INFO);
+	logger = log_create("IO.log", "IO_MateLavado", 1, LOG_LEVEL_DEBUG);
 	config = iniciar_config();
 	config = config_create("IO.config");
 	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
