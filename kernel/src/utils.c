@@ -373,7 +373,7 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
     paquete->buffer->offset += tam;
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
-    int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+    int bytes = paquete->buffer->size + 2 * sizeof(int); 
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -606,7 +606,7 @@ pedir_io_task(int pid, t_interfaz *io, buffer_instr_io_t *buffer_instruccion)
     memcpy(paquete->buffer->stream + paquete->buffer->offset, buffer_instruccion->buffer, buffer_instruccion->size);
     paquete->buffer->offset += buffer_instruccion->size;
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+    int bytes = paquete->buffer->size + 2 * sizeof(int); 
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -911,7 +911,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+    int bytes = paquete->buffer->size + 2 * sizeof(int); 
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 

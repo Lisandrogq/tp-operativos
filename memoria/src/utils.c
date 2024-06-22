@@ -14,7 +14,7 @@ t_bitarray *bitarray;
 char *PATH_INSTRUCCIONES;
 char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 {
-	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES)); // tecnicamente no es absoluto pero podría serlo
+	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES)+1); // tecnicamente no es absoluto pero podría serlo
 	strcpy(path_absoluto, PATH_INSTRUCCIONES);
 	string_append(&path_absoluto, path_relativo);
 
@@ -26,7 +26,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 	fseek(file, 0, SEEK_END);
 	int file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	codigo = malloc(file_size);
+	codigo = malloc(file_size+1);//un +1 aca arregla el 💀💀💀, no se porque(capaz tiene q ver con el /0)
 	memset(codigo, 0, file_size);
 
 	char linea[100];
@@ -95,7 +95,6 @@ void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 	char *codigo = dictionary_remove(dictionary_codigos, pid_str); // creo que no hace falta mutex para codigos
 	free(codigo);
 	log_debug(logger, "Se elimino el codigo del pid %i", pid_a_eliminar);
-	// todo: eliminar tabla de paginas y marcar marcos como liberados
 }
 bool hay_paginas_disponibles(int paginas_a_agregar)
 {
@@ -200,6 +199,7 @@ void handle_cpu_client(int socket_cliente)
 				log_info(logger, "PID: %i - Tamaño Actual: %i - Tamaño a Ampliar: %i", solicitud_resize->pid, bytes_actuales, solicitud_resize->bytes);
 			}
 			devolver_status_resize(resize_status, socket_cliente);
+			free(solicitud_resize);
 			break;
 		case GET_FRAME:
 			get_frame_t *solicitud_f = recibir_pedido_frame(socket_cliente);

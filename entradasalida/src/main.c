@@ -31,6 +31,8 @@ int main(int argc, char *argv[])
 		iniciar_interfaz_dialfs();
 	}
 }
+
+
 int inicializar_cliente_kernel()
 {
 	char *ip;

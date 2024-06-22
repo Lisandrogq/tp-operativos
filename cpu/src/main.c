@@ -56,7 +56,7 @@ void solicitar_siguiente_instruccion()
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->registros->PC), sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
-	int bytes = paquete->buffer->size + 2 * sizeof(int); // ESTE *2 NO SE PUEDE TOCAR, ANDA ASÍ, PUNTO(.).
+	int bytes = paquete->buffer->size + 2 * sizeof(int); 
 
 	void *a_enviar = serializar_paquete(paquete, bytes);
 
