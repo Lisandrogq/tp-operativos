@@ -14,6 +14,9 @@ pthread_mutex_t mutex_pcb_desalojado;
 pthread_mutex_t mutex_lista_exit;
 pthread_mutex_t mutex_lista_exec;
 pthread_mutex_t mutex_lista_ready_mas;
+pthread_mutex_t mutex_plani_largo_plazo;
+pthread_mutex_t mutex_plani_corto_plazo;
+pthread_mutex_t mutex_plani_io;
 sem_t elementos_ready; // contador de ready, si no hay, no podes planificar.
 t_dictionary *dictionary_pcbs_bloqueado;
 t_dictionary *dictionary_recursos;
@@ -30,6 +33,7 @@ int contador;
 int socket_memoria;
 pthread_mutex_t mutex_socket_interrupt;
 int socket_interrupt;
+int planificacion;
 void comando_iniciar_proceso(char *path, int tam)
 {
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
@@ -150,7 +154,7 @@ void free_all_resources_taken(int pid)
     dictionary_iterator(dictionary_recursos, liberar);
 }
 
-void comando_finalizar_proceso(char *pid_str, int motivo) // Aca no puedo hacer un lock mutex_plani a las colas porque se bloquea la consola y ya no puedo reanudar
+void comando_finalizar_proceso(char *pid_str, int motivo) 
 {
     int pid_a_terminar = atoi(pid_str);
     int pid_state = get_pid_state(pid_a_terminar); /// TODO:QUE ESTO TAMBIEN DEVUELVA UN INDICE PARA REMOVE(INDEX)
@@ -280,19 +284,17 @@ void *imprimir_lista_bloqueado(char *nombre_io, t_cola_io *struct_interfaz)
 }
 void comando_reanudar_planificacion()
 {
-    // Unlock mutex_plani_exec por ejemplo y asi con todas las colas y cosas
-    // Unlock mutex_plani_exec por ejemplo
-    // Unlock mutex_plani_exec por ejemplo
-    // Unlock mutex_plani_exec por ejemplo
-    // Unlock mutex_plani_exec por ejemplo
+    planificacion = 1;
+    pthread_mutex_unlock(&mutex_plani_largo_plazo);
+    pthread_mutex_unlock(&mutex_plani_corto_plazo);
+    pthread_mutex_unlock(&mutex_plani_io);
 }
 void comando_detener_planificacion()
 {
-    // lock mutex_plani_exec por ejemplo y asi con todas las colas y cosas
-    // lock mutex_plani_exec por ejemplo
-    // lock mutex_plani_exec por ejemplo
-    // lock mutex_plani_exec por ejemplo
-    // lock mutex_plani_exec por ejemplo
+    pthread_mutex_lock(&mutex_plani_largo_plazo);
+    pthread_mutex_lock(&mutex_plani_corto_plazo);
+    pthread_mutex_lock(&mutex_plani_io);
+    planificacion = 0;
 }
 
 void comando_listar_procesos_por_estado()
@@ -758,10 +760,14 @@ void *client_handler(void *arg)
     int modulo = handshake_Server(socket_io);
     log_info(logger, "se conecto alguna io");
     bool conexion_terminada = false;
-    t_interfaz *interfaz;
+    t_interfaz *interfaz; 
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_io);
+        if (planificacion == 0)
+		{
+			pthread_mutex_lock(&mutex_plani_io);
+		}
         switch (cod_op)
         {
         case CREACION_IO:

@@ -15,9 +15,14 @@ void *hilo_largo_plazo()
 {
 	while (1)
 	{
-		//Aca se deberia lockear para detener la planificacion
+		// Aca se deberia lockear para detener la planificacion, pero esta el probelema de que es un while uno y se le haria mucha veces el wait
 		sem_wait(&hay_new);
 		sem_wait(&contador_multi);
+		if (planificacion == 0)
+		{
+			log_error(logger, "entre a plani largo");
+			pthread_mutex_lock(&mutex_plani_largo_plazo);
+		}
 		elemento_cola_new *elemento = list_remove(lista_pcbs_new, 0);
 		pthread_mutex_lock(&mutex_socket_memoria);
 		solicitar_crear_estructuras_administrativas(elemento->tam, elemento->path, elemento->pcb->pid, socket_memoria);
@@ -49,13 +54,11 @@ void *consola()
 		{
 			int tam = 1 + strlen(instruccion[1]);
 			comando_iniciar_proceso(instruccion[1], tam); // Debe poder crearse procesos en new pero no pasara a rready
-			// Una posible solucion y creo la unica es volver a esta funcion un hilo
 		}
 		if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
 		{
 			int tam = 1 + sizeof(strlen(linea));
-			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER); //Aca no puedo hacer un lock mutex_plani a las colas porque se bloquea la consola y ya no puedo reanudar, esto depende de si se pueden matar procesos con la plani detenida
-			// Seguramente se puedan matar procesos y esto no tenga que ser un hilo
+			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER); 
 		}
 		if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
 		{
@@ -86,27 +89,31 @@ void *consola()
 			int nuevo_grado = atoi(instruccion[1]);
 			int grado_incial = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 			int grado_actual;
-			//cuando ande ok lo paso a utils//
-			if(primero == 0){
+			// cuando ande ok lo paso a utils//
+			if (primero == 0)
+			{
 				grado_actual = grado_incial;
 				primero = 1;
 			}
-    		// Ajustar semáforos según el nuevo grado
-    		while (nuevo_grado > grado_actual) {
-        		sem_post(&contador_multi);
-        		grado_actual++;
-    		}
-    		while (nuevo_grado < grado_actual) {
-        		sem_wait(&contador_multi);
-        		grado_actual--;
-    		}
+			// Ajustar semáforos según el nuevo grado
+			while (nuevo_grado > grado_actual)
+			{
+				sem_post(&contador_multi);
+				grado_actual++;
+			}
+			while (nuevo_grado < grado_actual)
+			{
+				sem_wait(&contador_multi);
+				grado_actual--;
+			}
 			grado_actual = nuevo_grado;
 		}
-		
+
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
 		free(linea);
-	}}
+	}
+}
 
 void *cliente_cpu_dispatch()
 {
@@ -138,7 +145,15 @@ void *cliente_cpu_dispatch()
 		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
 		int motivo_desalojo = -1;
+		if (planificacion == 0)
+		{
+			pthread_mutex_lock(&mutex_plani_corto_plazo);
+		}
 		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo, buffer_instruccion);
+		if (planificacion == 0)
+		{
+			pthread_mutex_lock(&mutex_plani_corto_plazo);
+		}
 		pthread_mutex_lock(&mutex_lista_exec);
 		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
 		pthread_mutex_unlock(&mutex_lista_exec);
@@ -404,10 +419,20 @@ void terminar_programa(int conexion, t_log *logger, t_config *config)
 int main(int argc, char const *argv[])
 { // creo que no hace falta mutex para exec
 	pid_sig_term = -1;
+	planificacion = 1;
 	sem_init(&elementos_ready, 0, 0);
 	sem_init(&hay_new, 0, 0);
 	pthread_mutex_init(&mutex_lista_ready_mas, NULL);
 	pthread_mutex_unlock(&mutex_lista_ready_mas);
+
+	pthread_mutex_init(&mutex_plani_corto_plazo, NULL);
+	pthread_mutex_unlock(&mutex_plani_corto_plazo);
+
+	pthread_mutex_init(&mutex_plani_io, NULL);
+	pthread_mutex_unlock(&mutex_plani_io);
+
+	pthread_mutex_init(&mutex_plani_largo_plazo, NULL);
+	pthread_mutex_unlock(&mutex_plani_largo_plazo);
 
 	pthread_mutex_init(&mutex_lista_exit, NULL);
 	pthread_mutex_unlock(&mutex_lista_exit); // debe empezar desbloqueado, pq todos hacen lock primero
