@@ -56,7 +56,7 @@ void solicitar_siguiente_instruccion()
 	memcpy(paquete->buffer->stream + paquete->buffer->offset, &(pcb_exec->registros->PC), sizeof(int));
 	paquete->buffer->offset += sizeof(int);
 
-	int bytes = paquete->buffer->size + 2 * sizeof(int); 
+	int bytes = paquete->buffer->size + 2 * sizeof(int);
 
 	void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -270,7 +270,7 @@ int decode(t_strings_instruccion *instruccion)
 	}
 	if (strcmp(instruccion->cod_instruccion, "IO_FS_WRITE") == 0) // IO_FS_WRITE (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo)
 	{
-		/* buffer: 
+		/* buffer:
 			nombre
 			lista direcciones
 			puntero escritura
@@ -294,13 +294,38 @@ int decode(t_strings_instruccion *instruccion)
 
 		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, max_tam);
 
-		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes_fs(solicitudes, instruccion->p2,puntero_archivo);
+		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes_fs(solicitudes, instruccion->p2, puntero_archivo,IO_FS_WRITE);
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
 		liberar_y_eliminar_solicitudes(solicitudes);
 		return STATUS_DESALOJADO;
-
-
 	}
+	if (strcmp(instruccion->cod_instruccion, "IO_FS_READ") == 0) // IO_FS_WRITE (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo)
+	{
+
+		void *p_puntero_archivo = dictionary_get(dic_p_registros, instruccion->p5);
+		int tam_r_puntero_archivo = *(int *)dictionary_get(dic_tam_registros, instruccion->p5);
+		int puntero_archivo = 0;
+		memcpy(&puntero_archivo, p_puntero_archivo, tam_r_puntero_archivo);
+		//--
+		void *p_max_tam = dictionary_get(dic_p_registros, instruccion->p4);
+		int tam_r_max_tam = *(int *)dictionary_get(dic_tam_registros, instruccion->p4);
+		int max_tam = 0;
+		memcpy(&max_tam, p_max_tam, tam_r_max_tam);
+
+		int dir_logica = 0;
+		void *p_dir_logica = 0;
+		int tam_r_dir = *((int *)dictionary_get(dic_tam_registros, instruccion->p3));
+		p_dir_logica = dictionary_get(dic_p_registros, instruccion->p3);
+		memcpy(&dir_logica, p_dir_logica, tam_r_dir);
+
+		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, max_tam);
+
+		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes_fs(solicitudes, instruccion->p2, puntero_archivo, IO_FS_READ);
+		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
+		liberar_y_eliminar_solicitudes(solicitudes);
+		return STATUS_DESALOJADO;
+	}
+
 	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
 	{
 		int tam_string = atoi(instruccion->p1);

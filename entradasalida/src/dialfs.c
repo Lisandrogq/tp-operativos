@@ -31,8 +31,7 @@ void iniciar_interfaz_dialfs()
 	while (1) // xd
 	{
 		io_task *pedido = recibir_peticion();
-		int operacion = decode_operation(pedido->buffer_instruccion);
-
+		int operacion = decode_operation(pedido->buffer_instruccion);//no es un 'recibir_operacion'. Esto no lo saca del buffer
 		handle_operations(operacion, pedido);
 
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
@@ -59,27 +58,49 @@ handle_operations(int operacion, io_task *pedido)
 		log_info(logger, "PID: %i - Operacion: IO_FS_TRUNCATE", pedido->pid_solicitante);
 		break;
 	case IO_FS_WRITE:
-		fs_write_t *sol_write = decode_buffer_write_sol(buffer_instruccion);
-		void *datos = malloc(sol_write->max_tam);
-		memset(datos, 0, sol_write->max_tam);
-		leer_memoria(sol_write->solicitudes, datos);
-		log_debug(logger, "datos leidos: %s", (char *)datos);
-		escribir_archivo(datos, sol_write->nombre, sol_write->puntero_archivo, sol_write->max_tam);
+		fs_rw_sol_t *sol_write = decode_buffer_rw_sol(buffer_instruccion);
+		void *datos_w = malloc(sol_write->max_tam);
+		memset(datos_w, 0, sol_write->max_tam);
+		leer_memoria(sol_write->solicitudes, datos_w);
+		log_debug(logger, "datos_w leidos desde memoria: %s", (char *)datos_w);
+		escribir_archivo(datos_w, sol_write->nombre, sol_write->puntero_archivo, sol_write->max_tam);
 		log_info(logger, "PID: %i - Operacion: IO_FS_WRITE", pedido->pid_solicitante);
-		free(datos);
+		free(datos_w);
 		free(sol_write->nombre);
 		free(sol_write);
+		break;
+	case IO_FS_READ:
+		fs_rw_sol_t *sol_read = decode_buffer_rw_sol(buffer_instruccion);
+		void *datos_r = leer_archivo(sol_read->nombre,sol_read->puntero_archivo,sol_read->max_tam);
+		log_debug(logger, "datos_r leidos desde fs: %s", (char *)datos_r);
+		populate_solicitudes(sol_read->solicitudes, datos_r);
+		escribir_memoria(sol_read->solicitudes);
+		log_info(logger, "PID: %i - Operacion: IO_FS_READ", pedido->pid_solicitante);
+		free(datos_r);
+		free(sol_read->nombre);
+		free(sol_read);
 		break;
 	}
 	free(pedido->buffer_instruccion);
 	free(pedido);
 }
 
-fs_write_t *decode_buffer_write_sol(buffer_instr_io_t *buffer_instruccion) // max tam = suma de tam de cada sol
+void *leer_archivo(char *nombre, int puntero, int tam)
+{
+	void *datos = malloc(tam);
+	int puntero_base = get_puntero_base(nombre);
+	FILE *bloques = fopen(bloques_path, "r");
+	fseek(bloques, puntero_base + puntero, SEEK_SET);
+	fread(datos,tam,1,bloques);
+	fclose(bloques);
+	return datos;
+}
+
+fs_rw_sol_t *decode_buffer_rw_sol(buffer_instr_io_t *buffer_instruccion) // max tam = suma de tam de cada sol
 {
 	void *buffer = buffer_instruccion->buffer;
-	fs_write_t *sol_write = malloc(sizeof(fs_write_t));
-	memset(sol_write, 0, sizeof(fs_write_t));
+	fs_rw_sol_t *sol_write = malloc(sizeof(fs_rw_sol_t));
+	memset(sol_write, 0, sizeof(fs_rw_sol_t));
 	sol_write->solicitudes = list_create(); // solicitud_unitaria_t *
 	int offset = sizeof(u_int32_t);			// pq sigue estando el op
 

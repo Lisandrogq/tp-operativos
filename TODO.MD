@@ -29,7 +29,7 @@ ____
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
 
-#### REVISAR KERNEL #####
+#### REVISAR #####
 * revisar multiprog, probablemente no ande el caso:
 mando 30 procesos, multiprog en 20, cambio a 17, cambio a 15, cambio a 12 ....
 va  a suceder que algunos de los signals caen en el wait del while hilo largo plazo 

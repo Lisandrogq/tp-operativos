@@ -34,7 +34,7 @@ typedef struct
     char *nombre;
     int puntero_archivo;
     t_list* solicitudes;
-} fs_write_t;
+} fs_rw_sol_t;
 // Cliente
 // void enviar_mensaje(char* mensaje, int socket_cliente);
 void inicializar_bloques();
@@ -44,7 +44,8 @@ void ocupar_bloque(int index);
 void liberar_bloque(int index);
 bool es_posible_agrandar(char *nombre, int bloques_actuales, int bloques_a_agregar);
 void reducir_archivo(char *nombre, int bloques_actuales, int bloques_a_reducir, int nuevos_bytes);
-fs_write_t *decode_buffer_write_sol(buffer_instr_io_t *buffer_instruccion);
+fs_rw_sol_t *decode_buffer_rw_sol(buffer_instr_io_t *buffer_instruccion);
+void *leer_archivo(char *nombre, int puntero, int tam);
 void agrandar_archivo(char *nombre, int bloques_actuales, int bloques_a_agregar, int nuevos_bytes);
 void truncar_archivo(truncate_t *sol);
 char *get_complete_path(char *nombre);

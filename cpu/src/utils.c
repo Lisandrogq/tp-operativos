@@ -370,16 +370,15 @@ buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam) // e
     list_iterator_destroy(iterator);
     return buffer_instruccion;
 }
-buffer_instr_io_t *serializar_solicitudes_fs(t_list *solicitudes, char *nombre, int puntero_archivo)
+buffer_instr_io_t *serializar_solicitudes_fs(t_list *solicitudes, char *nombre, int puntero_archivo, int OPERACION)
 {
     int tam_nombre = strlen(nombre);
     buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
     buffer_instruccion->size = 4 * list_size(solicitudes) * sizeof(u_int32_t) + 3 * sizeof(u_int32_t) + tam_nombre;
     buffer_instruccion->buffer = malloc(buffer_instruccion->size);
     t_list_iterator *iterator = list_iterator_create(solicitudes);
-    int op = IO_FS_WRITE;
     int offset = 0;
-    memcpy(buffer_instruccion->buffer + offset, &op, sizeof(u_int32_t)); 
+    memcpy(buffer_instruccion->buffer + offset, &OPERACION, sizeof(u_int32_t)); 
     offset += sizeof(u_int32_t);
     memcpy(buffer_instruccion->buffer + offset, &(puntero_archivo), sizeof(u_int32_t));
     offset += sizeof(u_int32_t);

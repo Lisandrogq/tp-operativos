@@ -46,7 +46,7 @@ void *menor_timestamp(tlb_element *elemento1, tlb_element *elemento2);
 tlb_element *get_element_tlb(solicitud_unitaria_t *sol);
 interrupcion_t *recibir_interrupcion(int socket_interrupt);
 buffer_instr_io_t *serializar_solicitudes(t_list *solicitudes, int max_tam);
-buffer_instr_io_t *serializar_solicitudes_fs(t_list *solicitudes, char *nombre, int puntero_archivo);
+buffer_instr_io_t *serializar_solicitudes_fs(t_list *solicitudes, char *nombre, int puntero_archivo, int OPERACION);
 t_strings_instruccion *fetch(int PC);
 int decode(t_strings_instruccion *instruccion);
 int execute(t_strings_instruccion *instruccion);
