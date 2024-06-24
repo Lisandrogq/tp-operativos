@@ -36,7 +36,7 @@ interrupcion_t *recibir_interrupcion(int socket_interrupt)
 }
 void execute_set(char *nombre_r_destino, int valor)
 {
-    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")|| !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = valor;
@@ -44,13 +44,13 @@ void execute_set(char *nombre_r_destino, int valor)
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
         u_int8_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
-        *r_destino = valor; //Da error la instruccion set pc 0, en plani_4
+        *r_destino = valor; 
     }
 }
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
 {
     int sumando = 0;
-    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
+    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")||!strcmp(nombre_r_origen, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sumando = *r_origen;
@@ -60,7 +60,7 @@ void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
         u_int8_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sumando = *r_origen;
     }
-    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")|| !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino + sumando;
@@ -74,7 +74,7 @@ void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8 ES UNSIGNED, NO CREO Q SEA UN PROBLEMA EN LAS PRUEBAS PERO XD
 {
     int sustraendo = 0;
-    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")) // caso registros de 4 byte
+    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")|| !strcmp(nombre_r_origen, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sustraendo = *r_origen;
@@ -84,7 +84,7 @@ void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8
         u_int8_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sustraendo = *r_origen;
     }
-    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")) // caso registros de 4 byte
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")|| !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino - sustraendo;
@@ -98,7 +98,7 @@ void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8
 void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // habría que ver si hay alguna forma para no pasar el contexto
 {
 
-    if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI")) // caso registros de 4 byte
+    if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI")|| !strcmp(nombre_r, "PC")) // caso registros de 4 byte
     {
         u_int32_t *registro = dictionary_get(dic_p_registros, nombre_r);
         if (*registro != 0)

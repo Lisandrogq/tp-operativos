@@ -31,7 +31,7 @@ void iniciar_interfaz_dialfs()
 	while (1) // xd
 	{
 		io_task *pedido = recibir_peticion();
-		int operacion = decode_operation(pedido->buffer_instruccion);//no es un 'recibir_operacion'. Esto no lo saca del buffer
+		int operacion = decode_operation(pedido->buffer_instruccion); // no es un 'recibir_operacion'. Esto no lo saca del buffer
 		handle_operations(operacion, pedido);
 
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
@@ -71,7 +71,7 @@ handle_operations(int operacion, io_task *pedido)
 		break;
 	case IO_FS_READ:
 		fs_rw_sol_t *sol_read = decode_buffer_rw_sol(buffer_instruccion);
-		void *datos_r = leer_archivo(sol_read->nombre,sol_read->puntero_archivo,sol_read->max_tam);
+		void *datos_r = leer_archivo(sol_read->nombre, sol_read->puntero_archivo, sol_read->max_tam);
 		log_debug(logger, "datos_r leidos desde fs: %s", (char *)datos_r);
 		populate_solicitudes(sol_read->solicitudes, datos_r);
 		escribir_memoria(sol_read->solicitudes);
@@ -91,7 +91,7 @@ void *leer_archivo(char *nombre, int puntero, int tam)
 	int puntero_base = get_puntero_base(nombre);
 	FILE *bloques = fopen(bloques_path, "r");
 	fseek(bloques, puntero_base + puntero, SEEK_SET);
-	fread(datos,tam,1,bloques);
+	fread(datos, tam, 1, bloques);
 	fclose(bloques);
 	return datos;
 }
@@ -161,7 +161,7 @@ void truncar_archivo(truncate_t *sol)
 		int bloques_a_agregar = nuevos_bloques - bloques_actuales;
 		if (!es_posible_agrandar(sol->file, bloques_actuales, bloques_a_agregar))
 		{
-			// todo COMPACTAR
+			compactar(sol->file);
 		}
 		agrandar_archivo(sol->file, bloques_actuales, bloques_a_agregar, nuevos_bytes);
 	}
@@ -174,6 +174,18 @@ void truncar_archivo(truncate_t *sol)
 	actualizar_tamanio(sol->file, nuevos_bytes);
 }
 
+void compactar(char *nombre)
+{
+/* 	void *buffer_i = get_file_buffer(nombre);
+
+	while (hay_huecos())
+	{
+		dezplazar_primer_file()
+	}
+	int inicio = push_file(buffer_i);
+	actualizar_metadata(inicio);
+	free(buffer_i); */
+}
 void actualizar_tamanio(char *nombre, int nuevos_bytes)
 {
 	char *path = get_complete_path(nombre);

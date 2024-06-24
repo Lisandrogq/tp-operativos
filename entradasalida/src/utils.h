@@ -48,6 +48,7 @@ fs_rw_sol_t *decode_buffer_rw_sol(buffer_instr_io_t *buffer_instruccion);
 void *leer_archivo(char *nombre, int puntero, int tam);
 void agrandar_archivo(char *nombre, int bloques_actuales, int bloques_a_agregar, int nuevos_bytes);
 void truncar_archivo(truncate_t *sol);
+void compactar(char *nombre);
 char *get_complete_path(char *nombre);
 int get_puntero_base(char *nombre);
 truncate_t *decode_buffer_truncate_sol(buffer_instr_io_t *buffer_instruccion);
