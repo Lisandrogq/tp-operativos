@@ -20,7 +20,6 @@ void *hilo_largo_plazo()
 		sem_wait(&contador_multi);
 		if (planificacion == 0)
 		{
-			log_error(logger, "entre a plani largo");
 			pthread_mutex_lock(&mutex_plani_largo_plazo);
 		}
 		elemento_cola_new *elemento = list_remove(lista_pcbs_new, 0);

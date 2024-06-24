@@ -154,7 +154,7 @@ void free_all_resources_taken(int pid)
     dictionary_iterator(dictionary_recursos, liberar);
 }
 
-void comando_finalizar_proceso(char *pid_str, int motivo) 
+void comando_finalizar_proceso(char *pid_str, int motivo)
 {
     int pid_a_terminar = atoi(pid_str);
     int pid_state = get_pid_state(pid_a_terminar); /// TODO:QUE ESTO TAMBIEN DEVUELVA UN INDICE PARA REMOVE(INDEX)
@@ -284,6 +284,7 @@ void *imprimir_lista_bloqueado(char *nombre_io, t_cola_io *struct_interfaz)
 }
 void comando_reanudar_planificacion()
 {
+    log_debug(logger,"Iniciando planifiacion");
     planificacion = 1;
     pthread_mutex_unlock(&mutex_plani_largo_plazo);
     pthread_mutex_unlock(&mutex_plani_corto_plazo);
@@ -291,6 +292,7 @@ void comando_reanudar_planificacion()
 }
 void comando_detener_planificacion()
 {
+    log_debug(logger,"Deteniendo planificacion");
     pthread_mutex_lock(&mutex_plani_largo_plazo);
     pthread_mutex_lock(&mutex_plani_corto_plazo);
     pthread_mutex_lock(&mutex_plani_io);
@@ -375,7 +377,7 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
     paquete->buffer->offset += tam;
 
     memcpy(paquete->buffer->stream + paquete->buffer->offset, &pid, sizeof(int));
-    int bytes = paquete->buffer->size + 2 * sizeof(int); 
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -608,7 +610,7 @@ pedir_io_task(int pid, t_interfaz *io, buffer_instr_io_t *buffer_instruccion)
     memcpy(paquete->buffer->stream + paquete->buffer->offset, buffer_instruccion->buffer, buffer_instruccion->size);
     paquete->buffer->offset += buffer_instruccion->size;
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int); 
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -760,14 +762,10 @@ void *client_handler(void *arg)
     int modulo = handshake_Server(socket_io);
     log_info(logger, "se conecto alguna io");
     bool conexion_terminada = false;
-    t_interfaz *interfaz; 
+    t_interfaz *interfaz;
     while (!conexion_terminada)
     {
         int cod_op = recibir_operacion(socket_io);
-        if (planificacion == 0)
-		{
-			pthread_mutex_lock(&mutex_plani_io);
-		}
         switch (cod_op)
         {
         case CREACION_IO:
@@ -783,7 +781,10 @@ void *client_handler(void *arg)
 
             break;
         case FIN_IO_TASK:
-
+            if (planificacion == 0)
+            {
+                pthread_mutex_lock(&mutex_plani_io);
+            }
             t_fin_io_task *estructura = recibir_fin_io_task(socket_io);
             if (!pcb_esta_en_exit(estructura->pid))
             {
@@ -917,7 +918,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int); 
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
