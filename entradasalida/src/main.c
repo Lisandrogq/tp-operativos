@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 	config = iniciar_config();
 	config = config_create("IO.config");
 	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
-	nombre = "ESPERA";
+	nombre = "SLP1";
 	char *tipo = "GENERICA";
 	/*
 	nombre = "DIALFS";

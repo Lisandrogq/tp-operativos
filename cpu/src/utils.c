@@ -44,7 +44,7 @@ void execute_set(char *nombre_r_destino, int valor)
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
         u_int8_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
-        *r_destino = valor;
+        *r_destino = valor; //Da error la instruccion set pc 0, en plani_4
     }
 }
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
@@ -475,6 +475,7 @@ t_log *logger;
 
 t_dictionary *inicializar_diccionario(registros_t *registros)
 {
+    dictionary_put(dic_p_registros, "PC", &(registros->PC)); // Nosotros pensamos que teoricamente un proceso no deberia poder cambiar su program counter, pero en las pruebas esta
     dictionary_put(dic_p_registros, "AX", &(registros->AX));
     dictionary_put(dic_p_registros, "BX", &(registros->BX));
     dictionary_put(dic_p_registros, "CX", &(registros->CX));

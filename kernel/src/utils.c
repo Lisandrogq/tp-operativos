@@ -284,7 +284,7 @@ void *imprimir_lista_bloqueado(char *nombre_io, t_cola_io *struct_interfaz)
 }
 void comando_reanudar_planificacion()
 {
-    log_debug(logger,"Iniciando planifiacion");
+    log_debug(logger, "Iniciando planifiacion");
     planificacion = 1;
     pthread_mutex_unlock(&mutex_plani_largo_plazo);
     pthread_mutex_unlock(&mutex_plani_corto_plazo);
@@ -292,7 +292,7 @@ void comando_reanudar_planificacion()
 }
 void comando_detener_planificacion()
 {
-    log_debug(logger,"Deteniendo planificacion");
+    log_debug(logger, "Deteniendo planificacion");
     pthread_mutex_lock(&mutex_plani_largo_plazo);
     pthread_mutex_lock(&mutex_plani_corto_plazo);
     pthread_mutex_lock(&mutex_plani_io);
@@ -678,6 +678,7 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
         }
         else
         {
+            pthread_mutex_unlock(&mutex_lista_ready_mas);
             log_debug(logger, "Enviando a ejecutar desde ready+");
             pthread_mutex_lock(&mutex_lista_ready_mas);
             pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
