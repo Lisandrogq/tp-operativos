@@ -433,7 +433,7 @@ void enviar_interrupcion(int motivo, int pid)
 void *hilo_quantum(void *parametro)
 {
     pcb_t *pcb = (pcb_t *)parametro;
-    usleep(pcb->quantum); // creo que esto deber+oa ser *1000
+    usleep(pcb->quantum* 1000); 
     enviar_interrupcion(CLOCK, pcb->pid);
 }
 void *hilo_quantumVRR(void *parametro)
