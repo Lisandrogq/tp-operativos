@@ -14,7 +14,7 @@ t_bitarray *bitarray;
 char *PATH_INSTRUCCIONES;
 char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 {
-	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES)+1); // tecnicamente no es absoluto pero podría serlo
+	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES) + 1); // tecnicamente no es absoluto pero podría serlo
 	strcpy(path_absoluto, PATH_INSTRUCCIONES);
 	string_append(&path_absoluto, path_relativo);
 
@@ -26,7 +26,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 	fseek(file, 0, SEEK_END);
 	int file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	codigo = malloc(file_size+1);//un +1 aca arregla el 💀💀💀, no se porque(capaz tiene q ver con el /0)
+	codigo = malloc(file_size + 1); // un +1 aca arregla el 💀💀💀, no se porque(capaz tiene q ver con el /0)
 	memset(codigo, 0, file_size);
 
 	char linea[100];

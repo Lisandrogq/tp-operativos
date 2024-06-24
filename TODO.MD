@@ -12,15 +12,6 @@
 ____
 #### CHECKPOINT 3 #######
 - [ ] CMD:Iniciar planificación,Detener planificación,
-- [x] Manejo de recursos
-- [x] Planificador largo plazo
-- [x] Memoría e instrucciones minimas
-- [x] Integrar con paginacion
-- [x] MMU
-- [x] TLB (FIFO)
-- [x] Instrucciones adicionales
-- [x] IOs
-- [x] El issue #3807 dice que hay retardo ante cualquier peticion, creo q hay q ponerla justo despues del codop o ago así
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
 
 #### ENTREGA FINAL #######
@@ -33,28 +24,26 @@ ____
 - [ ] FS READ
 - [x] FS TRUNCATE
 - [ ] FS COMPACTACION 💀💀💀
-
-
 - [ ] Agregar logs requeridos en consigna
-- [ ] Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]
+- [ ] Agregar retardos donde corresponda
 - [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
-- [ ] Hay que tener cuidado con nuestra planificacion, ya que no planificamos como tal(NUNCA ordenamos las listas) simplemente nos aseguramos de siempre agregar bien(Al final ya que todos usan fifo de alguna forma) esto podria estar mal desde el punto de vista teorico ya que solo se planifica e algunos casos y tambien porque no planificcamos como tal
-- [ ] Revisar uso de 'exit(-1);' para cerrar sockets
 
-#### CHECKPOINT 2 ####
-- [] -unificar sigterm (un solo if antes del switch?)
-- [] desconexion de ios
-- [x] CMD:Ejecutar Script de Operaciones.
-- [x] falta manejar caso en que finaliza una io a un proceso en exit(creo q con un if está)
-- [x] Terminar de hacer q los io task los maneje el kernel: el hilo con io manda al recibir un fintask y al pedir, si esta vacía la cola, se manda desde ahi.
-- [x] Implementar RR
-- [x] Integrar estructura de comunicacion IO->kernel->cpu
-- [x] integrar blocked en planning(manejar syscallsIO)
-- [X] Funcion crear_estructuras_administrativas
-- [X] recibir estructuras_administrativas en memoria
-- [X] Terminar de implementar consola(y conexion con memoria para ejecutar Comandos)
-- [X] Implementar envio de instrucciones a cpu desde memoria.
-- [X] Revisar si hace falta un hilo EN KERNEL que solo este en rcv para escuchar las solicitudes a IO que hace CPU. **RTA:VAN POR DISPATCH**
-- [X] Revisar instrucciones con pocos parametros recibiendo cualquier cosa en los ultimosp parametros
-- [x] check interrupt:(hay que validar q la interrupcion que llega sea de ese PID(capaz de esa rafaja de cpu tamb),creo. otra alternativa es matar el hilo que cuenta el quantum al desalojar un proceso)
+#### REVISAR KERNEL #####
+* revisar multiprog, probablemente no ande el caso:
+mando 30 procesos, multiprog en 20, cambio a 17, cambio a 15, cambio a 12 ....
+va  a suceder que algunos de los signals caen en el wait del while hilo largo plazo 
+Posible solucion: meter en hilo largo plazo un if (grado de multiprog cambiado){wait(reanudar)}
+La solucion que decía el issue me hace ruido, es raro que proceso que terminen no hagan signal(deben marcar que terminaron)
+
+* Revisar que la implementacion de cpu sea teoricamente correcta:q el saber q instruccion es se haga en decode(por traduccion)[ELIMINAR execute() y poner exec_()en cada if de decode]
+
+* Revisar donde se suma el pc, antes de exec o dsp  de exec, si es despues, un set pc 3 terminaría siendo un set pc 4
+
+* Hay que tener cuidado con nuestra planificacion, ya que no planificamos como tal(NUNCA ordenamos las listas) simplemente nos aseguramos de siempre agregar bien(Al final ya que todos usan fifo de alguna forma) esto podria estar mal desde el punto de vista teorico ya que solo se planifica e algunos casos y tambien porque no planificcamos como tal **PREGUNTARLE A CARRI**
+
+* Revisar uso de 'exit(-1);' para cerrar sockets 
+ 
+
+
+ 
