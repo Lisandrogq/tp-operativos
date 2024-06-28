@@ -36,7 +36,6 @@ typedef struct
     t_list* solicitudes;
 } fs_rw_sol_t;
 // Cliente
-// void enviar_mensaje(char* mensaje, int socket_cliente);
 void inicializar_bloques();
 int get_next_free_block();
 void inicializar_bitmap();

@@ -180,6 +180,8 @@ typedef enum
 	READ_MEM_RESPONSE,
 	WRITE_MEM,
 	WRITE_MEM_RESPONSE,
+	CREACION_EXITOSA,
+	ERROR,
 
 } op_code;
 

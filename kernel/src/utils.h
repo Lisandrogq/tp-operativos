@@ -90,7 +90,7 @@ bool pcb_esta_en_exit(int pid);
 void solicitar_eliminar_estructuras_administrativas(int pid);
 int es_una_io_valida(int pid, t_strings_instruccion *instruccion);
 t_fin_io_task *recibir_fin_io_task(int socket_cliente);
-void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria);
+int solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria);
 // Cliente
 void comando_iniciar_proceso(char *path, int tam);
 void comando_finalizar_proceso(char *pid_str, int motivo);

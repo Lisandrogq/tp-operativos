@@ -24,12 +24,20 @@ void *hilo_largo_plazo()
 		}
 		elemento_cola_new *elemento = list_remove(lista_pcbs_new, 0);
 		pthread_mutex_lock(&mutex_socket_memoria);
-		solicitar_crear_estructuras_administrativas(elemento->tam, elemento->path, elemento->pcb->pid, socket_memoria);
+		int err = solicitar_crear_estructuras_administrativas(elemento->tam, elemento->path, elemento->pcb->pid, socket_memoria);
 		pthread_mutex_unlock(&mutex_socket_memoria);
-		pthread_mutex_lock(&mutex_lista_ready);
-		int error = list_add(lista_pcbs_ready, elemento->pcb);
-		pthread_mutex_unlock(&mutex_lista_ready);
-		sem_post(&elementos_ready);
+		if (err == ERROR)
+		{
+			log_error(logger, "Error al crear estructuras");
+			list_add(lista_pcbs_exit, elemento->pcb);
+		}
+		else
+		{
+			pthread_mutex_lock(&mutex_lista_ready);
+			int error = list_add(lista_pcbs_ready, elemento->pcb);
+			pthread_mutex_unlock(&mutex_lista_ready);
+			sem_post(&elementos_ready);
+		}
 	}
 }
 void *consola()
@@ -57,7 +65,7 @@ void *consola()
 		if (!strcmp(instruccion[0], "FINALIZAR_PROCESO"))
 		{
 			int tam = 1 + sizeof(strlen(linea));
-			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER); 
+			comando_finalizar_proceso(instruccion[1], INTERRUPTED_BY_USER);
 		}
 		if (!strcmp(instruccion[0], "ESTADO_PROCESO"))
 		{

@@ -48,7 +48,7 @@ void eliminar_estrucuras_administrativas(int pid_a_eliminar);
 read_t *recibir_pedido_lectura(socket_cliente);
 write_t *recibir_pedido_escritura(int socket_cliente);
 void enviar_status_escritura(int status, int socket_cliente);
-void crear_estructuras_administrativas(solicitud_creacion_t *e_admin);
+int crear_estructuras_administrativas(solicitud_creacion_t *e_admin);
 void crear_tabla_paginas(int pid);
 void handle_kerel_client(int socket_memoria);
 void *client_handler(void *arg);
@@ -60,4 +60,5 @@ void recibir_operacion1(int socket_cliente);
 int handshake_Server(int);
 int terminarServidor(int, int);
 pcb_t *recibir_paquete(int socket_cliente);
+void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 #endif /* UTILS_H_ */

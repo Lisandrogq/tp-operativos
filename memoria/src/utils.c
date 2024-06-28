@@ -22,35 +22,47 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 	FILE *file;
 	char *codigo;
 	file = fopen(path_absoluto, "r");
-
-	fseek(file, 0, SEEK_END);
-	int file_size = ftell(file);
-	fseek(file, 0, SEEK_SET);
-	codigo = malloc(file_size + 1); // un +1 aca arregla el 💀💀💀, no se porque(capaz tiene q ver con el /0)
-	memset(codigo, 0, file_size);
-
-	char linea[100];
-	while (fgets(linea, 100, file))
+	if (file)
 	{
-		strcat(codigo, linea);
-	}
+		fseek(file, 0, SEEK_END); // Segmentation fault
+		int file_size = ftell(file);
+		fseek(file, 0, SEEK_SET);
+		codigo = malloc(file_size + 1); // un +1 aca arregla el 💀💀💀, no se porque(capaz tiene q ver con el /0)
+		memset(codigo, 0, file_size);
 
-	printf("%s\n", codigo);
-	fclose(file);
-	free(path_absoluto); // esto hace free al relativo
-	return codigo;
+		char linea[100];
+		while (fgets(linea, 100, file))
+		{
+			strcat(codigo, linea);
+		}
+
+		printf("%s\n", codigo);
+		fclose(file);
+		free(path_absoluto); // esto hace free al relativo
+		return codigo;
+	}
+	else
+	{
+		log_error(logger, "No se pudo encontrar el archivo");
+		return "error";
+	}
 }
 void int_to_char(int pid, char *pid_str)
 {
 
 	snprintf(pid_str, sizeof(pid_str), "%d", pid);
 }
-void crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
+int crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 {
 	char *codigo = leer_codigo(e_admin->path);
+	if (!strcmp(codigo, "error"))
+	{
+		return -1;
+	}
 	char pid_str[5] = "";
 	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
+	return 1;
 }
 void eliminar_tabla_paginas(int pid_a_eliminar)
 {
@@ -300,10 +312,18 @@ void handle_kerel_client(int socket)
 			sem_init(sem, 0, 0);
 			list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 			log_info(logger, "path:%s", e_admin->path);
-			crear_estructuras_administrativas(e_admin);
-			crear_tabla_paginas(e_admin->pid);
+			int err = crear_estructuras_administrativas(e_admin);
+			if (err == -1)
+			{
+				enviar_operacion(ERROR,"ERROR",socket);
+			}
+			else
+			{
+				enviar_operacion(CREACION_EXITOSA,"CREACION_EXITOSA",socket);
+				crear_tabla_paginas(e_admin->pid);
+				sem_post(sem);
+			}
 			free(e_admin); // el free de .path se hace en leer codigo
-			sem_post(sem);
 			break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
@@ -772,4 +792,25 @@ int recibir_solicitud_de_eliminacion(int socket_cliente)
 	free(buffer->stream);
 	free(buffer);
 	return pid_a_eliminar;
+}
+void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
+{
+    // vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
+
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+
+    paquete->codigo_operacion = cod_op;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = strlen(mensaje) + 1;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+
+    int bytes = paquete->buffer->size + 2 * sizeof(int); 
+
+    void *a_enviar = serializar_paquete(paquete, bytes);
+
+    send(socket_cliente, a_enviar, bytes, 0);
+
+    free(a_enviar);
+    eliminar_paquete(paquete);
 }

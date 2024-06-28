@@ -360,7 +360,7 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     fclose(archivo);
 }
 
-void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
+int solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, int socket_memoria)
 {
 
     t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -382,6 +382,8 @@ void solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, i
     void *a_enviar = serializar_paquete(paquete, bytes);
 
     send(socket_memoria, a_enviar, bytes, 0);
+
+    return recibir_operacion(socket_memoria);// Aca recibir un cod OP que le diga que se creo bien la Estrcutura
 
     eliminar_paquete(paquete);
     free(a_enviar);
@@ -433,7 +435,7 @@ void enviar_interrupcion(int motivo, int pid)
 void *hilo_quantum(void *parametro)
 {
     pcb_t *pcb = (pcb_t *)parametro;
-    usleep(pcb->quantum* 1000); 
+    usleep(pcb->quantum * 1000);
     enviar_interrupcion(CLOCK, pcb->pid);
 }
 void *hilo_quantumVRR(void *parametro)
