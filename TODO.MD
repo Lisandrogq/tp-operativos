@@ -26,8 +26,9 @@ ____
 - [ ] FS COMPACTACION 💀💀💀
 - [ ] Agregar logs requeridos en consigna
 - [ ] Agregar retardos donde corresponda
-- [ ] Refactorizar instrucciones: Escribir los registros con memcpy (el size de escritura se saca con otro diccionario)).
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
+- [ ] EL PLANIFICADOR de largo plazo debería esperar a que la memoria envié el okey de que se creo el proceso antes de poder pasar de New a Ready ( revisar respuesta del issue #4050 sobre bloqueo de planificador largo)
+
 
 #### REVISAR #####
 * revisar multiprog, probablemente no ande el caso:
