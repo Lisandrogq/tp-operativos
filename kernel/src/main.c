@@ -30,6 +30,7 @@ void *hilo_largo_plazo()
 		{
 			log_error(logger, "Error al crear estructuras");
 			list_add(lista_pcbs_exit, elemento->pcb);
+			sem_post(&contador_multi);
 		}
 		else
 		{

@@ -383,10 +383,10 @@ int solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, in
 
     send(socket_memoria, a_enviar, bytes, 0);
 
-    return recibir_operacion(socket_memoria);// Aca recibir un cod OP que le diga que se creo bien la Estrcutura
-
     eliminar_paquete(paquete);
     free(a_enviar);
+
+    return  recibir_operacion(socket_memoria);
 }
 
 void solicitar_eliminar_estructuras_administrativas(int pid)

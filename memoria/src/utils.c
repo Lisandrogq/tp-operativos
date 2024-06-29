@@ -313,13 +313,16 @@ void handle_kerel_client(int socket)
 			list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
 			log_info(logger, "path:%s", e_admin->path);
 			int err = crear_estructuras_administrativas(e_admin);
+			int status = 0;
 			if (err == -1)
 			{
-				enviar_operacion(ERROR,"ERROR",socket);
+				status = ERROR;
+				send(socket, &status, sizeof(int), 0);
 			}
 			else
 			{
-				enviar_operacion(CREACION_EXITOSA,"CREACION_EXITOSA",socket);
+				status = CREACION_EXITOSA;
+				send(socket, &status, sizeof(int), 0);
 				crear_tabla_paginas(e_admin->pid);
 				sem_post(sem);
 			}
@@ -792,25 +795,4 @@ int recibir_solicitud_de_eliminacion(int socket_cliente)
 	free(buffer->stream);
 	free(buffer);
 	return pid_a_eliminar;
-}
-void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
-{
-    // vamos a tener q retocar esta funcion cuando queramos mandar structs o cosas mas genericas(no solo strings).
-
-    t_paquete *paquete = malloc(sizeof(t_paquete));
-
-    paquete->codigo_operacion = cod_op;
-    paquete->buffer = malloc(sizeof(t_buffer));
-    paquete->buffer->size = strlen(mensaje) + 1;
-    paquete->buffer->stream = malloc(paquete->buffer->size);
-    memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
-
-    int bytes = paquete->buffer->size + 2 * sizeof(int); 
-
-    void *a_enviar = serializar_paquete(paquete, bytes);
-
-    send(socket_cliente, a_enviar, bytes, 0);
-
-    free(a_enviar);
-    eliminar_paquete(paquete);
 }

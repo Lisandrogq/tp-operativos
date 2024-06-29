@@ -60,5 +60,4 @@ void recibir_operacion1(int socket_cliente);
 int handshake_Server(int);
 int terminarServidor(int, int);
 pcb_t *recibir_paquete(int socket_cliente);
-void enviar_operacion(int cod_op, char *mensaje, int socket_cliente);
 #endif /* UTILS_H_ */
