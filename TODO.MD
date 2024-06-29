@@ -11,29 +11,28 @@
 - [ ]**SI SE EJECUTA EL CODIGO DE'res'(dos resize seguidos) SE ROMPE MEMORIA**(Hay algun mal manejo de memoria previo)
 ____
 #### CHECKPOINT 3 #######
-- [ ] CMD:Iniciar planificación,Detener planificación,
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
 
 #### ENTREGA FINAL #######
 - [ ] IMPLEMENTAR DESCONEXION DE ios
 - [x] TLB (LRU)
-- [ ] DETENER_PLANIFICACION, en principo un solo semaforo(en total) que bloquee las cosas.
+- [x] DETENER_PLANIFICACION, en principo un solo semaforo(en total) que bloquee las cosas.
 - [X] FS CREATE
 - [X] FS DELETE
-- [ ] FS WRITE
-- [ ] FS READ
+- [x] FS WRITE
+- [x] FS READ
 - [x] FS TRUNCATE
 - [ ] FS COMPACTACION 💀💀💀
 - [ ] Agregar logs requeridos en consigna
 - [ ] Agregar retardos donde corresponda
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
-- [ ] EL PLANIFICADOR de largo plazo debería esperar a que la memoria envié el okey de que se creo el proceso antes de poder pasar de New a Ready ( revisar respuesta del issue #4050 sobre bloqueo de planificador largo)
+- [x] EL PLANIFICADOR de largo plazo debería esperar a que la memoria envié el okey de que se creo el proceso antes de poder pasar de New a Ready ( revisar respuesta del issue #4050 sobre bloqueo de planificador largo)
 
 
 #### REVISAR #####
 * revisar multiprog, probablemente no ande el caso:
 mando 30 procesos, multiprog en 20, cambio a 17, cambio a 15, cambio a 12 ....
-va  a suceder que algunos de los signals caen en el wait del while hilo largo plazo 
+va  a suceder que algunos de los signals de exit caen en el wait del while hilo largo plazo haciendo que se manden a ready nuevos procesos cuando el grado de programacion no lo permite
 Posible solucion: meter en hilo largo plazo un if (grado de multiprog cambiado){wait(reanudar)}
 La solucion que decía el issue me hace ruido, es raro que proceso que terminen no hagan signal(deben marcar que terminaron)
 
