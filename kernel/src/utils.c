@@ -37,7 +37,7 @@ int planificacion;
 void comando_iniciar_proceso(char *path, int tam)
 {
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
-    elemento_cola_new *elemento = malloc(sizeof(elemento_cola_new));
+    elemento_cola_new *elemento = malloc(sizeof(elemento_cola_new)); 
     char *nuevo_path = malloc(tam);
     strcpy(nuevo_path, path);
     elemento->pcb = nuevo_pcb;
@@ -326,8 +326,6 @@ void comando_ejecutar_script(char *path, FILE *archivo)
     while (fgets(linea, len, archivo) != NULL)
     {
         char *instruccion[2];
-        instruccion[0] = malloc(strlen(linea));
-        instruccion[1] = malloc(strlen(linea));
         instruccion[0] = strtok(linea, " \n");
         instruccion[1] = strtok(NULL, " \n");
         if (strcmp(linea, "\0") == 0)
@@ -354,6 +352,7 @@ void comando_ejecutar_script(char *path, FILE *archivo)
         }
         if (!strcmp(instruccion[0], "ddd"))
             return;
+        
     }
     // cierra el archivo//
     free(linea);
@@ -386,7 +385,7 @@ int solicitar_crear_estructuras_administrativas(int tam, char *path, int pid, in
     eliminar_paquete(paquete);
     free(a_enviar);
 
-    return  recibir_operacion(socket_memoria);
+    return recibir_operacion(socket_memoria);
 }
 
 void solicitar_eliminar_estructuras_administrativas(int pid)
@@ -452,9 +451,6 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     enviar_PCB(cod_op, *pcb, socket_cliente);
     int motivo_desalojo = -1;
     int restante_quantum = 0;
-
-    // FLACO EL ALGORITMO PUEDE SER GLOBAL
-    // si, pero no hace falta prefiero que este asi
     if (strcmp(algoritmo, "RR") == 0)
     {
         pthread_t quantum;
@@ -539,6 +535,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     }
     // SE RECIBE:NOMBRE,COD_INSTRUCCION
     // SE RECIBE:{SIZE:INT, BUFFER:VOID} ESTO SERA MANDADO "DIRECTAMENTE" A LA IO
+    free(buffer);
     return motivo_desalojo;
 }
 bool is_io_connected(int socket)

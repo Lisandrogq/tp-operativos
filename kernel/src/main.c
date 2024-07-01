@@ -39,6 +39,8 @@ void *hilo_largo_plazo()
 			pthread_mutex_unlock(&mutex_lista_ready);
 			sem_post(&elementos_ready);
 		}
+		free(elemento->path);
+		free(elemento);
 	}
 }
 void *consola()
@@ -48,8 +50,6 @@ void *consola()
 	while (1)
 	{
 		linea = readline(">");
-		instruccion[0] = malloc(strlen(linea));
-		instruccion[1] = malloc(strlen(linea));
 		instruccion[0] = strtok(linea, " ");
 		instruccion[1] = strtok(NULL, " ");
 		if (strcmp(linea, "\0") == 0)
@@ -119,7 +119,7 @@ void *consola()
 
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
-		free(linea);
+		free(linea);	
 	}
 }
 
@@ -343,6 +343,8 @@ void *cliente_cpu_dispatch()
 			log_info(logger, "Entre al switch pero al default");
 			break;
 		}
+		free(instruccion_de_desalojo);
+		free(buffer_instruccion);
 	}
 }
 
