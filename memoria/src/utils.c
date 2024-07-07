@@ -70,6 +70,7 @@ void eliminar_tabla_paginas(int pid_a_eliminar)
 	};
 	elemento_lista_tablas *elemento = list_remove_by_condition(lista_tablas_paginas, is_pid);
 	t_list_iterator *iterator = list_iterator_create(elemento->tabla);
+	log_info(logger, "Eliminacion de Tabla de Páginas ");
 	log_info(logger, "Eliminacion de Tabla de Páginas - PID: %i - Tamaño: 0", pid_a_eliminar, list_size(elemento->tabla));
 
 	while (list_iterator_has_next(iterator))
@@ -309,7 +310,7 @@ void handler_kernel_client(int socket)
 			sem_t *sem = malloc(sizeof(sem_t));
 			sem_init(sem, 0, 0);
 			list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
-			log_info(logger, "path:%s", e_admin->path);
+			log_info(logger, "path:%s", e_admin->path); // Ultimo log antes del error del so-deploy
 			int err = crear_estructuras_administrativas(e_admin);
 			int status = 0;
 			if (err == -1)
@@ -721,7 +722,7 @@ solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente)
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-	solicitud_creacion_t *estructura = malloc(sizeof(pcb_t));
+	solicitud_creacion_t *estructura = malloc(sizeof(solicitud_creacion_t)); //puede ser este el error?
 	void *stream = buffer->stream;
 	memcpy(&(estructura->tam), stream, sizeof(int));
 	stream += sizeof(int);
