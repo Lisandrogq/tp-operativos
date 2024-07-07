@@ -35,8 +35,6 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 		{
 			strcat(codigo, linea);
 		}
-
-		printf("%s\n", codigo);
 		fclose(file);
 		free(path_absoluto); // esto hace free al relativo
 		return codigo;
@@ -298,7 +296,7 @@ void *leer_memoria(u_int32_t dir_fisica, int tam_lectura)
 	memcpy(datos_leidos, espacio_usuario + dir_fisica, tam_lectura);
 	return datos_leidos;
 }
-void handle_kerel_client(int socket)
+void handler_kernel_client(int socket)
 {
 	bool conexion_terminada = false;
 	while (!conexion_terminada)
@@ -346,7 +344,7 @@ void *client_handler(void *arg)
 	{
 	case 0:
 		log_info(logger, "se conecto el modulo kernel");
-		handle_kerel_client(socket_cliente);
+		handler_kernel_client(socket_cliente);
 		break;
 	case 1:
 		log_info(logger, "se conecto el modulo cpu");
@@ -366,52 +364,6 @@ void *client_handler(void *arg)
 		log_warning(logger, "Cliente desconocido por memoria server.");
 		return;
 	}
-
-	// bool conexion_terminada = false;
-	// while (!conexion_terminada)
-	// {
-	// 	int cod_op = recibir_operacion(socket_cliente);
-	// 	log_warning(logger, "codop:%i", cod_op);
-	// 	switch (cod_op)
-	// 	{
-	// 	case OPERACION_KERNEL_1:
-	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-	// 		recibir_operacion1(socket_cliente);
-	// 		break;
-	// 	case OPERACION_CPU_1:
-	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-	// 		recibir_operacion1(socket_cliente);
-	// 		break;
-	// 	case OPERACION_IO_1:
-	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-	// 		recibir_operacion1(socket_cliente);
-	// 		break;
-	// 	case MENSAJE:
-	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-	// 		recibir_mensaje(socket_cliente);
-	// 		break;
-	// 	case CREAR_PCB:
-	// 		// capaz habria q cambiar el nombre de recibir_(...) a manejar_(...)
-	// 		pcb_t *pcb = malloc(sizeof(pcb_t));
-	// 		pcb = recibir_paquete(socket_cliente);
-	// 		log_info(logger, "Pid: %i", pcb->pid);
-	// 		log_info(logger, "Quantum: %i", pcb->quantum);
-	// 		log_info(logger, "Registros: %i", pcb->registros->AX);
-	// 		// FREEE??
-	// 		break;
-	// 	case ELIMINAR_PCB:
-	// 		pcb = recibir_paquete(socket_cliente);
-	// 		eliminar_pcb(pcb);
-	// 		break;
-	// 	case -1:
-	// 		log_info(logger, "Se desconecto algun cliente");
-	// 		conexion_terminada = true;
-	// 		break;
-	// 	default:
-	// 		log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-	// 		break;
-	// 	}
-	// }
 	close(socket_cliente);
 }
 

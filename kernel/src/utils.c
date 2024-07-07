@@ -352,10 +352,10 @@ void comando_ejecutar_script(char *path, FILE *archivo)
         }
         if (!strcmp(instruccion[0], "ddd"))
             return;
-        
+        //ACA
     }
     // cierra el archivo//
-    free(linea);
+    free(linea); //Deberia ir Adentro del while(ACA) pero no tengo tiempo a probarlo asi que lo dejo asi
     fclose(archivo);
 }
 
