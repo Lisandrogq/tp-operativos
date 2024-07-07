@@ -8,7 +8,7 @@
 - [ ] ARREGLAR cuando se mueve el offset haciendo stream+=... , Cuando se quiera liberar stream, no se va a liberar nada, pq stream esta al final.
 - [ ] unificar los tipos de  de int a U_int_X ***en vm int 32 == int, capaz en el labo la pasamos mal***
 - [ ] TERMINAR DE AGREGAR MUTEX
-- [ ] Al hacer ejecutar Script prueba plani los 4 procesos tienen el mismo codigo que es el del 4 proceso
+- [ ] Al hacer ejecutar Script prueba plani los 4 procesos tienen el mismo codigo que es el del 4 proceso. El error nace de la solucion al error so-deploy la funcion int_to_char en memoria es la que causa el problema.
 - [ ]**SI SE EJECUTA EL CODIGO DE'res'(dos resize seguidos) SE ROMPE MEMORIA**(Hay algun mal manejo de memoria previo)
 ____
 #### CHECKPOINT 3 #######
