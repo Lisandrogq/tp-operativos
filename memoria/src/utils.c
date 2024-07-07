@@ -59,7 +59,7 @@ int crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 		return -1;
 	}
 	char pid_str[5] = "";
-	int_to_char(e_admin->pid, &pid_str);
+	int_to_char(e_admin->pid, pid_str);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
 	return 1;
 }
@@ -101,7 +101,7 @@ void crear_tabla_paginas(int pid)
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {
 	char pid_str[5] = "";
-	int_to_char(pid_a_eliminar, &pid_str);
+	int_to_char(pid_a_eliminar, pid_str);
 	sem_t *sem_a_liberar = list_get(sems_espera_creacion_codigos, pid_a_eliminar);
 	free(sem_a_liberar);
 	char *codigo = dictionary_remove(dictionary_codigos, pid_str); // creo que no hace falta mutex para codigos
@@ -473,7 +473,7 @@ char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 {
 	char *linea; // esto debería ser dinamico y en un malloc, creo, mejro si no:p.
 	char pid_str[5] = "";
-	int_to_char(p_info->pid, &pid_str);
+	int_to_char(p_info->pid, pid_str);
 	char *codigo = dictionary_get(dictionary_codigos, pid_str);
 	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
 	// HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE ()
