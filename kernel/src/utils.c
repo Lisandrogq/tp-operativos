@@ -321,11 +321,11 @@ void comando_ejecutar_script(char *path, FILE *archivo)
 {
     char *linea = malloc(100);
     size_t len = 50;
+    char *instruccion[2];
 
     // Mientras haya lineas en el archivo//
     while (fgets(linea, len, archivo) != NULL)
     {
-        char *instruccion[2];
         instruccion[0] = strtok(linea, " \n");
         instruccion[1] = strtok(NULL, " \n");
         if (strcmp(linea, "\0") == 0)
