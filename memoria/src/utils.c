@@ -35,6 +35,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 		{
 			strcat(codigo, linea);
 		}
+		printf("%s\n", codigo);
 		fclose(file);
 		free(path_absoluto); // esto hace free al relativo
 		return codigo;
@@ -47,8 +48,8 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 }
 void int_to_char(int pid, char *pid_str)
 {
-
-	snprintf(pid_str, sizeof(pid_str), "%d", pid);
+	//snprintf(pid_str, sizeof(pid_str), "%d", pid);
+	pid_str = string_itoa(pid);
 }
 int crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 {
@@ -71,7 +72,7 @@ void eliminar_tabla_paginas(int pid_a_eliminar)
 	elemento_lista_tablas *elemento = list_remove_by_condition(lista_tablas_paginas, is_pid);
 	t_list_iterator *iterator = list_iterator_create(elemento->tabla);
 	log_info(logger, "Eliminacion de Tabla de Páginas ");
-	log_info(logger, "Eliminacion de Tabla de Páginas - PID: %i - Tamaño: 0", pid_a_eliminar, list_size(elemento->tabla));
+	log_info(logger, "Eliminacion de Tabla de Páginas - PID: %i - Tamaño: %i", pid_a_eliminar, list_size(elemento->tabla));
 
 	while (list_iterator_has_next(iterator))
 	{
@@ -414,7 +415,7 @@ void handle_crear_pcb(int socket_cliente)
 {
 	int size;
 	int *buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego la operacion crear_pcb, el pid es: %s", buffer);
+	log_info(logger, "Me llego la operacion crear_pcb, el pid es: %i", buffer);
 	free(buffer);
 }
 
@@ -562,7 +563,7 @@ fetch_t *recibir_process_info(int socket_cliente)
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
 
-	fetch_t *p_info = malloc(sizeof(fetch_t));
+	fetch_t *p_info = malloc(sizeof(fetch_t)); //Free?
 	void *stream = paquete->buffer->stream;
 	memcpy(&(p_info->pid), stream, sizeof(int));
 	stream += sizeof(int);
@@ -726,7 +727,7 @@ solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente)
 	void *stream = buffer->stream;
 	memcpy(&(estructura->tam), stream, sizeof(int));
 	stream += sizeof(int);
-	estructura->path = malloc(estructura->tam);
+	estructura->path = malloc(estructura->tam); //Free
 	memcpy((estructura->path), stream, estructura->tam); // este sizeof(int) no debería ser estructura->tam???
 	stream += estructura->tam;
 	memcpy(&(estructura->pid), stream, sizeof(int)); // REGISTROS_T?????
