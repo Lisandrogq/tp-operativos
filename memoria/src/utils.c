@@ -46,11 +46,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 		return "error";
 	}
 }
-void int_to_char(int pid, char *pid_str)
-{
-	//snprintf(pid_str, sizeof(pid_str), "%d", pid);
-	pid_str = string_itoa(pid);
-}
+
 int crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 {
 	char *codigo = leer_codigo(e_admin->path);
@@ -58,9 +54,9 @@ int crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	{
 		return -1;
 	}
-	char pid_str[5] = "";
-	int_to_char(e_admin->pid, pid_str);
+	char *pid_str = string_itoa(e_admin->pid);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
+	free(pid_str);//se le puede hacer free ahora, pq no se vuelve a usar, el codigo ya quedo en esa key
 	return 1;
 }
 void eliminar_tabla_paginas(int pid_a_eliminar)
@@ -100,12 +96,12 @@ void crear_tabla_paginas(int pid)
 }
 void eliminar_estrucuras_administrativas(int pid_a_eliminar)
 {
-	char pid_str[5] = "";
-	int_to_char(pid_a_eliminar, pid_str);
+	char *pid_str = string_itoa(pid_a_eliminar);
 	sem_t *sem_a_liberar = list_get(sems_espera_creacion_codigos, pid_a_eliminar);
 	free(sem_a_liberar);
 	char *codigo = dictionary_remove(dictionary_codigos, pid_str); // creo que no hace falta mutex para codigos
 	free(codigo);
+	free(pid_str);
 	log_debug(logger, "Se elimino el codigo del pid %i", pid_a_eliminar);
 }
 bool hay_paginas_disponibles(int paginas_a_agregar)
@@ -472,13 +468,13 @@ char **separar_linea_en_parametros(const char *input_string)
 char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 {
 	char *linea; // esto debería ser dinamico y en un malloc, creo, mejro si no:p.
-	char pid_str[5] = "";
-	int_to_char(p_info->pid, pid_str);
+	char *pid_str = string_itoa(p_info->pid);
 	char *codigo = dictionary_get(dictionary_codigos, pid_str);
 	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
 	// HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE ()
 	log_info(logger, "LINEA LEIDA:%s", linea);
 	char **palabras = separar_linea_en_parametros(linea);
+	free(pid_str);
 	return palabras;
 }
 int enviar_instruccion(char **palabras, int socket_cliente)

@@ -344,7 +344,7 @@ void *cliente_cpu_dispatch()
 			break;
 		}
 		free(instruccion_de_desalojo);
-		free(buffer_instruccion);
+		//free(buffer_instruccion);q te dije de mirar donde pones los frees pancho gay
 	}
 }
 

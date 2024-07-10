@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <commons/log.h>
 #include <commons/collections/dictionary.h>
+#include <commons/string.h>
 #include <string.h>
 #include <assert.h>
 #include <utils/utils_generales.h>
@@ -41,7 +42,6 @@ int escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_lectura);
 int enviar_instruccion(char **palabras, int socket_cliente);
 char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente);
 fetch_t *recibir_process_info(int socket_cliente);
-void int_to_char(int pid, char *pid_str);
 solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente);
 int recibir_solicitud_de_eliminacion(int socket_cliente);
 void eliminar_estrucuras_administrativas(int pid_a_eliminar);
