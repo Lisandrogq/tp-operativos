@@ -509,7 +509,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
 
     memcpy(&(palabras->tamcod), stream, sizeof(int));
     stream += sizeof(int);
-    palabras->cod_instruccion = malloc(palabras->tamcod);
+    palabras->cod_instruccion = malloc(palabras->tamcod); 
     memset(palabras->cod_instruccion, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
     memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
     stream += palabras->tamcod;
@@ -527,7 +527,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
 
     if (buffer_instruccion->size != 0)
     {
-        buffer_instruccion->buffer = malloc(buffer_instruccion->size);
+        buffer_instruccion->buffer = malloc(buffer_instruccion->size); //LEAK LICHU
         memcpy(buffer_instruccion->buffer, stream, buffer_instruccion->size);
     }
     else
@@ -535,6 +535,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
     }
     // SE RECIBE:NOMBRE,COD_INSTRUCCION
     // SE RECIBE:{SIZE:INT, BUFFER:VOID} ESTO SERA MANDADO "DIRECTAMENTE" A LA IO
+    free(buffer->stream);
     free(buffer);
     return motivo_desalojo;
 }
@@ -805,6 +806,8 @@ void *client_handler(void *arg)
                 pedir_io_task(elemento->pcb->pid, interfaz, elemento->buffer_instruccion);
                 
             }
+            free(estructura->nombre);
+            free(estructura);
             break;
         case -1:
             log_info(logger, "SE DESCONECTO UNA IO");

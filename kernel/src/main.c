@@ -36,6 +36,7 @@ void *hilo_largo_plazo()
 		{
 			pthread_mutex_lock(&mutex_lista_ready);
 			int error = list_add(lista_pcbs_ready, elemento->pcb);
+			log_info(logger,"Cola de ready PIDS: ")
 			pthread_mutex_unlock(&mutex_lista_ready);
 			sem_post(&elementos_ready);
 		}
@@ -148,7 +149,7 @@ void *cliente_cpu_dispatch()
 	{
 		// reemplazar por void*buffer_instruccion sin malloc
 		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));
-		buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
+		buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t)); //LEAK LICHU
 		// creo q no  debería generar conflicto con los desalojos sin instruccion
 		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
@@ -343,6 +344,8 @@ void *cliente_cpu_dispatch()
 			log_info(logger, "Entre al switch pero al default");
 			break;
 		}
+		free(instruccion_de_desalojo->cod_instruccion);
+		free(instruccion_de_desalojo->p1);
 		free(instruccion_de_desalojo);
 		// free(buffer_instruccion);//q te dije de mirar donde pones los frees pancho gay
 	}
