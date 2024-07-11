@@ -539,16 +539,16 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
 
     memcpy(&(palabras->tamcod), stream, sizeof(int));
     stream += sizeof(int);
-    palabras->cod_instruccion = malloc(palabras->tamcod);
-    memset(palabras->cod_instruccion, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+    palabras->cod_instruccion = malloc(palabras->tamcod + 1);
+    memset(palabras->cod_instruccion, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio) error
     memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
     stream += palabras->tamcod;
 
     memcpy(&(palabras->tamp1), stream, sizeof(int));
     stream += sizeof(int);
 
-    palabras->p1 = malloc(palabras->tamp1);
-    memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
+    palabras->p1 = malloc(palabras->tamp1 + 1);
+    memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio) error
     memcpy((palabras->p1), stream, palabras->tamp1);
     stream += palabras->tamp1;
 
@@ -557,11 +557,8 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
 
     if (buffer_instruccion->size != 0)
     {
-        buffer_instruccion->buffer = malloc(buffer_instruccion->size); // LEAK LICHU
+        buffer_instruccion->buffer = malloc(buffer_instruccion->size);
         memcpy(buffer_instruccion->buffer, stream, buffer_instruccion->size);
-    }
-    else
-    {
     }
     // SE RECIBE:NOMBRE,COD_INSTRUCCION
     // SE RECIBE:{SIZE:INT, BUFFER:VOID} ESTO SERA MANDADO "DIRECTAMENTE" A LA IO
@@ -662,6 +659,7 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     sem_wait(sem);
     elemento_cola_io *elemento_borrado = list_remove_by_condition(lista_blocked_del_io, is_pid);
     pcb_t *pcb_a_desbloquear = elemento_borrado->pcb;
+    free(elemento_borrado->buffer_instruccion->buffer);
     free(elemento_borrado->buffer_instruccion);
     free(elemento_borrado);
     int quantum = config_get_int_value(config, "QUANTUM");

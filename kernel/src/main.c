@@ -40,7 +40,7 @@ void *hilo_largo_plazo()
 			log_info(logger, "PID: %i Estado Anterior: NEW  Estado Actual: READY", elemento->pcb->pid);
 			pthread_mutex_lock(&mutex_lista_ready);
 			int error = list_add(lista_pcbs_ready, elemento->pcb);
-			log_info(logger,"Cola de ready PIDS: ");
+			log_info(logger, "Cola de ready PIDS: ");
 			list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
 			pthread_mutex_unlock(&mutex_lista_ready);
 			sem_post(&elementos_ready);
@@ -154,7 +154,7 @@ void *cliente_cpu_dispatch()
 	{
 		// reemplazar por void*buffer_instruccion sin malloc
 		t_strings_instruccion *instruccion_de_desalojo = malloc(sizeof(t_strings_instruccion));
-		buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t)); //LEAK LICHU
+		buffer_instr_io_t *buffer_instruccion = malloc(sizeof(buffer_instr_io_t));
 		// creo q no  debería generar conflicto con los desalojos sin instruccion
 		log_debug(logger, "Esperando nuevos procesos en ready...");
 		sem_wait(&elementos_ready); // este sem debería es un contador de procesos en ready
@@ -171,6 +171,10 @@ void *cliente_cpu_dispatch()
 		pthread_mutex_lock(&mutex_lista_exec);
 		pcb_t *pcb_desalojado = list_remove(lista_pcbs_exec, 0);
 		pthread_mutex_unlock(&mutex_lista_exec);
+		if (motivo_desalojo != IO_TASK)
+		{
+			free(buffer_instruccion);
+		}
 		switch (motivo_desalojo)
 		{
 		case OUT_OF_MEMORY: // AGREGAR MANEJO SIGTERM
@@ -234,7 +238,7 @@ void *cliente_cpu_dispatch()
 							pthread_mutex_lock(&mutex_lista_ready_mas);
 							list_add(lista_ready_mas, pcb_bloqueado);
 							log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_bloqueado->pid);
-							log_info(logger,"Cola de ready + PIDS: ");
+							log_info(logger, "Cola de ready + PIDS: ");
 							list_iterate(lista_ready_mas, (void *)imprimir_pcb_cola);
 							pthread_mutex_unlock(&mutex_lista_ready_mas);
 						}
@@ -243,7 +247,7 @@ void *cliente_cpu_dispatch()
 							pthread_mutex_lock(&mutex_lista_ready);
 							list_add(lista_pcbs_ready, pcb_bloqueado);
 							log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY", pcb_bloqueado->pid);
-							log_info(logger,"Cola de ready PIDS:");
+							log_info(logger, "Cola de ready PIDS:");
 							list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
 							pthread_mutex_unlock(&mutex_lista_ready);
 						}
@@ -305,7 +309,7 @@ void *cliente_cpu_dispatch()
 				pthread_mutex_lock(&mutex_lista_ready);
 				list_add(lista_pcbs_ready, pcb_desalojado);
 				log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_desalojado->pid);
-				log_info(logger,"Cola de ready PIDS: ");
+				log_info(logger, "Cola de ready PIDS: ");
 				list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
 				pthread_mutex_unlock(&mutex_lista_ready);
 				sem_post(&elementos_ready);

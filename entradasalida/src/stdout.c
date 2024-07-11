@@ -24,6 +24,8 @@ void iniciar_interfaz_stdout()
 		liberar_y_eliminar_solicitudes(solicitudes);
 
 		free(output_string);
+		free(pedido->buffer_instruccion);
+		free(pedido);
 	}
 }
 

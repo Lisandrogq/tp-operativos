@@ -86,7 +86,6 @@ t_interfaz *crear_estrcutura_io(int tipo)
 	{
 	case GENERICA:
 		memset(interfaz, 0, sizeof(t_interfaz));
-		interfaz->nombre = malloc(strlen(nombre) + 1);
 		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = GENERICA;
@@ -95,7 +94,6 @@ t_interfaz *crear_estrcutura_io(int tipo)
 		break;
 	case STDIN:
 		memset(interfaz, 0, sizeof(t_interfaz));
-		interfaz->nombre = malloc(strlen(nombre) + 1);
 		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = STDIN;
@@ -104,7 +102,6 @@ t_interfaz *crear_estrcutura_io(int tipo)
 		break;
 	case STDOUT:
 		memset(interfaz, 0, sizeof(t_interfaz));
-		interfaz->nombre = malloc(strlen(nombre) + 1);
 		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = STDOUT;
@@ -113,7 +110,6 @@ t_interfaz *crear_estrcutura_io(int tipo)
 		break;
 	case DIALFS:
 		memset(interfaz, 0, sizeof(t_interfaz));
-		interfaz->nombre = malloc(strlen(nombre) + 1);
 		interfaz->nombre = nombre;
 		interfaz->estado = DISPONIBLE;
 		interfaz->tipo = DIALFS;
