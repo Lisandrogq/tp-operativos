@@ -7,7 +7,7 @@ t_config *config;
 int socket_kernel;
 int socket_memoria;
 int tiempo_Unidad_Trabajo;
-
+int RETRASO_COMPACTACION;
 t_list *decode_addresses_buffer(buffer_instr_io_t *buffer_instruccion, int *max_tam) // max tam = suma de tam de cada sol
 {
 	void *buffer = buffer_instruccion->buffer;

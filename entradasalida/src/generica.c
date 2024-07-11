@@ -30,5 +30,5 @@ void iniciar_interfaz_generica()
 
 void gen_resolver_peticion(int cant_sleep) // gran nombre
 {
-	sleep(cant_sleep);
+	usleep(cant_sleep*tiempo_Unidad_Trabajo*1000);
 }

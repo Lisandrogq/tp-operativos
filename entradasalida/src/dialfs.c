@@ -12,7 +12,7 @@ t_bitarray *bitmap;
 
 void iniciar_interfaz_dialfs()
 {
-
+	RETRASO_COMPACTACION = config_get_int_value(config, "RETRASO_COMPACTACION");
 	PATH_BASE_DIALFS = config_get_string_value(config, "PATH_BASE_DIALFS");
 	BLOCK_SIZE = config_get_int_value(config, "BLOCK_SIZE");
 	BLOCK_COUNT = config_get_int_value(config, "BLOCK_COUNT");
@@ -33,8 +33,9 @@ void iniciar_interfaz_dialfs()
 		io_task *pedido = recibir_peticion();
 		int operacion = decode_operation(pedido->buffer_instruccion); // no es un 'recibir_operacion'. Esto no lo saca del buffer
 		handle_operations(operacion, pedido);
-
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
+		free(pedido->buffer_instruccion);
+		free(pedido);
 	}
 }
 handle_operations(int operacion, io_task *pedido)
@@ -43,46 +44,51 @@ handle_operations(int operacion, io_task *pedido)
 	switch (operacion)
 	{
 	case IO_FS_CREATE:
+		log_info(logger, "PID: %i - Operacion: IO_FS_CREATE", pedido->pid_solicitante);
 		char *nombre_c = decode_buffer_file_name(buffer_instruccion);
 		crear_archivo(nombre_c);
-		log_info(logger, "PID: %i - Operacion: IO_FS_CREATE", pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Crear Archivo: %s", pedido->pid_solicitante, nombre_c);
 		break;
 	case IO_FS_DELETE:
+		log_info(logger, "PID: %i - Operacion: IO_FS_DELETE", pedido->pid_solicitante);
 		char *nombre_d = decode_buffer_file_name(buffer_instruccion);
 		eliminar_archivo(nombre_d);
-		log_info(logger, "PID: %i - Operacion: IO_FS_DELETE", pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Eliminar Archivo: %s", pedido->pid_solicitante, nombre_d);
+
 		break;
 	case IO_FS_TRUNCATE:
-		truncate_t *sol_truncate = decode_buffer_truncate_sol(buffer_instruccion);
-		truncar_archivo(sol_truncate);
 		log_info(logger, "PID: %i - Operacion: IO_FS_TRUNCATE", pedido->pid_solicitante);
+		truncate_t *sol_truncate = decode_buffer_truncate_sol(buffer_instruccion);
+		truncar_archivo(sol_truncate, pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Truncar Archivo: %s - Tamaño: %i", pedido->pid_solicitante, sol_truncate->file, sol_truncate->bytes);
 		break;
 	case IO_FS_WRITE:
+		log_info(logger, "PID: %i - Operacion: IO_FS_WRITE", pedido->pid_solicitante);
 		fs_rw_sol_t *sol_write = decode_buffer_rw_sol(buffer_instruccion);
 		void *datos_w = malloc(sol_write->max_tam);
 		memset(datos_w, 0, sol_write->max_tam);
 		leer_memoria(sol_write->solicitudes, datos_w);
 		log_debug(logger, "datos_w leidos desde memoria: %s", (char *)datos_w);
 		escribir_archivo(datos_w, sol_write->nombre, sol_write->puntero_archivo, sol_write->max_tam);
-		log_info(logger, "PID: %i - Operacion: IO_FS_WRITE", pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Escribir Archivo: %s - Tamaño a Escribir: %i - Puntero Archivo: %i", pedido->pid_solicitante, sol_write->nombre, sol_write->max_tam, sol_write->puntero_archivo);
 		free(datos_w);
 		free(sol_write->nombre);
 		free(sol_write);
 		break;
 	case IO_FS_READ:
+		log_info(logger, "PID: %i - Operacion: IO_FS_READ", pedido->pid_solicitante);
 		fs_rw_sol_t *sol_read = decode_buffer_rw_sol(buffer_instruccion);
 		void *datos_r = leer_archivo(sol_read->nombre, sol_read->puntero_archivo, sol_read->max_tam);
 		log_debug(logger, "datos_r leidos desde fs: %s", (char *)datos_r);
 		populate_solicitudes(sol_read->solicitudes, datos_r);
 		escribir_memoria(sol_read->solicitudes);
-		log_info(logger, "PID: %i - Operacion: IO_FS_READ", pedido->pid_solicitante);
+		log_info(logger, "PID: %i - Leer Archivo: %s - Tamaño a Leer: %i - Puntero Archivo: %i", pedido->pid_solicitante, sol_read->nombre, sol_read->max_tam, sol_read->puntero_archivo);
+
 		free(datos_r);
 		free(sol_read->nombre);
 		free(sol_read);
 		break;
 	}
-	free(pedido->buffer_instruccion);
-	free(pedido);
 }
 
 void *leer_archivo(char *nombre, int puntero, int tam)
@@ -148,7 +154,7 @@ int get_puntero_base(char *nombre)
 	config_destroy(metadata);
 	return bloque_inicial * BLOCK_SIZE;
 }
-void truncar_archivo(truncate_t *sol)
+void truncar_archivo(truncate_t *sol, int pid_solicitante)
 {
 	int bytes_actuales = get_actual_bytes(sol->file);
 	int nuevos_bytes = sol->bytes;
@@ -161,7 +167,10 @@ void truncar_archivo(truncate_t *sol)
 		int bloques_a_agregar = nuevos_bloques - bloques_actuales;
 		if (!es_posible_agrandar(sol->file, bloques_actuales, bloques_a_agregar))
 		{
+			log_info(logger, "PID: %i - Inicio Compactación.", pid_solicitante);
 			compactar(sol->file);
+			usleep(RETRASO_COMPACTACION * 1000);
+			log_info(logger, "PID: %i - Fin Compactación.", pid_solicitante);
 		}
 		agrandar_archivo(sol->file, bloques_actuales, bloques_a_agregar, nuevos_bytes);
 	}
@@ -232,7 +241,7 @@ t_dictionary *obtener_lista_files(char *a_excluir)
 	{
 		char *nombre = strdup(entry->d_name);
 
-		if (strcmp(nombre, a_excluir) != 0 && strcmp(nombre, "bitmap.dat") != 0 && strcmp(nombre, "bloques.dat") != 0 && strcmp(nombre, ".") != 0 && strcmp(nombre, "..") != 0) 
+		if (strcmp(nombre, a_excluir) != 0 && strcmp(nombre, "bitmap.dat") != 0 && strcmp(nombre, "bloques.dat") != 0 && strcmp(nombre, ".") != 0 && strcmp(nombre, "..") != 0)
 		{
 			char *path = get_complete_path(nombre);
 			t_config *metadata = config_create(path);
