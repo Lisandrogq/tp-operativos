@@ -25,6 +25,7 @@ void iniciar_interfaz_generica()
 		gen_resolver_peticion(cant_sleep);
 
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
+		free(pedido->buffer_instruccion->buffer);
 		free(pedido->buffer_instruccion);
 		free(pedido);
 	}

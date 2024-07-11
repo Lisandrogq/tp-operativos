@@ -26,6 +26,7 @@ void iniciar_interfaz_stdin()
 		liberar_y_eliminar_solicitudes(solicitudes);
 		
 		free(input_string);
+		free(pedido->buffer_instruccion->buffer);
 		free(pedido->buffer_instruccion);
 		free(pedido);
 	}

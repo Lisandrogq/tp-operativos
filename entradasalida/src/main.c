@@ -87,7 +87,7 @@ io_task *recibir_pedido_io(int socket_kernel)
 	stream += sizeof(int);
 	memcpy(&(pedido->buffer_instruccion->size), stream, sizeof(int));
 	stream += sizeof(int);
-	pedido->buffer_instruccion->buffer = malloc(pedido->buffer_instruccion->size);
+	pedido->buffer_instruccion->buffer = malloc(pedido->buffer_instruccion->size); //Free lichu
 	memcpy(pedido->buffer_instruccion->buffer, stream, pedido->buffer_instruccion->size);
 
 	free(buffer->stream);

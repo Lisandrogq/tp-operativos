@@ -34,6 +34,7 @@ void iniciar_interfaz_dialfs()
 		int operacion = decode_operation(pedido->buffer_instruccion); // no es un 'recibir_operacion'. Esto no lo saca del buffer
 		handle_operations(operacion, pedido);
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);
+		free(pedido->buffer_instruccion->buffer);
 		free(pedido->buffer_instruccion);
 		free(pedido);
 	}
