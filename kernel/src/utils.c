@@ -49,13 +49,14 @@ void *imprimir_pcb(pcb_t *pcb)
 void comando_iniciar_proceso(char *path, int tam)
 {
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
-    elemento_cola_new *elemento = malloc(sizeof(elemento_cola_new)); 
+    elemento_cola_new *elemento = malloc(sizeof(elemento_cola_new));
     char *nuevo_path = malloc(tam);
     strcpy(nuevo_path, path);
     elemento->pcb = nuevo_pcb;
     elemento->tam = tam;
     elemento->path = nuevo_path;
     int error = list_add(lista_pcbs_new, elemento);
+    log_info(logger, "PID: %i Estado Anterior:  Estado Actual: NEW", nuevo_pcb->pid);
     sem_post(&hay_new);
     next_pid++;
 }
@@ -146,7 +147,8 @@ void free_all_resources_taken(int pid)
                     {
                         pthread_mutex_lock(&mutex_lista_ready_mas);
                         list_add(lista_ready_mas, pcb_bloqueado);
-                        log_info(logger,"Cola de ready + PIDS: ");
+                        log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_bloqueado->pid);
+                        log_info(logger, "Cola de ready + PIDS: ");
                         list_iterate(lista_ready_mas, (void *)imprimir_pcb_cola);
                         pthread_mutex_unlock(&mutex_lista_ready_mas);
                     }
@@ -154,8 +156,9 @@ void free_all_resources_taken(int pid)
                     {
                         pthread_mutex_lock(&mutex_lista_ready);
                         list_add(lista_pcbs_ready, pcb_bloqueado);
-                        log_info(logger,"Cola de ready PIDS: ");
-			            list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
+                        log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY", pcb_bloqueado->pid);
+                        log_info(logger, "Cola de ready PIDS: ");
+                        list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
                         pthread_mutex_unlock(&mutex_lista_ready);
                     }
                 }
@@ -265,6 +268,7 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
         solicitar_eliminar_estructuras_administrativas(pid_a_terminar);
         pthread_mutex_unlock(&mutex_socket_memoria);
         free_all_resources_taken(pcb_a_terminar->pid);
+        imprimir_estado_anterior(pcb_a_terminar);
         list_add(lista_pcbs_exit, pcb_a_terminar); // Post(contador multiprogramacion)
         pcb_a_terminar->state = EXIT_S;
         sem_post(&contador_multi);
@@ -272,6 +276,25 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
 
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid_a_terminar, motivo); // hacerlo string
     // mandar pcb a exit
+}
+void *imprimir_estado_anterior(pcb_t *pcb)
+{
+    if (pcb->state == BLOCK_S)
+    {
+        log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: EXIT", pcb->pid);
+    }
+    else if (pcb->state == NEW_S)
+    {
+        log_info(logger, "PID: %i Estado Anterior: NEW  Estado Actual: EXIT", pcb->pid);
+    }
+    else if (pcb->state == EXEC_S)
+    {
+        log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: EXIT", pcb->pid);
+    }
+    else
+    {
+        log_info(logger, "PID: %i Estado Anterior: READY  Estado Actual: EXIT", pcb->pid);
+    }
 }
 void *imprimir_pcb_bloqueado(elemento_cola_io *elemento_cola)
 {
@@ -359,10 +382,10 @@ void comando_ejecutar_script(char *path, FILE *archivo)
         }
         if (!strcmp(instruccion[0], "ddd"))
             return;
-        //ACA
+        // ACA
     }
     // cierra el archivo//
-    free(linea); //Deberia ir Adentro del while(ACA) pero no tengo tiempo a probarlo asi que lo dejo asi
+    free(linea); // Deberia ir Adentro del while(ACA) pero no tengo tiempo a probarlo asi que lo dejo asi
     fclose(archivo);
 }
 
@@ -516,7 +539,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
 
     memcpy(&(palabras->tamcod), stream, sizeof(int));
     stream += sizeof(int);
-    palabras->cod_instruccion = malloc(palabras->tamcod); 
+    palabras->cod_instruccion = malloc(palabras->tamcod);
     memset(palabras->cod_instruccion, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
     memcpy(palabras->cod_instruccion, stream, palabras->tamcod);
     stream += palabras->tamcod;
@@ -534,7 +557,7 @@ int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_stri
 
     if (buffer_instruccion->size != 0)
     {
-        buffer_instruccion->buffer = malloc(buffer_instruccion->size); //LEAK LICHU
+        buffer_instruccion->buffer = malloc(buffer_instruccion->size); // LEAK LICHU
         memcpy(buffer_instruccion->buffer, stream, buffer_instruccion->size);
     }
     else
@@ -646,7 +669,8 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     {
         pthread_mutex_lock(&mutex_lista_ready_mas);
         list_add(lista_ready_mas, pcb_a_desbloquear);
-        log_info(logger,"Cola de ready + PIDS: ");
+        log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_a_desbloquear->pid);
+        log_info(logger, "Cola de ready + PIDS: ");
         list_iterate(lista_ready_mas, (void *)imprimir_pcb_cola);
         pthread_mutex_unlock(&mutex_lista_ready_mas);
     }
@@ -654,8 +678,9 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_pcbs_ready, pcb_a_desbloquear);
-        log_info(logger,"Cola de ready PIDS: ");
-		list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
+        log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY", pcb_a_desbloquear->pid);
+        log_info(logger, "Cola de ready PIDS: ");
+        list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
         pthread_mutex_unlock(&mutex_lista_ready);
     }
     pcb_a_desbloquear->state = READY_S;
@@ -669,7 +694,6 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
     {
         pcb_a_ejecutar = list_get(lista_pcbs_exec, 0);
         pthread_mutex_unlock(&mutex_lista_exec);
-        log_debug(logger, "Enviando a ejecutar desde exec");
     }
     else
     {
@@ -678,25 +702,24 @@ int planificar(int socket_cliente, t_strings_instruccion *instruccion_de_desaloj
         if (list_is_empty(lista_ready_mas))
         {
             pthread_mutex_unlock(&mutex_lista_ready_mas);
-            log_debug(logger, "Enviando a ejecutar desde normal");
             pthread_mutex_lock(&mutex_lista_ready);
             pcb_a_ejecutar = list_remove(lista_pcbs_ready, 0);
             pthread_mutex_unlock(&mutex_lista_ready);
             pthread_mutex_lock(&mutex_lista_exec);
             list_add(lista_pcbs_exec, pcb_a_ejecutar);
+            log_info(logger, "PID: %i Estado Anterior: READY  Estado Actual: EXEC", pcb_a_ejecutar->pid);
             pthread_mutex_unlock(&mutex_lista_exec);
             pcb_a_ejecutar->state = EXEC_S;
         }
         else
         {
             pthread_mutex_unlock(&mutex_lista_ready_mas);
-            log_debug(logger, "Enviando a ejecutar desde ready+");
             pthread_mutex_lock(&mutex_lista_ready_mas);
             pcb_a_ejecutar = list_remove(lista_ready_mas, 0);
             pthread_mutex_unlock(&mutex_lista_ready_mas);
-
             pthread_mutex_lock(&mutex_lista_exec);
             list_add(lista_pcbs_exec, pcb_a_ejecutar);
+            log_info(logger, "PID: %i Estado Anterior: READY(+) Estado Actual: EXEC", pcb_a_ejecutar->pid);
             pthread_mutex_unlock(&mutex_lista_exec);
             pcb_a_ejecutar->state = EXEC_S;
         }
@@ -806,7 +829,7 @@ void *client_handler(void *arg)
             else
             { // si el proceso que la pidio esta en exit, no se intenta desbloquearlo
                 log_warning(logger, "TERMINO LA IO del pid:%i que uso:%s, pero el pcb esta en exit", estructura->pid, estructura->nombre);
-                //TODO liberar el elemento de la cola 
+                // TODO liberar el elemento de la cola
             }
             t_cola_io *struct_cola = dictionary_get(dictionary_pcbs_bloqueado, estructura->nombre);
             if (list_size(struct_cola->cola_de_io_pedido) != 0) // esto no va en desbloquear pcb ppq despues va a haber recursos
@@ -815,7 +838,6 @@ void *client_handler(void *arg)
                 // wait de la cola
                 elemento_cola_io *elemento = list_get(struct_cola->cola_de_io_pedido, 0);
                 pedir_io_task(elemento->pcb->pid, interfaz, elemento->buffer_instruccion);
-                
             }
             free(estructura->nombre);
             free(estructura);

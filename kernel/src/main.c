@@ -30,10 +30,14 @@ void *hilo_largo_plazo()
 		{
 			log_error(logger, "Error al crear estructuras");
 			list_add(lista_pcbs_exit, elemento->pcb);
+			elemento->pcb->state = EXIT_S;
+			log_info(logger, "PID: %i Estado Anterior: NEW  Estado Actual: EXIT", elemento->pcb->pid);
 			sem_post(&contador_multi);
 		}
 		else
 		{
+			elemento->pcb->state = READY_S;
+			log_info(logger, "PID: %i Estado Anterior: NEW  Estado Actual: READY", elemento->pcb->pid);
 			pthread_mutex_lock(&mutex_lista_ready);
 			int error = list_add(lista_pcbs_ready, elemento->pcb);
 			log_info(logger,"Cola de ready PIDS: ");
@@ -171,6 +175,7 @@ void *cliente_cpu_dispatch()
 		{
 		case OUT_OF_MEMORY: // AGREGAR MANEJO SIGTERM
 			pcb_desalojado->state = EXIT_S;
+			log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: EXIT", pcb_desalojado->pid);
 			list_add(lista_pcbs_exit, pcb_desalojado);
 			sem_post(&contador_multi);
 			solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
@@ -186,6 +191,7 @@ void *cliente_cpu_dispatch()
 				if (struct_recurso_wait->instancias < 0)
 				{
 					pcb_desalojado->state = BLOCK_S;
+					log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: BLOCKED", pcb_desalojado->pid);
 					list_add(struct_recurso_wait->cola_de_bloqueados_por_recurso, pcb_desalojado);
 				}
 				else
@@ -203,6 +209,7 @@ void *cliente_cpu_dispatch()
 				solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 				free_all_resources_taken(pcb_desalojado->pid);
 				list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
+				log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: EXIT", pcb_desalojado->pid);
 				sem_post(&contador_multi);
 				pcb_desalojado->state = EXIT_S;
 				log_info(logger, "Finaliza el proceso %i - Motivo: RECURSO_INVALIDO_WAIT", pcb_desalojado->pid);
@@ -226,7 +233,8 @@ void *cliente_cpu_dispatch()
 						{
 							pthread_mutex_lock(&mutex_lista_ready_mas);
 							list_add(lista_ready_mas, pcb_bloqueado);
-							 log_info(logger,"Cola de ready + PIDS: ");
+							log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_bloqueado->pid);
+							log_info(logger,"Cola de ready + PIDS: ");
 							list_iterate(lista_ready_mas, (void *)imprimir_pcb_cola);
 							pthread_mutex_unlock(&mutex_lista_ready_mas);
 						}
@@ -234,6 +242,7 @@ void *cliente_cpu_dispatch()
 						{
 							pthread_mutex_lock(&mutex_lista_ready);
 							list_add(lista_pcbs_ready, pcb_bloqueado);
+							log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY", pcb_bloqueado->pid);
 							log_info(logger,"Cola de ready PIDS:");
 							list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
 							pthread_mutex_unlock(&mutex_lista_ready);
@@ -255,13 +264,14 @@ void *cliente_cpu_dispatch()
 				solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 				free_all_resources_taken(pcb_desalojado->pid);
 				list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
+				log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: EXIT", pcb_desalojado->pid);
 				sem_post(&contador_multi);
 				pcb_desalojado->state = EXIT_S;
 				log_info(logger, "Finaliza el proceso %i - Motivo: RECURSO_INVALIDO_SIGNAL", pcb_desalojado->pid);
 			}
 			break;
 		case SUCCESS: // agregar resto de casos de fin
-
+			log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: EXIT", pcb_desalojado->pid);
 			pcb_desalojado->state = EXIT_S;
 			list_add(lista_pcbs_exit, pcb_desalojado);
 			sem_post(&contador_multi);
@@ -294,6 +304,7 @@ void *cliente_cpu_dispatch()
 				pcb_desalojado->state = READY_S;
 				pthread_mutex_lock(&mutex_lista_ready);
 				list_add(lista_pcbs_ready, pcb_desalojado);
+				log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_desalojado->pid);
 				log_info(logger,"Cola de ready PIDS: ");
 				list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
 				pthread_mutex_unlock(&mutex_lista_ready);
@@ -314,6 +325,7 @@ void *cliente_cpu_dispatch()
 					solicitar_eliminar_estructuras_administrativas(pcb_desalojado->pid);
 					free_all_resources_taken(pcb_desalojado->pid);
 					list_add(lista_pcbs_exit, pcb_desalojado); // Post(contador multiprogramacion)
+					log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: EXIT", pcb_desalojado->pid);
 					sem_post(&contador_multi);
 					pcb_desalojado->state = EXIT_S;
 					log_info(logger, "Finaliza el proceso %i - Motivo: INVALID_INTERFACE", pcb_desalojado->pid);
@@ -322,6 +334,7 @@ void *cliente_cpu_dispatch()
 				{
 					t_interfaz *io = dictionary_get(dictionary_ios, instruccion_de_desalojo->p1);
 					pcb_desalojado->state = BLOCK_S;
+					log_info(logger, "PID: %i Estado Anterior: EXEC  Estado Actual: BLOCKED", pcb_desalojado->pid);
 					// pthread_mutex_lock(&mutex_lista_bloqueado);
 					t_cola_io *struct_io = dictionary_get(dictionary_pcbs_bloqueado, instruccion_de_desalojo->p1); //[1] segunda palabra
 					t_list *cola_de_io_pedido = struct_io->cola_de_io_pedido;
