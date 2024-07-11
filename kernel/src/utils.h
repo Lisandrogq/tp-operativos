@@ -106,6 +106,8 @@ t_log *iniciar_logger(void);
 t_config *iniciar_config(void);
 void leer_consola(t_log *);
 void paquete(int);
+void *imprimir_pcb_cola(pcb_t *pcb);
+void *imprimir_pcb(pcb_t *pcb);
 void terminar_programa(int, t_log *, t_config *);
 void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io);
 int enviar_proceso_a_ejecutar(int cod_op, pcb_t *pcb, int socket_cliente, t_strings_instruccion *instruccion_de_desalojo, char *algoritmo, buffer_instr_io_t *buffer_instruccion);

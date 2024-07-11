@@ -34,6 +34,18 @@ int socket_memoria;
 pthread_mutex_t mutex_socket_interrupt;
 int socket_interrupt;
 int planificacion;
+void *imprimir_pcb_cola(pcb_t *pcb)
+{
+    log_info(logger, "PID: %i", pcb->pid);
+    return 0;
+}
+void *imprimir_pcb(pcb_t *pcb)
+{
+    log_info(logger, "PID: %i", pcb->pid);
+    log_info(logger, "QUANTUM: %i", pcb->quantum);
+    printf("\n");
+    return 0;
+}
 void comando_iniciar_proceso(char *path, int tam)
 {
     pcb_t *nuevo_pcb = crear_pcb(next_pid);
@@ -134,12 +146,16 @@ void free_all_resources_taken(int pid)
                     {
                         pthread_mutex_lock(&mutex_lista_ready_mas);
                         list_add(lista_ready_mas, pcb_bloqueado);
+                        log_info(logger,"Cola de ready + PIDS: ");
+                        list_iterate(lista_ready_mas, (void *)imprimir_pcb_cola);
                         pthread_mutex_unlock(&mutex_lista_ready_mas);
                     }
                     else
                     {
                         pthread_mutex_lock(&mutex_lista_ready);
                         list_add(lista_pcbs_ready, pcb_bloqueado);
+                        log_info(logger,"Cola de ready PIDS: ");
+			            list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
                         pthread_mutex_unlock(&mutex_lista_ready);
                     }
                 }
@@ -257,15 +273,6 @@ void comando_finalizar_proceso(char *pid_str, int motivo)
     log_info(logger, "Finaliza el proceso %i - Motivo: %i", pid_a_terminar, motivo); // hacerlo string
     // mandar pcb a exit
 }
-
-void *imprimir_pcb(pcb_t *pcb)
-{
-    log_info(logger, "PID: %i", pcb->pid);
-    log_info(logger, "Quantum: %i", pcb->quantum);
-    printf("\n");
-    return 0;
-}
-
 void *imprimir_pcb_bloqueado(elemento_cola_io *elemento_cola)
 {
     pcb_t *pcb = elemento_cola->pcb;
@@ -639,12 +646,16 @@ void desbloquear_pcb(int pid_a_desbloquear, char *nombre_io)
     {
         pthread_mutex_lock(&mutex_lista_ready_mas);
         list_add(lista_ready_mas, pcb_a_desbloquear);
+        log_info(logger,"Cola de ready + PIDS: ");
+        list_iterate(lista_ready_mas, (void *)imprimir_pcb_cola);
         pthread_mutex_unlock(&mutex_lista_ready_mas);
     }
     else
     {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_pcbs_ready, pcb_a_desbloquear);
+        log_info(logger,"Cola de ready PIDS: ");
+		list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
         pthread_mutex_unlock(&mutex_lista_ready);
     }
     pcb_a_desbloquear->state = READY_S;
