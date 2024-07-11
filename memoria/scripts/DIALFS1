@@ -1,3 +1,0 @@
-IO_FS_CREATE DIALFS file1.dial1
-IO_FS_CREATE DIALFS file2.dial1
-EXIT

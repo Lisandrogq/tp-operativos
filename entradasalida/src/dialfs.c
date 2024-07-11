@@ -173,18 +173,81 @@ void truncar_archivo(truncate_t *sol)
 	// ante cualquiera de los 3 casos:
 	actualizar_tamanio(sol->file, nuevos_bytes);
 }
-
+// 111233344050//se quiere agregar otro bloque al f2.
+// 111033344050
+// 111333044050
+// 111333440050
+// 111333445000
+// 111333445220
 void compactar(char *nombre)
 {
-/* 	void *buffer_i = get_file_buffer(nombre);
 
-	while (hay_huecos())
+	int bloques_file = liberar_bloques(nombre);
+	t_dictionary *files_actuales = obtener_lista_files("AD"); // esto escluye a 'nombre'.El indice es el bloque inicial, el contenido es el nombre.
+	void *buffer_file = leer_archivo(nombre, 0, bloques_file * BLOCK_SIZE);
+
+	int gap_start = get_next_free_block(0);
+	int next_busy_block = get_next_busy_block(gap_start);
+	while (next_busy_block != -1) // si es -1, quiere decir que ya se llego al espacio continuo en disco
 	{
-		dezplazar_primer_file()
+		char *n_b_b_str = string_itoa(next_busy_block);
+		dezplazar_file(gap_start, dictionary_get(files_actuales, n_b_b_str)); //  mueve hacia la izq al file que empiece en ese bloque
+		gap_start = get_next_free_block(gap_start);
+		next_busy_block = get_next_busy_block(gap_start);
 	}
-	int inicio = push_file(buffer_i);
-	actualizar_metadata(inicio);
-	free(buffer_i); */
+	actualizar_metadata(nombre, gap_start);
+	escribir_archivo(buffer_file, nombre, 0, bloques_file * BLOCK_SIZE);
+	ocupar_bloques(gap_start, bloques_file);
+
+	free(buffer_file);
+	dictionary_destroy_and_destroy_elements(files_actuales, free);
+}
+
+void dezplazar_file(int nuevo_inicio, char *nombre)
+{
+	int bloques_file = liberar_bloques(nombre);
+	void *buffer_file = leer_archivo(nombre, 0, bloques_file * BLOCK_SIZE);
+	actualizar_metadata(nombre, nuevo_inicio);
+	escribir_archivo(buffer_file, nombre, 0, bloques_file * BLOCK_SIZE);
+	ocupar_bloques(nuevo_inicio, bloques_file);
+}
+void actualizar_metadata(char *nombre, int nuevo_inicio)
+{
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	char *s = string_itoa(nuevo_inicio);
+	config_set_value(metadata, "BLOQUE_INICIAL", s);
+	free(s);
+	config_save(metadata);
+	config_destroy(metadata);
+	free(path); // este free incluye a nombre
+}
+
+t_dictionary *obtener_lista_files(char *a_excluir)
+{
+	t_dictionary *files = dictionary_create();
+	DIR *dir = opendir("./estructuras_fs");
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		char *nombre = strdup(entry->d_name);
+
+		if (strcmp(nombre, a_excluir) != 0 && strcmp(nombre, "bitmap.dat") != 0 && strcmp(nombre, "bloques.dat") != 0 && strcmp(nombre, ".") != 0 && strcmp(nombre, "..") != 0) 
+		{
+			char *path = get_complete_path(nombre);
+			t_config *metadata = config_create(path);
+			int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+			char *b_i_str = string_itoa(bloque_inicial);
+			dictionary_put(files, b_i_str, nombre);
+			free(b_i_str);
+			config_destroy(metadata);
+		}
+	}
+	closedir(dir);
+	return files;
+}
+void *get_file_buffer(char *nombre)
+{
 }
 void actualizar_tamanio(char *nombre, int nuevos_bytes)
 {
@@ -283,7 +346,7 @@ int decode_operation(buffer_instr_io_t *buffer_instruccion)
 }
 void crear_archivo(char *nombre)
 {
-	int bloque = get_next_free_block();
+	int bloque = get_next_free_block(0);
 	ocupar_bloque(bloque);
 	crear_metadata(nombre, bloque);
 }
@@ -297,15 +360,11 @@ void ocupar_bloque(int index)
 	bitarray_set_bit(bitmap, index);
 	msync(mmbitmap, tam_bitmap_file, MS_SYNC);
 }
-void liberar_bloque(int index)
-{
-	bitarray_clean_bit(bitmap, index);
-	msync(mmbitmap, tam_bitmap_file, MS_SYNC);
-}
-int get_next_free_block()
+
+int get_next_free_block(int inicio_busqueda)
 {
 
-	for (int i = 0; i < BLOCK_COUNT; i++)
+	for (int i = inicio_busqueda; i < BLOCK_COUNT; i++)
 	{
 		if (!bitarray_test_bit(bitmap, i))
 		{
@@ -314,6 +373,20 @@ int get_next_free_block()
 	}
 	return -1;
 }
+
+int get_next_busy_block(int inicio_busqueda)
+{
+
+	for (int i = inicio_busqueda; i < BLOCK_COUNT; i++)
+	{
+		if (bitarray_test_bit(bitmap, i))
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
 void crear_metadata(char *nombre, int bloque)
 {
 	char *path = get_complete_path(nombre);
@@ -336,22 +409,38 @@ void eliminar_archivo(char *nombre)
 	t_config *metadata = config_create(path);
 	if (metadata == 0)
 		return;
-	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
-	int tam = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
-	int bloques_a_liberar = ceil(((double)tam) / BLOCK_SIZE);
-	bloques_a_liberar = bloques_a_liberar ? bloques_a_liberar : 1; // estoespq siempre se toma un bloque inicialmente
-	liberar_bloques_desde(bloque_inicial, bloques_a_liberar);
+	liberar_bloques(nombre);
 	config_destroy(metadata);
 	remove(path);
 	free(path);
 }
-void liberar_bloques_desde(int bloque_inicial, int bloques_a_liberar)
+int liberar_bloques(char *nombre)
 {
+	char *path = get_complete_path(nombre);
+	t_config *metadata = config_create(path);
+	if (metadata == 0)
+		return;
+	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+	int tam = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+	int bloques_a_liberar = ceil(((double)tam) / BLOCK_SIZE);
+	bloques_a_liberar = bloques_a_liberar ? bloques_a_liberar : 1; // estoespq siempre se toma un bloque inicialmente
+
 	for (int i = bloque_inicial; i < bloque_inicial + bloques_a_liberar; i++)
 	{
-		liberar_bloque(i);
+		desocupar_bloque(i);
+	}
+	return bloques_a_liberar;
+}
+
+int ocupar_bloques(int inicio, int cant_bloques)
+{
+
+	for (int i = inicio; i < inicio + cant_bloques; i++)
+	{
+		ocupar_bloque(i);
 	}
 }
+
 char *get_complete_path(char *nombre)
 {
 	char *path = malloc(strlen(PATH_BASE_DIALFS));

@@ -17,6 +17,7 @@
 #include <commons/bitarray.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <dirent.h>
 extern char *nombre;
 extern t_log *logger;
 extern t_config *config;
@@ -35,12 +36,19 @@ typedef struct
     int puntero_archivo;
     t_list* solicitudes;
 } fs_rw_sol_t;
+typedef struct
+{
+    int gap_start;
+    int next_busy_block;
+} gap_t;
+
 // Cliente
 void inicializar_bloques();
-int get_next_free_block();
+int get_next_free_block(int inicio_busqueda);
 void inicializar_bitmap();
+
+t_dictionary *obtener_lista_files(char *a_excluir);
 void ocupar_bloque(int index);
-void liberar_bloque(int index);
 bool es_posible_agrandar(char *nombre, int bloques_actuales, int bloques_a_agregar);
 void reducir_archivo(char *nombre, int bloques_actuales, int bloques_a_reducir, int nuevos_bytes);
 fs_rw_sol_t *decode_buffer_rw_sol(buffer_instr_io_t *buffer_instruccion);
@@ -51,7 +59,12 @@ void compactar(char *nombre);
 char *get_complete_path(char *nombre);
 int get_puntero_base(char *nombre);
 truncate_t *decode_buffer_truncate_sol(buffer_instr_io_t *buffer_instruccion);
-void liberar_bloques_desde(int bloque_inicial, int bloques_a_liberar);
+int liberar_bloques(char *nombre);
+int ocupar_bloques(int inicio, int cant_bloques);
+void actualizar_tamanio(char *nombre, int nuevos_bytes);
+void actualizar_metadata(char *nombre, int nuevo_inicio);
+int get_next_busy_block(int inicio_busqueda);
+void dezplazar_file(int nuevo_inicio, char *nombre);
 char *get_complete_path(char *nombre);
 void eliminar_archivo(char *nombre);
 void desocupar_bloque(int index);

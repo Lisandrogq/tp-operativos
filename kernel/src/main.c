@@ -119,7 +119,7 @@ void *consola()
 
 		if (!strcmp(instruccion[0], "ddd"))
 			return;
-		free(linea);	
+		free(linea);
 	}
 }
 
@@ -344,7 +344,7 @@ void *cliente_cpu_dispatch()
 			break;
 		}
 		free(instruccion_de_desalojo);
-		//free(buffer_instruccion);q te dije de mirar donde pones los frees pancho gay
+		// free(buffer_instruccion);//q te dije de mirar donde pones los frees pancho gay
 	}
 }
 

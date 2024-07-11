@@ -22,7 +22,8 @@ ____
 - [x] FS WRITE
 - [x] FS READ
 - [x] FS TRUNCATE
-- [ ] FS COMPACTACION 💀💀💀
+- [x] FS COMPACTACION 💀💀💀
+- [ ] !!!REVISAR EL codigo 'esto_crashea_memoria', desaparece la tabla de paginas 
 - [ ] Agregar logs requeridos en consigna
 - [ ] Agregar retardos donde corresponda
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso

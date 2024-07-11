@@ -794,6 +794,7 @@ void *client_handler(void *arg)
             else
             { // si el proceso que la pidio esta en exit, no se intenta desbloquearlo
                 log_warning(logger, "TERMINO LA IO del pid:%i que uso:%s, pero el pcb esta en exit", estructura->pid, estructura->nombre);
+                //TODO liberar el elemento de la cola 
             }
             t_cola_io *struct_cola = dictionary_get(dictionary_pcbs_bloqueado, estructura->nombre);
             if (list_size(struct_cola->cola_de_io_pedido) != 0) // esto no va en desbloquear pcb ppq despues va a haber recursos
@@ -802,6 +803,7 @@ void *client_handler(void *arg)
                 // wait de la cola
                 elemento_cola_io *elemento = list_get(struct_cola->cola_de_io_pedido, 0);
                 pedir_io_task(elemento->pcb->pid, interfaz, elemento->buffer_instruccion);
+                
             }
             break;
         case -1:
