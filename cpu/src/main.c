@@ -172,7 +172,7 @@ int decode(t_strings_instruccion *instruccion)
 		void *datos = dictionary_get(dic_p_registros, instruccion->p1);
 
 		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, tam_r_datos);
-		execute_mov_in(solicitudes, datos);
+		execute_mov_in(solicitudes, datos, NUMERICO);
 		liberar_y_eliminar_solicitudes(solicitudes);
 	}
 
@@ -190,7 +190,7 @@ int decode(t_strings_instruccion *instruccion)
 
 		t_list *solicitudes = obtener_direcciones_fisicas_write(datos, dir_logica, tam_r_datos);
 
-		int status = execute_mov_out(solicitudes); // los datosa escribir no se pasan pq estan en solicitud
+		int status = execute_mov_out(solicitudes, NUMERICO); // los datosa escribir no se pasan pq estan en solicitud
 		liberar_y_eliminar_solicitudes(solicitudes);
 		if (status == MEM_W_NO_OK)
 		{
@@ -335,14 +335,14 @@ int decode(t_strings_instruccion *instruccion)
 		u_int32_t *dir_logica_read = dictionary_get(dic_p_registros, "SI"); // siempre se usa SI
 
 		t_list *solicitudes_r = obtener_direcciones_fisicas_read(*dir_logica_read, tam_string);
-		execute_mov_in(solicitudes_r, buffer_intermedio);
-		log_info(logger, "EL STRING COPIADO ES:%s", buffer_intermedio);
+		execute_mov_in(solicitudes_r, buffer_intermedio, STRING);
+		log_debug(logger, "EL STRING COPIADO ES:%s", buffer_intermedio);
 		liberar_y_eliminar_solicitudes(solicitudes_r);
 
 		// traduccion write
 		u_int32_t *dir_logica_write = dictionary_get(dic_p_registros, "DI");
 		t_list *solicitudes_w = obtener_direcciones_fisicas_write(buffer_intermedio, *dir_logica_write, tam_string);
-		execute_mov_out(solicitudes_w);
+		execute_mov_out(solicitudes_w, STRING);
 		liberar_y_eliminar_solicitudes(solicitudes_w);
 
 		/* //TEST: lo escrito por 2 proceso simultaneamente esta bien:
@@ -524,7 +524,7 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 	int n_frame = NULL;
 
 	tlb_element *elemento = NULL;
-	if (CANTIDAD_ENTRADAS_TLB != 0)//SI LA TLB ESTA DESACTIVADA
+	if (CANTIDAD_ENTRADAS_TLB != 0) // SI LA TLB ESTA DESACTIVADA
 		get_element_tlb(sol);
 
 	if (elemento == NULL)
@@ -532,7 +532,7 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 
 		n_frame = solicitar_frame_a_memoria(sol);
 
-		if (CANTIDAD_ENTRADAS_TLB != 0)//SI LA TLB ESTA DESACTIVADA, NO SE LA ACTUALIZA
+		if (CANTIDAD_ENTRADAS_TLB != 0) // SI LA TLB ESTA DESACTIVADA, NO SE LA ACTUALIZA
 		{
 			log_info(logger, "PID: %i - TLB MISS - Pagina: %i", pcb_exec->pid, sol->pagina);
 			tlb_element *elemento = malloc(sizeof(elemento));

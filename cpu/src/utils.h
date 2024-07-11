@@ -29,10 +29,15 @@ extern int socket_dispatch;
 extern int socket_interrupt;
 extern int tam_pagina;
 extern int CANTIDAD_ENTRADAS_TLB;
-extern char* ALGORITMO_TLB;
+extern char *ALGORITMO_TLB;
 extern t_temporal *cronometro_lru;
 // Cliente
 
+typedef enum
+{
+    STRING,
+    NUMERICO,
+} MOV_data_type;
 typedef struct
 {
     int pid;
@@ -53,17 +58,17 @@ int execute(t_strings_instruccion *instruccion);
 void check_intr();
 t_dictionary *inicializar_diccionario(registros_t *registros);
 void devolver_pcb(int motivo_desalojo, pcb_t pcb, int socket_cliente, t_strings_instruccion *instruccion, buffer_instr_io_t *buffer_instruccion_io);
-void execute_mov_in(t_list *solicitudes, void *datos);
-int execute_mov_out(t_list *solicitudes);
-solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol);
-int execute_unitary_mov_out(solicitud_unitaria_t *sol);
+void execute_mov_in(t_list *solicitudes, void *datos,int t_dato);
+int execute_mov_out(t_list *solicitudes,int t_dato);
+solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol, int t_dato);
+int execute_unitary_mov_out(solicitud_unitaria_t *sol, int t_dato);
 buffer_instr_io_t *serializar_truncate_sol(char *nombre, int bytes);
 void execute_set(char *nombre_r_destino, int valor);
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen);
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen);
 void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto);
 buffer_instr_io_t *serializar_nombre(char *nombre, int op);
-void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos,int pid);
+void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos, int pid);
 void solicitar_escribir_memoria(void *datos, u_int32_t dir_fisica, int tam_r_datos, int pid);
 void *recibir_datos_leidos();
 int recibir_status_escritura();

@@ -36,7 +36,7 @@ interrupcion_t *recibir_interrupcion(int socket_interrupt)
 }
 void execute_set(char *nombre_r_destino, int valor)
 {
-    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")|| !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI") || !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = valor;
@@ -44,13 +44,13 @@ void execute_set(char *nombre_r_destino, int valor)
     else if (strlen(nombre_r_destino) == 2) // caso registros de 1 byte
     {
         u_int8_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
-        *r_destino = valor; 
+        *r_destino = valor;
     }
 }
 void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
 {
     int sumando = 0;
-    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")||!strcmp(nombre_r_origen, "PC")) // caso registros de 4 byte
+    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI") || !strcmp(nombre_r_origen, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sumando = *r_origen;
@@ -60,7 +60,7 @@ void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
         u_int8_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sumando = *r_origen;
     }
-    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")|| !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI") || !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino + sumando;
@@ -74,7 +74,7 @@ void execute_sum(char *nombre_r_destino, char *nombre_r_origen)
 void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8 ES UNSIGNED, NO CREO Q SEA UN PROBLEMA EN LAS PRUEBAS PERO XD
 {
     int sustraendo = 0;
-    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI")|| !strcmp(nombre_r_origen, "PC")) // caso registros de 4 byte
+    if (strlen(nombre_r_origen) == 3 || !strcmp(nombre_r_origen, "SI") || !strcmp(nombre_r_origen, "DI") || !strcmp(nombre_r_origen, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sustraendo = *r_origen;
@@ -84,7 +84,7 @@ void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8
         u_int8_t *r_origen = dictionary_get(dic_p_registros, nombre_r_origen);
         sustraendo = *r_origen;
     }
-    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI")|| !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
+    if (strlen(nombre_r_destino) == 3 || !strcmp(nombre_r_destino, "SI") || !strcmp(nombre_r_destino, "DI") || !strcmp(nombre_r_destino, "PC")) // caso registros de 4 byte
     {
         u_int32_t *r_destino = dictionary_get(dic_p_registros, nombre_r_destino);
         *r_destino = *r_destino - sustraendo;
@@ -98,7 +98,7 @@ void execute_sub(char *nombre_r_destino, char *nombre_r_origen) // CREO QUE INT8
 void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // habría que ver si hay alguna forma para no pasar el contexto
 {
 
-    if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI")|| !strcmp(nombre_r, "PC")) // caso registros de 4 byte
+    if (strlen(nombre_r) == 3 || !strcmp(nombre_r, "SI") || !strcmp(nombre_r, "DI") || !strcmp(nombre_r, "PC")) // caso registros de 4 byte
     {
         u_int32_t *registro = dictionary_get(dic_p_registros, nombre_r);
         if (*registro != 0)
@@ -112,7 +112,7 @@ void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // ha
     }
 }
 
-void execute_mov_in(t_list *solicitudes, void *datos)
+void execute_mov_in(t_list *solicitudes, void *datos, int t_dato)
 {
     list_map(solicitudes, execute_unitary_mov_in);
     t_list_iterator *iterator = list_iterator_create(solicitudes);
@@ -125,14 +125,14 @@ void execute_mov_in(t_list *solicitudes, void *datos)
     }
     list_iterator_destroy(iterator);
 }
-int execute_mov_out(t_list *solicitudes)
+int execute_mov_out(t_list *solicitudes, int t_dato)
 {
     t_list_iterator *iterator = list_iterator_create(solicitudes);
     int status = MEM_W_OK;
     while (list_iterator_has_next(iterator))
     {
         solicitud_unitaria_t *sol = list_iterator_next(iterator);
-        int status = execute_unitary_mov_out(sol);
+        int status = execute_unitary_mov_out(sol, t_dato);
 
         if (status != MEM_W_OK) // NO SE INDICA Q HACER ANTE ESTOS CASOS(FINALZIAR PROCESO???)
         {
@@ -143,7 +143,7 @@ int execute_mov_out(t_list *solicitudes)
     return status;
 }
 
-solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol)
+solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol, int t_dato)
 {
     u_int32_t dir_fisica = sol->dir_fisica_base + sol->offset;
     int tam_r_datos = sol->tam;
@@ -152,23 +152,45 @@ solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol)
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     void *datos_obtenidos = recibir_datos_leidos();
     memcpy(sol->datos, datos_obtenidos, sol->tam);
-    int *logeable = malloc(sizeof(int));
-    memset(logeable, 0, sizeof(int));
-    memcpy(logeable, datos_obtenidos, sol->tam);
-    log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %i - Valor: %i", sol->pid, sol->dir_fisica_base + sol->offset, *logeable);
-    free(logeable);
+
+    if (t_dato == STRING)
+    {
+        char *logeable = malloc(sol->tam + 1);
+        memset(logeable, 0, sol->tam + 1);
+        memcpy(logeable, sol->datos, sol->tam);
+        log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %s - Valor: %s", sol->pid, sol->dir_fisica_base + sol->offset, logeable);
+    }
+    if (t_dato == NUMERICO)
+    {
+        int *logeable = malloc(sizeof(int));
+        memset(logeable, 0, sizeof(int));
+        memcpy(logeable, datos_obtenidos, sol->tam);
+        log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %d - Valor: %d", sol->pid, sol->dir_fisica_base + sol->offset, *logeable);
+        free(logeable);
+    }
     return sol;
 }
-int execute_unitary_mov_out(solicitud_unitaria_t *sol)
+int execute_unitary_mov_out(solicitud_unitaria_t *sol, int t_dato)
 {
     solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam, sol->pid);
     int cod_op = recibir_operacion(socket_memoria); // waitall y codop
     int status_escritura = recibir_status_escritura();
-    int *logeable = malloc(sizeof(int));
-    memset(logeable, 0, sizeof(int));
-    memcpy(logeable, sol->datos, sol->tam);
-    log_info(logger, "PID: %i - Acción: ESCRIBIR - Dirección Física: %i - Valor: %i", pcb_exec->pid, sol->dir_fisica_base + sol->offset, *logeable);
-    free(logeable);
+
+    if (t_dato == STRING)
+    {
+        char *logeable = malloc(sol->tam + 1);
+        memset(logeable, 0, sol->tam + 1);
+        memcpy(logeable, sol->datos, sol->tam);
+        log_info(logger, "PID: %i - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pcb_exec->pid, sol->dir_fisica_base + sol->offset, logeable);
+    }
+    if (t_dato == NUMERICO)
+    {
+        int *logeable = malloc(sizeof(int));
+        memset(logeable, 0, sizeof(int));
+        memcpy(logeable, sol->datos, sol->tam);
+        log_info(logger, "PID: %i - Acción: ESCRIBIR - Dirección Física: %d - Valor: %d", pcb_exec->pid, sol->dir_fisica_base + sol->offset, *logeable);
+        free(logeable);
+    }
 
     return status_escritura;
 }
@@ -287,7 +309,7 @@ void enviar_operacion(int cod_op, char *mensaje, int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-    int bytes = paquete->buffer->size + 2 * sizeof(int); 
+    int bytes = paquete->buffer->size + 2 * sizeof(int);
 
     void *a_enviar = serializar_paquete(paquete, bytes);
 
@@ -378,7 +400,7 @@ buffer_instr_io_t *serializar_solicitudes_fs(t_list *solicitudes, char *nombre, 
     buffer_instruccion->buffer = malloc(buffer_instruccion->size);
     t_list_iterator *iterator = list_iterator_create(solicitudes);
     int offset = 0;
-    memcpy(buffer_instruccion->buffer + offset, &OPERACION, sizeof(u_int32_t)); 
+    memcpy(buffer_instruccion->buffer + offset, &OPERACION, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
     memcpy(buffer_instruccion->buffer + offset, &(puntero_archivo), sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
