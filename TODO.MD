@@ -14,12 +14,12 @@ ____
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
 
 #### ENTREGA FINAL #######
-- [ ] !!!REVISAR EL codigo 'esto_crashea_memoria', desaparece la tabla de paginas 
 - [ ] Agregar logs requeridos en consigna
 - [ ] Agregar retardos donde corresponda
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
 - [ ] Invalidar entradas de tlb al hacer resize achicando #4112
 - [ ] IMPLEMENTAR DESCONEXION DE ios
+- [ ] cuando sacamos el thread interrupt(cpu) no nos dimos cuenta q el handshake no se esta haciendo creo(no genera problemas pero revisar)
 - [x] TLB (LRU)
 - [x] DETENER_PLANIFICACION, en principo un solo semaforo(en total) que bloquee las cosas.
 - [X] FS CREATE

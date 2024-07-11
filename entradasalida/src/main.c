@@ -10,8 +10,8 @@ int main(int argc, char *argv[])
 	config = iniciar_config();
 	config = config_create("IO.config");
 	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
-	nombre = "DIALFS";
-	char *tipo = "DIALFS";
+	nombre = "MONITOR";
+	char *tipo = "STDOUT";
 	/*
 	nombre = "DIALFS";
 	char *tipo = "DIALFS";

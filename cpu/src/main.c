@@ -294,7 +294,7 @@ int decode(t_strings_instruccion *instruccion)
 
 		t_list *solicitudes = obtener_direcciones_fisicas_read(dir_logica, max_tam);
 
-		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes_fs(solicitudes, instruccion->p2, puntero_archivo,IO_FS_WRITE);
+		buffer_instr_io_t *buffer_instruccion = serializar_solicitudes_fs(solicitudes, instruccion->p2, puntero_archivo, IO_FS_WRITE);
 		devolver_pcb(IO_TASK, *pcb_exec, socket_dispatch, instruccion, buffer_instruccion);
 		liberar_y_eliminar_solicitudes(solicitudes);
 		return STATUS_DESALOJADO;
@@ -523,24 +523,29 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 {
 	int n_frame = NULL;
 
-	tlb_element *elemento = get_element_tlb(sol);
+	tlb_element *elemento = NULL;
+	if (CANTIDAD_ENTRADAS_TLB != 0)//SI LA TLB ESTA DESACTIVADA
+		get_element_tlb(sol);
 
 	if (elemento == NULL)
 	{
-		log_info(logger, "PID: %i - TLB MISS - Pagina: %i", pcb_exec->pid, sol->pagina);
 
 		n_frame = solicitar_frame_a_memoria(sol);
 
-		tlb_element *elemento = malloc(sizeof(elemento));
-		elemento->pid = pcb_exec->pid;
-		elemento->pagina = sol->pagina;
-		elemento->frame = n_frame;
-
-		if (strcmp(ALGORITMO_TLB, "LRU") == 0)
+		if (CANTIDAD_ENTRADAS_TLB != 0)//SI LA TLB ESTA DESACTIVADA, NO SE LA ACTUALIZA
 		{
-			elemento->timestamp = temporal_gettime(cronometro_lru);
+			log_info(logger, "PID: %i - TLB MISS - Pagina: %i", pcb_exec->pid, sol->pagina);
+			tlb_element *elemento = malloc(sizeof(elemento));
+			elemento->pid = pcb_exec->pid;
+			elemento->pagina = sol->pagina;
+			elemento->frame = n_frame;
+
+			if (strcmp(ALGORITMO_TLB, "LRU") == 0)
+			{
+				elemento->timestamp = temporal_gettime(cronometro_lru);
+			}
+			actualizar_tlb(elemento);
 		}
-		actualizar_tlb(elemento);
 	}
 	else
 	{
@@ -553,13 +558,13 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 	}
 	// esto se hace independientemente de la forma de obtencion
 	sol->dir_fisica_base = n_frame * tam_pagina;
-	void printear(tlb_element * elemento)
+	/* void printear(tlb_element * elemento)
 	{
 		printf("(PID%i)=[%i-%i] |||| ", elemento->pid, elemento->pagina, elemento->frame);
 	}
 	printf("ESTADO TLB: ");
 	list_iterate(tlb_list, printear);
-	printf("\n");
+	printf("\n"); */
 	return sol;
 }
 
