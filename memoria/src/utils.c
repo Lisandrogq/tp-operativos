@@ -16,7 +16,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 {
 	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES) + 1); // tecnicamente no es absoluto pero podría serlo
 	strcpy(path_absoluto, PATH_INSTRUCCIONES);
-	string_append(&path_absoluto, path_relativo);
+	string_append(&path_absoluto, path_relativo);//LICHU ESTO ESTA RARO
 
 	// leer el pseudocodigo
 	FILE *file;
@@ -42,6 +42,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 	}
 	else
 	{
+		free(path_absoluto);
 		log_error(logger, "No se pudo encontrar el archivo");
 		return "error";
 	}
@@ -184,6 +185,7 @@ void handle_cpu_client(int socket_cliente)
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
 			sem_post(sem);
 			enviar_instruccion(palabras, socket_cliente);
+			free(palabras);
 			break;
 		case RESIZE:
 			resize_t *solicitud_resize = recibir_pedido_resize(socket_cliente);
@@ -307,7 +309,7 @@ void handler_kernel_client(int socket)
 			sem_t *sem = malloc(sizeof(sem_t));
 			sem_init(sem, 0, 0);
 			list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
-			log_info(logger, "path:%s", e_admin->path); // Ultimo log antes del error del so-deploy
+			log_info(logger, "path:%s", e_admin->path); 
 			int err = crear_estructuras_administrativas(e_admin);
 			int status = 0;
 			if (err == -1)
@@ -322,7 +324,7 @@ void handler_kernel_client(int socket)
 				crear_tabla_paginas(e_admin->pid);
 				sem_post(sem);
 			}
-			free(e_admin); // el free de .path se hace en leer codigo
+			free(e_admin); //el free de .path se hace en leer codigo
 			break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
@@ -434,7 +436,7 @@ char *get_linea_buscada(const char *input_string, int linea_buscada)
 
 	while (token != NULL && line_count <= linea_buscada)
 	{
-		lines[line_count] = strdup(token);
+		lines[line_count] = strdup(token);//LEAK LICHU
 		line_count++;
 		token = strtok(NULL, "\n");
 	}
@@ -453,7 +455,7 @@ char **separar_linea_en_parametros(const char *input_string)
 
 	while (token != NULL && word_count <= 5)
 	{
-		palabras[word_count] = strdup(token);
+		palabras[word_count] = strdup(token);//LEAK LICHU
 		word_count++;
 		token = strtok(NULL, " ");
 	}
@@ -475,6 +477,8 @@ char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 	log_info(logger, "LINEA LEIDA:%s", linea);
 	char **palabras = separar_linea_en_parametros(linea);
 	free(pid_str);
+	free(p_info);
+	free(linea);
 	return palabras;
 }
 int enviar_instruccion(char **palabras, int socket_cliente)
@@ -554,12 +558,10 @@ fetch_t *recibir_process_info(int socket_cliente)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
-
 	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
-
-	fetch_t *p_info = malloc(sizeof(fetch_t)); //Free?
+	fetch_t *p_info = malloc(sizeof(fetch_t)); //CREO ESTA ARREGLADO
 	void *stream = paquete->buffer->stream;
 	memcpy(&(p_info->pid), stream, sizeof(int));
 	stream += sizeof(int);
@@ -719,11 +721,11 @@ solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente)
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-	solicitud_creacion_t *estructura = malloc(sizeof(solicitud_creacion_t)); //puede ser este el error?
+	solicitud_creacion_t *estructura = malloc(sizeof(solicitud_creacion_t)); 
 	void *stream = buffer->stream;
 	memcpy(&(estructura->tam), stream, sizeof(int));
 	stream += sizeof(int);
-	estructura->path = malloc(estructura->tam); //Free
+	estructura->path = malloc(estructura->tam); //Free LICHU
 	memcpy((estructura->path), stream, estructura->tam); // este sizeof(int) no debería ser estructura->tam???
 	stream += estructura->tam;
 	memcpy(&(estructura->pid), stream, sizeof(int)); // REGISTROS_T?????
