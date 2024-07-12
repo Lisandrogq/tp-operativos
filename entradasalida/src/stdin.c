@@ -18,8 +18,8 @@ void iniciar_interfaz_stdin()
 
 
 		t_list *solicitudes = decode_addresses_buffer(pedido->buffer_instruccion, &max_tam);
-		char *input_string = malloc(max_tam);
-		input_string = readline(">");
+		
+		char *input_string = readline(">");
 		populate_solicitudes(solicitudes, input_string);
 		escribir_memoria(solicitudes);
 		informar_fin_de_tarea(socket_kernel, IO_OK, pedido->pid_solicitante);

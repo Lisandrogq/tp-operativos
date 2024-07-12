@@ -167,7 +167,7 @@ void solicitar_leer_memoria(u_int32_t dir_fisica, int tam_r_datos, int pid)
 }
 void leer_memoria(t_list *solicitudes, void *datos)
 {
-	list_map(solicitudes, leer_memoria_unitario);
+	list_iterate(solicitudes,leer_memoria_unitario);
 	t_list_iterator *iterator = list_iterator_create(solicitudes);
 	int write_offset = 0;
 	while (list_iterator_has_next(iterator))
@@ -187,11 +187,12 @@ solicitud_unitaria_t *leer_memoria_unitario(solicitud_unitaria_t *sol)
 	void *datos_obtenidos = recibir_datos_leidos();
 	sol->datos = malloc(sol->tam);
 	memcpy(sol->datos, datos_obtenidos, sol->tam);
-	int *logeable = malloc(sizeof(int));
-	memset(logeable, 0, sizeof(int));
+	int *logeable = malloc(sol->tam+1);
+	memset(logeable, 0, sol->tam+1);
 	memcpy(logeable, datos_obtenidos, sol->tam);
 	log_debug(logger, "Lei en la Dir Física: %i - Valor: %i", sol->dir_fisica_base + sol->offset, *logeable);
 	free(logeable);
+	free(datos_obtenidos);
 	return sol;
 }
 void *recibir_datos_leidos()
@@ -270,8 +271,8 @@ void escribir_memoria_unitario(solicitud_unitaria_t *sol)
 	solicitar_escribir_memoria(sol->datos, sol->dir_fisica_base + sol->offset, sol->tam,sol->pid);
 	int cod_op = recibir_operacion(socket_memoria);	   // waitall y codop
 	int status_escritura = recibir_status_escritura(); // es irrelevante el status(no aclaran q la escritura falle)
-	int *logeable = malloc(sizeof(int));
-	memset(logeable, 0, sizeof(int));
+	int *logeable = malloc(sol->tam+1);
+	memset(logeable, 0, sol->tam+1);
 	memcpy(logeable, sol->datos, sol->tam);
 	log_debug(logger, "Escribí en la Dir Física: %i - Valor: %i", sol->dir_fisica_base + sol->offset, *logeable);
 	free(logeable);

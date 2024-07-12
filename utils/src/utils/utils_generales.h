@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <commons/log.h>
+#include <commons/collections/list.h>
 
 #define PUERTO_KERNEL "4444"
 #define PUERTO_CPU_DISPATCH "4445"
@@ -263,7 +264,8 @@ typedef struct
 	op_code codigo_operacion;
 	t_buffer *buffer;
 } t_paquete;
-
+void liberar_solicitud(solicitud_unitaria_t *sol);
+void liberar_y_eliminar_solicitudes(t_list *solicitudes);
 pcb_t *recibir_paquete(int socket_cliente);
 void eliminar_pcb(pcb_t *pcb);
 void eliminar_paquete(t_paquete *paquete);

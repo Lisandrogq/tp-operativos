@@ -49,19 +49,22 @@ handle_operations(int operacion, io_task *pedido)
 		char *nombre_c = decode_buffer_file_name(buffer_instruccion);
 		crear_archivo(nombre_c);
 		log_info(logger, "PID: %i - Crear Archivo: %s", pedido->pid_solicitante, nombre_c);
+		free(nombre_c);
 		break;
 	case IO_FS_DELETE:
 		log_info(logger, "PID: %i - Operacion: IO_FS_DELETE", pedido->pid_solicitante);
 		char *nombre_d = decode_buffer_file_name(buffer_instruccion);
 		eliminar_archivo(nombre_d);
 		log_info(logger, "PID: %i - Eliminar Archivo: %s", pedido->pid_solicitante, nombre_d);
-
+		free(nombre_d);
 		break;
 	case IO_FS_TRUNCATE:
 		log_info(logger, "PID: %i - Operacion: IO_FS_TRUNCATE", pedido->pid_solicitante);
 		truncate_t *sol_truncate = decode_buffer_truncate_sol(buffer_instruccion);
 		truncar_archivo(sol_truncate, pedido->pid_solicitante);
 		log_info(logger, "PID: %i - Truncar Archivo: %s - Tamaño: %i", pedido->pid_solicitante, sol_truncate->file, sol_truncate->bytes);
+		free(sol_truncate->file);
+		free(sol_truncate);
 		break;
 	case IO_FS_WRITE:
 		log_info(logger, "PID: %i - Operacion: IO_FS_WRITE", pedido->pid_solicitante);
@@ -69,9 +72,10 @@ handle_operations(int operacion, io_task *pedido)
 		void *datos_w = malloc(sol_write->max_tam);
 		memset(datos_w, 0, sol_write->max_tam);
 		leer_memoria(sol_write->solicitudes, datos_w);
-		log_debug(logger, "datos_w leidos desde memoria: %s", (char *)datos_w);
+		// log_debug(logger, "datos_w leidos desde memoria: %s", (char *)datos_w);
 		escribir_archivo(datos_w, sol_write->nombre, sol_write->puntero_archivo, sol_write->max_tam);
 		log_info(logger, "PID: %i - Escribir Archivo: %s - Tamaño a Escribir: %i - Puntero Archivo: %i", pedido->pid_solicitante, sol_write->nombre, sol_write->max_tam, sol_write->puntero_archivo);
+		liberar_y_eliminar_solicitudes(sol_write->solicitudes);
 		free(datos_w);
 		free(sol_write->nombre);
 		free(sol_write);
@@ -84,7 +88,7 @@ handle_operations(int operacion, io_task *pedido)
 		populate_solicitudes(sol_read->solicitudes, datos_r);
 		escribir_memoria(sol_read->solicitudes);
 		log_info(logger, "PID: %i - Leer Archivo: %s - Tamaño a Leer: %i - Puntero Archivo: %i", pedido->pid_solicitante, sol_read->nombre, sol_read->max_tam, sol_read->puntero_archivo);
-
+		liberar_y_eliminar_solicitudes(sol_read->solicitudes);
 		free(datos_r);
 		free(sol_read->nombre);
 		free(sol_read);
@@ -153,6 +157,7 @@ int get_puntero_base(char *nombre)
 	t_config *metadata = config_create(path);
 	int bloque_inicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
 	config_destroy(metadata);
+	free(path);
 	return bloque_inicial * BLOCK_SIZE;
 }
 void truncar_archivo(truncate_t *sol, int pid_solicitante)
@@ -193,7 +198,7 @@ void compactar(char *nombre)
 {
 
 	int bloques_file = liberar_bloques(nombre);
-	t_dictionary *files_actuales = obtener_lista_files("AD"); // esto escluye a 'nombre'.El indice es el bloque inicial, el contenido es el nombre.
+	t_dictionary *files_actuales = obtener_lista_files("AD"); // esto excluye a 'nombre'.El indice es el bloque inicial, el contenido es el nombre.
 	void *buffer_file = leer_archivo(nombre, 0, bloques_file * BLOCK_SIZE);
 
 	int gap_start = get_next_free_block(0);
@@ -204,15 +209,20 @@ void compactar(char *nombre)
 		dezplazar_file(gap_start, dictionary_get(files_actuales, n_b_b_str)); //  mueve hacia la izq al file que empiece en ese bloque
 		gap_start = get_next_free_block(gap_start);
 		next_busy_block = get_next_busy_block(gap_start);
+		free(n_b_b_str);
 	}
 	actualizar_metadata(nombre, gap_start);
 	escribir_archivo(buffer_file, nombre, 0, bloques_file * BLOCK_SIZE);
 	ocupar_bloques(gap_start, bloques_file);
 
 	free(buffer_file);
-	dictionary_destroy_and_destroy_elements(files_actuales, free);
+	dictionary_iterator(files_actuales, free_file_name);//REVISAR PORQUE ESTO NO HACE FREE DEL NOMBRE
+	dictionary_destroy(files_actuales);
 }
-
+void *free_file_name(char *key, void *file_name)
+{
+	free(file_name);
+}
 void dezplazar_file(int nuevo_inicio, char *nombre)
 {
 	int bloques_file = liberar_bloques(nombre);
@@ -220,6 +230,7 @@ void dezplazar_file(int nuevo_inicio, char *nombre)
 	actualizar_metadata(nombre, nuevo_inicio);
 	escribir_archivo(buffer_file, nombre, 0, bloques_file * BLOCK_SIZE);
 	ocupar_bloques(nuevo_inicio, bloques_file);
+	free(buffer_file);
 }
 void actualizar_metadata(char *nombre, int nuevo_inicio)
 {
@@ -250,6 +261,7 @@ t_dictionary *obtener_lista_files(char *a_excluir)
 			char *b_i_str = string_itoa(bloque_inicial);
 			dictionary_put(files, b_i_str, nombre);
 			free(b_i_str);
+			free(path);
 			config_destroy(metadata);
 		}
 	}
@@ -265,6 +277,7 @@ void actualizar_tamanio(char *nombre, int nuevos_bytes)
 	t_config *metadata = config_create(path);
 	char *s = string_itoa(nuevos_bytes);
 	config_set_value(metadata, "TAMANIO_ARCHIVO", s);
+	free(path);
 	free(s); // una paja tener q hacer esto
 	config_save(metadata);
 	config_destroy(metadata);
@@ -280,6 +293,7 @@ void agrandar_archivo(char *nombre, int bloques_actuales, int bloques_a_agregar,
 	{ // no hace falta validar que se vaya del bitmap pq eso ya se hizo en 'es_posible_agrandar'
 		ocupar_bloque(i);
 	}
+	free(path);
 	config_destroy(metadata);
 }
 
@@ -304,11 +318,19 @@ bool es_posible_agrandar(char *nombre, int bloques_actuales, int bloques_a_agreg
 	for (int i = inicio_ampliacion; i < inicio_ampliacion + bloques_a_agregar; i++)
 	{
 		if (i >= BLOCK_COUNT) // fin pracito de bitmap
+		{
+			config_destroy(metadata);
+			free(path);
 			return false;
+		}
 		if (bitarray_test_bit(bitmap, i) == 1) // si no hay espacio continuo para agrandar, no se puede.
+		{
+			config_destroy(metadata);
+			free(path);
 			return false;
+		}
 	}
-	config_destroy(metadata);
+
 	return true;
 }
 
@@ -318,6 +340,7 @@ int get_actual_bytes(char *nombre)
 	t_config *metadata = config_create(path);
 	int tam = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
 	config_destroy(metadata);
+	free(path);
 	return tam;
 }
 truncate_t *decode_buffer_truncate_sol(buffer_instr_io_t *buffer_instruccion)
@@ -333,7 +356,6 @@ truncate_t *decode_buffer_truncate_sol(buffer_instr_io_t *buffer_instruccion)
 	memcpy(sol->file, buffer + offset, tam_nombre);
 	offset += tam_nombre;
 	memcpy(&(sol->bytes), buffer + offset, sizeof(u_int32_t));
-
 	return sol;
 }
 char *decode_buffer_file_name(buffer_instr_io_t *buffer_instruccion)
@@ -439,6 +461,8 @@ int liberar_bloques(char *nombre)
 	{
 		desocupar_bloque(i);
 	}
+	free(path);
+	config_destroy(metadata);
 	return bloques_a_liberar;
 }
 

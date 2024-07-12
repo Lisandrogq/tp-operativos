@@ -45,6 +45,7 @@ typedef struct
 } gap_t;
 
 // Cliente
+void *free_file_name(char *key, void *file_name);
 void inicializar_bloques();
 int get_next_free_block(int inicio_busqueda);
 void inicializar_bitmap();

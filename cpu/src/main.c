@@ -94,7 +94,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	memcpy(&(palabras->tamp1), stream, sizeof(int));
 	stream += sizeof(int);
 
-	palabras->p1 = malloc(palabras->tamp1);
+	palabras->p1 = malloc(palabras->tamp1+1);
 	memset(palabras->p1, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
 	memcpy((palabras->p1), stream, palabras->tamp1);
 	stream += palabras->tamp1;
@@ -102,7 +102,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	memcpy(&(palabras->tamp2), stream, sizeof(int));
 	stream += sizeof(int);
 
-	palabras->p2 = malloc(palabras->tamp2);
+	palabras->p2 = malloc(palabras->tamp2+1);
 	memset(palabras->p2, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
 
 	memcpy((palabras->p2), stream, palabras->tamp2);
@@ -111,7 +111,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	memcpy(&(palabras->tamp3), stream, sizeof(int));
 	stream += sizeof(int);
 
-	palabras->p3 = malloc(palabras->tamp3);
+	palabras->p3 = malloc(palabras->tamp3+1);
 	memset(palabras->p3, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
 
 	memcpy((palabras->p3), stream, palabras->tamp3);
@@ -120,7 +120,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	memcpy(&(palabras->tamp4), stream, sizeof(int));
 	stream += sizeof(int);
 
-	palabras->p4 = malloc(palabras->tamp4);
+	palabras->p4 = malloc(palabras->tamp4+1);
 	memset(palabras->p4, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
 
 	memcpy((palabras->p4), stream, palabras->tamp4);
@@ -129,7 +129,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	memcpy(&(palabras->tamp5), stream, sizeof(int));
 	stream += sizeof(int);
 
-	palabras->p5 = malloc(palabras->tamp5);
+	palabras->p5 = malloc(palabras->tamp5+1);
 	memset(palabras->p5, 0, 1); // se pone el unico byte alocado por malloc(0) en 0 para limpiar la basura(caso parametro vacio)
 
 	memcpy((palabras->p5), stream, palabras->tamp5);
@@ -336,7 +336,7 @@ int decode(t_strings_instruccion *instruccion)
 	if (strcmp(instruccion->cod_instruccion, "COPY_STRING") == 0) // COPY_STRING (Tamaño)
 	{
 		int tam_string = atoi(instruccion->p1);
-		void *buffer_intermedio = malloc(tam_string);
+		void *buffer_intermedio = malloc(tam_string+1);
 		memset(buffer_intermedio, 0, tam_string + 1); // p agregar /0
 
 		u_int32_t *dir_logica_read = dictionary_get(dic_p_registros, "SI"); // siempre se usa SI
