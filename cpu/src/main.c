@@ -35,6 +35,13 @@ void ejecutar_cliclos()
 									 // revisar si esto es teoricamente correcto, creo qsi
 				check_intr(&status); // asi puede marcar el proceso como desalojado
 			}
+			free(instruccion->cod_instruccion);
+			free(instruccion->p1);
+			free(instruccion->p2);
+			free(instruccion->p3);
+			free(instruccion->p4);
+			free(instruccion->p5);
+			free(instruccion);
 		}
 	}
 }
@@ -74,7 +81,7 @@ t_strings_instruccion *recibir_siguiente_instruccion()
 	buffer->stream = malloc(buffer->size);
 	recv(socket_memoria, buffer->stream, buffer->size, 0);
 
-	t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion));
+	t_strings_instruccion *palabras = malloc(sizeof(t_strings_instruccion)); // Free
 	memset(palabras, 0, sizeof(t_strings_instruccion));
 
 	void *stream = buffer->stream;
@@ -648,8 +655,6 @@ int execute(t_strings_instruccion *instruccion)
 
 		int num = atoi((instruccion->p2));
 		execute_set(instruccion->p1, num);
-		free((instruccion->p1));
-		free(instruccion);
 		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "SUM") == 0)
@@ -657,25 +662,17 @@ int execute(t_strings_instruccion *instruccion)
 		// u_int32_t *p1 = dictionary_get(dictionary, instruccion->p1);
 		// u_int32_t *p2 = dictionary_get(dictionary, instruccion->p2);
 		execute_sum(instruccion->p1, instruccion->p2);
-		free((instruccion->p1));
-		free((instruccion->p2));
-		free(instruccion);
 		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "SUB") == 0)
 	{
 		execute_sub(instruccion->p1, instruccion->p2);
-		free((instruccion->p1));
-		free((instruccion->p2));
-		free(instruccion);
 		return STATUS_OK;
 	}
 	if (strcmp(instruccion->cod_instruccion, "JNZ") == 0)
 	{
 		u_int32_t p2 = instruccion->p2;
 		execute_jnz(instruccion->p1, p2, pcb_exec->registros);
-		free((instruccion->p1));
-		free(instruccion);
 		return STATUS_OK;
 	}
 
@@ -733,9 +730,12 @@ void check_intr(int *status)
 		}
 		else
 			log_debug(logger, "Se recibio una intr para el pid %i, mientras ejecuta el pid%i motivo:%i", interrupcion->pid, pcb_exec->pid, interrupcion->motivo);
+
+		free(interrupcion);
 	}
 	// else
 	//  log_debug(logger, "No se recibio interrupciones");
+	free(instruccion_vacia);
 }
 void *servidor_interrupt()
 {
@@ -841,6 +841,7 @@ void inicializar_diccionario_tams()
 }
 int main(int argc, char const *argv[])
 {
+	pcb_exec = NULL;
 	cronometro_lru = temporal_create();
 	sem_init(&hay_proceso, 0, 0);
 	dic_p_registros = dictionary_create();

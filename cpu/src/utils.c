@@ -548,7 +548,13 @@ void *client_handler_dispatch(int socket_cliente)
         case DISPATCH:
             // TODO: liberar pcb sino es la primera ejecucion
             log_info(logger, "Se recibio el proceso a ejecutar por dispatch");
+            pcb_t *pcb_anterior = pcb_exec;
             pcb_exec = recibir_paquete(socket_cliente);
+            if (pcb_anterior != NULL)
+            {
+                free(pcb_anterior->registros);
+                free(pcb_anterior);
+            }
             log_info(logger, "PCB VINO CON Q = %i", pcb_exec->quantum);
             sem_post(&hay_proceso);
 

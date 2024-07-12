@@ -52,7 +52,7 @@ pcb_t *recibir_paquete(int socket_cliente)
     paquete->buffer->stream = malloc(paquete->buffer->size);
     recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
 
-    pcb_t *pcb = malloc(sizeof(pcb_t));
+    pcb_t *pcb = malloc(sizeof(pcb_t)); //Free en cpu
     pcb->registros = malloc(sizeof(registros_t));
     void *stream = paquete->buffer->stream;
     memcpy(&(pcb->pid), stream, sizeof(int));
