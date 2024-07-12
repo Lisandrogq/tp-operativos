@@ -613,7 +613,7 @@ tlb_element *get_element_tlb(solicitud_unitaria_t *sol)
 	tlb_element *elemento = list_find(tlb_list, find_page);
 	return elemento; // RETORNA NULL SI NO SE ENCONTRO
 }
-void actualizar_tlb(tlb_element *elemento) // al irse un proceso, se borra sus entradas de tlb?
+void actualizar_tlb(tlb_element *elemento) // al irse un proceso, se borra sus entradas de tlb? No, no se borran
 {
 	tlb_element *a_liberar;
 	if (list_size(tlb_list) < CANTIDAD_ENTRADAS_TLB)
