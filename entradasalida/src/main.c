@@ -8,18 +8,14 @@ int main(int argc, char *argv[])
 	logger = iniciar_logger();
 	logger = log_create("IO.log", "IO_MateLavado", 1, LOG_LEVEL_DEBUG);
 	config = iniciar_config();
-	config = config_create("IO.config");
+	log_info(logger,"Nombre IO: %s",argv[1]);
+	log_info(logger,"Config que usa: %s",argv[2]);
+	nombre = argv[1];
+	char*config_path = argv[2];
+	config = config_create(config_path);
 	// char *tipo = config_get_string_value(config, "TIPO_INTERFAZ");
-	nombre = "FS";
-	char *tipo = "DIALFS";
-	/*
-	nombre = "MONITOR";
-	char *tipo = "STDOUT";
-
-	nombre = "DIALFS";
-	char *tipo = "DIALFS";
-	nombre = "stdout";
-	char *tipo = "STDOUT";*/
+	char *tipo = config_get_string_value(config,"TIPO_INTERFAZ");
+	
 	if (strcmp(tipo, "GENERICA") == 0)
 	{
 		iniciar_interfaz_generica();
