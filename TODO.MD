@@ -13,7 +13,8 @@ ____
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
 
 #### ENTREGA FINAL #######
-- [ ] Agregar logs requeridos en consigna
+- [ ] mutex en espaciousuario
+- [x] Agregar logs requeridos en consigna
 - [ ] Agregar retardos donde corresponda
 - [ ] Aparece un '%' al final de ALGUNOS'exit' en codigos(aparentemente cuandos son muy largos).la solucion es medio sucia, para la entrega final habría q ver q onda eso
 - [ ] Invalidar entradas de tlb al hacer resize achicando #4112
