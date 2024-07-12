@@ -308,7 +308,7 @@ void *cliente_cpu_dispatch()
 				pcb_desalojado->state = READY_S;
 				pthread_mutex_lock(&mutex_lista_ready);
 				list_add(lista_pcbs_ready, pcb_desalojado);
-				log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY (+)", pcb_desalojado->pid);
+				log_info(logger, "PID: %i Estado Anterior: BLOCKED  Estado Actual: READY", pcb_desalojado->pid);
 				log_info(logger, "Cola de ready PIDS: ");
 				list_iterate(lista_pcbs_ready, (void *)imprimir_pcb_cola);
 				pthread_mutex_unlock(&mutex_lista_ready);
