@@ -4,11 +4,11 @@
 - [x] BREAKPOINTS PUEDEn ROMPER MEMORIA(de alguna forma el codigo esta vacio)
 - [x] hacer issue: si se finaliza un proceso justo cuando sale por sysscall, se borran las estructuras administrativas y no se mando a exit(capaz la 'solucion' es un mutex para exec)
 - [x] probar  bien todos los casos especiales de planificacion + finalizar_proceso
-- [ ] ARREGLAR LEAKS
+- [x] ARREGLAR LEAKS
 - [ ] ARREGLAR cuando se mueve el offset haciendo stream+=... , Cuando se quiera liberar stream, no se va a liberar nada, pq stream esta al final.
 - [ ] unificar los tipos de  de int a U_int_X ***en vm int 32 == int, capaz en el labo la pasamos mal***
 - [ ] TERMINAR DE AGREGAR MUTEX
-- [x]**SI SE EJECUTA EL CODIGO DE'res'(dos resize seguidos) SE ROMPE MEMORIA**(Hay algun mal manejo de memoria previo)
+- [x] **SI SE EJECUTA EL CODIGO DE'res'(dos resize seguidos) SE ROMPE MEMORIA**(Hay algun mal manejo de memoria previo)
 ____
 #### CHECKPOINT 3 #######
 - [ ] !!Agregar mutex cuando sea necesario(sockets,listas bloqueados,etc)
