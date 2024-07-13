@@ -16,7 +16,7 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 {
 	char *path_absoluto = malloc(strlen(PATH_INSTRUCCIONES) + 1); // tecnicamente no es absoluto pero podría serlo
 	strcpy(path_absoluto, PATH_INSTRUCCIONES);
-	string_append(&path_absoluto, path_relativo);//LICHU ESTO ESTA RARO
+	string_append(&path_absoluto, path_relativo); // LICHU ESTO ESTA RARO
 
 	// leer el pseudocodigo
 	FILE *file;
@@ -38,11 +38,13 @@ char *leer_codigo(char *path_relativo) // REVISAR POSIBLES LEAKS DE ESTO
 		printf("%s\n", codigo);
 		fclose(file);
 		free(path_absoluto); // esto hace free al relativo
+		free(path_relativo);
 		return codigo;
 	}
 	else
 	{
 		free(path_absoluto);
+		free(path_relativo);
 		log_error(logger, "No se pudo encontrar el archivo");
 		return "error";
 	}
@@ -57,7 +59,7 @@ int crear_estructuras_administrativas(solicitud_creacion_t *e_admin)
 	}
 	char *pid_str = string_itoa(e_admin->pid);
 	dictionary_put(dictionary_codigos, pid_str, codigo);
-	free(pid_str);//se le puede hacer free ahora, pq no se vuelve a usar, el codigo ya quedo en esa key
+	free(pid_str); // se le puede hacer free ahora, pq no se vuelve a usar, el codigo ya quedo en esa key
 	return 1;
 }
 void eliminar_tabla_paginas(int pid_a_eliminar)
@@ -79,6 +81,7 @@ void eliminar_tabla_paginas(int pid_a_eliminar)
 	}
 	list_destroy(elemento->tabla); // no hace falta eliminar los elementos de la lista pq son ints
 	free(elemento);
+	list_iterator_destroy(iterator);
 }
 void crear_tabla_paginas(int pid)
 {
@@ -185,6 +188,12 @@ void handle_cpu_client(int socket_cliente)
 			char **palabras = get_siguiente_instruction(p_info, socket_cliente);
 			sem_post(sem);
 			enviar_instruccion(palabras, socket_cliente);
+			free(palabras[0]);
+			free(palabras[1]);
+			free(palabras[2]);
+			free(palabras[3]);
+			free(palabras[4]);
+			free(palabras[5]);
 			free(palabras);
 			break;
 		case RESIZE:
@@ -215,6 +224,7 @@ void handle_cpu_client(int socket_cliente)
 			get_frame_t *solicitud_f = recibir_pedido_frame(socket_cliente);
 			int *frame = calcular_frame(solicitud_f);
 			enviar_frame(*frame, socket_cliente);
+			free(solicitud_f);
 
 			// número_página = floor(dirección_lógica / tamaño_página)
 			// desplazamiento = dirección_lógica - número_página * tamaño_página
@@ -228,13 +238,16 @@ void handle_cpu_client(int socket_cliente)
 			int a_loggear = 0;
 			enviar_datos_leidos(datos_leidos, solicitud_r->tam_lectura, socket_cliente);
 			log_info(logger, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", solicitud_r->pid, solicitud_r->dir_fisica, solicitud_r->tam_lectura);
+			free(solicitud_r);
+			free(datos_leidos);
 			break; // no se recibe pid en read/write(creo)
 		case WRITE_MEM:
 			write_t *solicitud_w = recibir_pedido_escritura(socket_cliente);
 			int write_status = escribir_memoria(solicitud_w->datos, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
 			enviar_status_escritura(write_status, socket_cliente);
 			log_info(logger, "PID: %i - Accion: ESCRIBIR - Direccion fisica: %i - Tamaño %i", solicitud_w->pid, solicitud_w->dir_fisica, solicitud_w->tam_escritura);
-
+			free(solicitud_w->datos);
+			free(solicitud_w);
 			break;
 		case -1:
 			return -1;
@@ -309,7 +322,7 @@ void handler_kernel_client(int socket)
 			sem_t *sem = malloc(sizeof(sem_t));
 			sem_init(sem, 0, 0);
 			list_add_in_index(sems_espera_creacion_codigos, e_admin->pid, sem); // los elementos nunca se borran, pq si hago remove muevo los demas(creo), solo se hace free del sem al eliminar_e_admin.
-			log_info(logger, "path:%s", e_admin->path); 
+			log_info(logger, "path:%s", e_admin->path);
 			int err = crear_estructuras_administrativas(e_admin);
 			int status = 0;
 			if (err == -1)
@@ -324,7 +337,7 @@ void handler_kernel_client(int socket)
 				crear_tabla_paginas(e_admin->pid);
 				sem_post(sem);
 			}
-			free(e_admin); //el free de .path se hace en leer codigo
+			free(e_admin); // el free de .path se hace en leer codigo
 			break;
 		case ELIMINAR_ESTRUC_ADMIN:
 			int pid_a_eliminar = recibir_solicitud_de_eliminacion(socket);
@@ -436,7 +449,8 @@ char *get_linea_buscada(const char *input_string, int linea_buscada)
 
 	while (token != NULL && line_count <= linea_buscada)
 	{
-		lines[line_count] = strdup(token);//LEAK LICHU
+		if (line_count == linea_buscada)
+			lines[line_count] = strdup(token); // LEAK LICHU
 		line_count++;
 		token = strtok(NULL, "\n");
 	}
@@ -455,7 +469,7 @@ char **separar_linea_en_parametros(const char *input_string)
 
 	while (token != NULL && word_count <= 5)
 	{
-		palabras[word_count] = strdup(token);//LEAK LICHU
+		palabras[word_count] = strdup(token); // LEAK LICHU
 		word_count++;
 		token = strtok(NULL, " ");
 	}
@@ -473,7 +487,6 @@ char **get_siguiente_instruction(fetch_t *p_info, int socket_cliente)
 	char *pid_str = string_itoa(p_info->pid);
 	char *codigo = dictionary_get(dictionary_codigos, pid_str);
 	linea = get_linea_buscada(codigo, p_info->pc); // HABRÍA QUE DIVIDIR EL CODIGO EN LINEAS AL CREAR ESTRUCTURAS ADMINISTRATIVAS,PERO NO HAY PLATA.
-	// HAY QUE VALIDAR Y VER QUE PASA SI SE TRATA DE ACCEDER A UNA LINEA QUE NO CORRESPONDE ()
 	log_info(logger, "LINEA LEIDA:%s", linea);
 	char **palabras = separar_linea_en_parametros(linea);
 	free(pid_str);
@@ -561,7 +574,7 @@ fetch_t *recibir_process_info(int socket_cliente)
 	recv(socket_cliente, &(paquete->buffer->size), sizeof(int), 0);
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0);
-	fetch_t *p_info = malloc(sizeof(fetch_t)); //CREO ESTA ARREGLADO
+	fetch_t *p_info = malloc(sizeof(fetch_t)); // CREO ESTA ARREGLADO
 	void *stream = paquete->buffer->stream;
 	memcpy(&(p_info->pid), stream, sizeof(int));
 	stream += sizeof(int);
@@ -721,11 +734,11 @@ solicitud_creacion_t *recibir_solicitud_de_creacion(int socket_cliente)
 	buffer->stream = malloc(buffer->size);
 	recv(socket_cliente, buffer->stream, buffer->size, 0);
 
-	solicitud_creacion_t *estructura = malloc(sizeof(solicitud_creacion_t)); 
+	solicitud_creacion_t *estructura = malloc(sizeof(solicitud_creacion_t));
 	void *stream = buffer->stream;
 	memcpy(&(estructura->tam), stream, sizeof(int));
 	stream += sizeof(int);
-	estructura->path = malloc(estructura->tam); //Free LICHU
+	estructura->path = malloc(estructura->tam);			 // Free LICHU
 	memcpy((estructura->path), stream, estructura->tam); // este sizeof(int) no debería ser estructura->tam???
 	stream += estructura->tam;
 	memcpy(&(estructura->pid), stream, sizeof(int)); // REGISTROS_T?????

@@ -114,7 +114,7 @@ void execute_jnz(char *nombre_r, uint32_t nuevo_pc, registros_t *contexto) // ha
 
 void execute_mov_in(t_list *solicitudes, void *datos, int t_dato)
 {
-    list_map(solicitudes, execute_unitary_mov_in);
+    list_iterate(solicitudes, execute_unitary_mov_in);
     t_list_iterator *iterator = list_iterator_create(solicitudes);
     int write_offset = 0;
     while (list_iterator_has_next(iterator))
@@ -140,6 +140,7 @@ int execute_mov_out(t_list *solicitudes, int t_dato)
             return MEM_W_NO_OK;
         }
     }
+    list_iterator_destroy(iterator);
     return status;
 }
 
@@ -168,6 +169,7 @@ solicitud_unitaria_t *execute_unitary_mov_in(solicitud_unitaria_t *sol, int t_da
         log_info(logger, "PID: %i - Acción: LEER - Dirección Física: %d - Valor: %d", sol->pid, sol->dir_fisica_base + sol->offset, *logeable);
         free(logeable);
     }
+    free(datos_obtenidos);
     return sol;
 }
 int execute_unitary_mov_out(solicitud_unitaria_t *sol, int t_dato)
@@ -182,6 +184,7 @@ int execute_unitary_mov_out(solicitud_unitaria_t *sol, int t_dato)
         memset(logeable, 0, sol->tam + 1);
         memcpy(logeable, sol->datos, sol->tam);
         log_info(logger, "PID: %i - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s", pcb_exec->pid, sol->dir_fisica_base + sol->offset, logeable);
+        free(logeable);
     }
     if (t_dato == NUMERICO)
     {

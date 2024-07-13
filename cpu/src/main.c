@@ -351,7 +351,7 @@ int decode(t_strings_instruccion *instruccion)
 		t_list *solicitudes_w = obtener_direcciones_fisicas_write(buffer_intermedio, *dir_logica_write, tam_string);
 		execute_mov_out(solicitudes_w, STRING);
 		liberar_y_eliminar_solicitudes(solicitudes_w);
-
+		free(buffer_intermedio);
 		/* //TEST: lo escrito por 2 proceso simultaneamente esta bien:
 		t_list *solicitudes_T = obtener_direcciones_fisicas_read(*dir_logica_write, tam_string);
 		execute_mov_in(solicitudes_T, buffer_intermedio);
@@ -443,7 +443,7 @@ t_list *obtener_direcciones_fisicas_read(int dir_logica, int tam_r_datos) // ret
 				tam_siguiente = tam_pagina;
 			list_add(solicitudes, sol);
 		}
-		list_map(solicitudes, traducir_a_dir_fisica);
+		list_iterate(solicitudes, traducir_a_dir_fisica);
 	}
 	else
 	{
@@ -454,7 +454,7 @@ t_list *obtener_direcciones_fisicas_read(int dir_logica, int tam_r_datos) // ret
 		sol->tam = tam_r_datos;
 		sol->datos = malloc(sol->tam);
 		list_add(solicitudes, sol);
-		list_map(solicitudes, traducir_a_dir_fisica); // xd
+		list_iterate(solicitudes, traducir_a_dir_fisica); // xd
 	}
 	return solicitudes;
 }
@@ -489,7 +489,7 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 				tam_siguiente = tam_pagina;
 			list_add(solicitudes, sol);
 		}
-		list_map(solicitudes, traducir_a_dir_fisica);
+		list_iterate(solicitudes, traducir_a_dir_fisica);
 	}
 	else
 	{
@@ -502,7 +502,7 @@ t_list *obtener_direcciones_fisicas_write(void *datos, int dir_logica, int tam_r
 		memcpy(sol->datos, datos, sol->tam);
 
 		list_add(solicitudes, sol);
-		list_map(solicitudes, traducir_a_dir_fisica); // xd
+		list_iterate(solicitudes, traducir_a_dir_fisica); // xd
 	}
 	return solicitudes;
 }
