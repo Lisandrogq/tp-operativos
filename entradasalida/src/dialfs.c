@@ -216,8 +216,8 @@ void compactar(char *nombre)
 	ocupar_bloques(gap_start, bloques_file);
 
 	free(buffer_file);
-	dictionary_iterator(files_actuales, free_file_name);//REVISAR PORQUE ESTO NO HACE FREE DEL NOMBRE
-	dictionary_destroy(files_actuales);
+	//dictionary_iterator(files_actuales, free_file_name);//REVISAR PORQUE ESTO NO HACE FREE DEL NOMBRE
+	//dictionary_destroy(files_actuales);
 }
 void *free_file_name(char *key, void *file_name)
 {
