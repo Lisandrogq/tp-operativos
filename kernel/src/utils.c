@@ -318,7 +318,11 @@ void comando_reanudar_planificacion()
     planificacion = 1;
     pthread_mutex_unlock(&mutex_plani_largo_plazo);
     pthread_mutex_unlock(&mutex_plani_corto_plazo);
-    pthread_mutex_unlock(&mutex_plani_io);
+    int size = dictionary_size(dictionary_ios);
+    for(int i = 0 ; i<=size ; i++)
+        {
+           pthread_mutex_unlock(&mutex_plani_io);  
+        }   
 }
 void comando_detener_planificacion()
 {
