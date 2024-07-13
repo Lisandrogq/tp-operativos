@@ -162,14 +162,12 @@ void *cliente_cpu_dispatch()
 		int motivo_desalojo = -1;
 		if (planificacion == 0)
 		{
-			log_error(logger, "Lock corto antes plani");
 			pthread_mutex_lock(&mutex_plani_corto_plazo);
 			pthread_mutex_unlock(&mutex_plani_corto_plazo);
 		}
 		motivo_desalojo = planificar(conexion_fd, instruccion_de_desalojo, algoritmo, buffer_instruccion);
 		if (planificacion == 0)
 		{
-			log_error(logger, "Lock corto DESPUES plani");
 			pthread_mutex_lock(&mutex_plani_corto_plazo);
 			pthread_mutex_unlock(&mutex_plani_corto_plazo);
 		}
