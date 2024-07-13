@@ -821,6 +821,7 @@ void *client_handler(void *arg)
             if (planificacion == 0)
             {
                 pthread_mutex_lock(&mutex_plani_io);
+                pthread_mutex_unlock(&mutex_plani_io);
             }
             t_fin_io_task *estructura = recibir_fin_io_task(socket_io);
             if (!pcb_esta_en_exit(estructura->pid))
