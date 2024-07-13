@@ -532,7 +532,7 @@ solicitud_unitaria_t *traducir_a_dir_fisica(solicitud_unitaria_t *sol)
 
 	tlb_element *elemento = NULL;
 	if (CANTIDAD_ENTRADAS_TLB != 0) // SI LA TLB ESTA DESACTIVADA
-		get_element_tlb(sol);
+		elemento = get_element_tlb(sol);
 
 	if (elemento == NULL)
 	{
